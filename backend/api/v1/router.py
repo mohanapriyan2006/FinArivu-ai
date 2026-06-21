@@ -11,6 +11,7 @@ from app.dashboard.router import router as dashboard_router
 from app.budget.router import router as budget_router
 from app.financial_health.router import router as financial_health_router
 from app.goals.router import router as goals_router
+from app.insights.router import router as insights_router
 
 api_router = APIRouter()
 
@@ -23,3 +24,4 @@ api_router.include_router(dashboard_router, prefix="/v1")
 api_router.include_router(budget_router, prefix="/v1")
 api_router.include_router(financial_health_router, prefix="/v1")
 api_router.include_router(goals_router, prefix="/v1")
+api_router.include_router(insights_router, prefix="/v1")

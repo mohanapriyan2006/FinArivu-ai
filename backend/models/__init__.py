@@ -8,6 +8,7 @@ from models.expense import Expense
 from models.budget import Budget
 from models.financial_health_score import FinancialHealthScore
 from models.goal import Goal
+from models.insight import Insight
 
 __all__ = [
     "User",
@@ -18,4 +19,5 @@ __all__ = [
     "Budget",
     "FinancialHealthScore",
     "Goal",
+    "Insight",
 ]

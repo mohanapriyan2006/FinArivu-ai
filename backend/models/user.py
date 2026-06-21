@@ -64,3 +64,8 @@ class User(Base, TimestampMixin):
         back_populates="user",
         cascade="all, delete-orphan",
     )
+    insights: Mapped[list["Insight"]] = relationship(
+        "Insight",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )

@@ -3,7 +3,9 @@
 import uuid
 from typing import List
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth.middleware import get_current_user
@@ -13,6 +15,7 @@ from services.goal_service import goal_service
 from services.user_service import user_service
 from utils.response import success_response
 
+limiter = Limiter(key_func=get_remote_address)
 router = APIRouter(tags=["Goals"])
 
 
