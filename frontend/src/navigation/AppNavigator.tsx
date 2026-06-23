@@ -15,10 +15,10 @@ export default function AppNavigator() {
       {!isAuthenticated ? (
         <Stack.Screen name="Auth" component={AuthNavigator} />
       ) : (
-        <>
+        <Stack.Group>
           <Stack.Screen name="Onboarding" component={OnboardingScreen} />
           <Stack.Screen name="Main" component={MainTabNavigator} />
-        </>
+        </Stack.Group>
       )}
     </Stack.Navigator>
   )
