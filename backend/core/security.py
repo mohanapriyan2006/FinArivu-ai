@@ -59,15 +59,9 @@ limiter = Limiter(key_func=get_remote_address)
 
 def setup_cors(app) -> None:
     """Configure CORS middleware on the FastAPI app."""
-    origins = settings.cors_origin_list + [
-        "exp://",
-        "http://localhost:19006",
-        "http://localhost:19000",
-        "http://localhost:8081",
-    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=["*"],
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
         allow_headers=["*"],

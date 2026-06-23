@@ -42,13 +42,13 @@ export default function DashboardScreen() {
   const chartColors = ['#0D47A1', '#DC2626', '#F4B400', '#22C55E', '#14B8A6', '#8B5CF6']
 
   const pieData =
-    summary?.expenseBreakdown.map((item, index) => ({
+    (summary?.expenseBreakdown || []).map((item, index) => ({
       name: item.category,
       amount: item.amount,
       color: chartColors[index % chartColors.length],
       legendFontColor: colors.textPrimary,
       legendFontSize: 12,
-    })) || []
+    }))
 
   const chartConfig = {
     backgroundColor: colors.surface,
@@ -106,10 +106,10 @@ export default function DashboardScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <Text style={styles.cardTitle}>Recent Income</Text>
-        {(summary?.recentIncome.length || 0) === 0 && (
+        {(summary?.recentIncome || []).length === 0 && (
           <Text style={styles.emptyText}>No income entries yet</Text>
         )}
-        {summary?.recentIncome.map((item) => (
+        {(summary?.recentIncome || []).map((item) => (
           <View key={item.id} style={styles.row}>
             <View style={styles.rowLeft}>
               <Text style={styles.rowTitle}>{item.source}</Text>
@@ -124,10 +124,10 @@ export default function DashboardScreen() {
 
       <View style={[styles.card, { backgroundColor: colors.surface }]}>
         <Text style={styles.cardTitle}>Recent Expenses</Text>
-        {(summary?.recentExpenses.length || 0) === 0 && (
+        {(summary?.recentExpenses || []).length === 0 && (
           <Text style={styles.emptyText}>No expense entries yet</Text>
         )}
-        {summary?.recentExpenses.map((item) => (
+        {(summary?.recentExpenses || []).map((item) => (
           <View key={item.id} style={styles.row}>
             <View style={styles.rowLeft}>
               <Text style={styles.rowTitle}>{item.description || 'Expense'}</Text>

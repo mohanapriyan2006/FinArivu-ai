@@ -15,7 +15,7 @@ class UserBase(BaseModel):
 class UserCreate(UserBase):
     """Schema for creating a user."""
 
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=6, max_length=72)
 
 
 class UserResponse(UserBase):
@@ -32,14 +32,14 @@ class UserRegisterRequest(BaseModel):
     """Request body for user registration."""
 
     email: EmailStr
-    password: str = Field(..., min_length=6)
+    password: str = Field(..., min_length=6, max_length=72)
 
 
 class UserLoginRequest(BaseModel):
     """Request body for user login."""
 
     email: EmailStr
-    password: str
+    password: str = Field(..., min_length=1, max_length=72)
 
 
 class UserSyncRequest(BaseModel):

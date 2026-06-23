@@ -66,6 +66,9 @@ class UserService:
             if existing:
                 raise ValidationError("Email already registered")
 
+            if len(password.encode("utf-8")) > 72:
+                raise ValidationError("Password must be 72 bytes or less")
+
             user = await user_repository.create(
                 session,
                 {
@@ -84,8 +87,8 @@ class UserService:
         except ValidationError:
             raise
         except Exception as exc:
-            logger.error("Failed to register user", extra={"email": email})
-            raise DatabaseError("Failed to register user") from exc
+            logger.error("Failed to register user", extra={"email": email, "error": str(exc)})
+            raise DatabaseError(f"Failed to register user: {exc}") from exc
 
     async def authenticate(
         self,
@@ -108,7 +111,7 @@ class UserService:
         except AuthenticationError:
             raise
         except Exception as exc:
-            logger.error("Authentication failed", extra={"email": email})
+            logger.error("Authentication failed", extra={"email": email, "error": str(exc)})
             raise DatabaseError("Authentication failed") from exc
 
 
