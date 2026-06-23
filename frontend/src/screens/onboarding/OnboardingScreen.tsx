@@ -3,7 +3,7 @@ import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndic
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ProfileService } from '@/services/ProfileService'
@@ -31,7 +31,7 @@ type OnboardingData = Step1Form & Step2Form & Step3Form
 
 export default function OnboardingScreen({ navigation }: { navigation: any }) {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const [step, setStep] = useState(1)
   const [formData, setFormData] = useState<Partial<OnboardingData>>({})
   const [saving, setSaving] = useState(false)

@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter
 
+from app.auth.router import router as auth_router
 from app.users.router import router as users_router
 from app.profile.router import router as profile_router
 from app.income.router import router as income_router
@@ -15,6 +16,7 @@ from app.insights.router import router as insights_router
 
 api_router = APIRouter()
 
+api_router.include_router(auth_router, prefix="/v1")
 api_router.include_router(users_router, prefix="/v1/users")
 api_router.include_router(profile_router, prefix="/v1")
 api_router.include_router(income_router, prefix="/v1")

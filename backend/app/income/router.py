@@ -25,7 +25,7 @@ async def list_income(
 ):
     """List all income entries for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await income_service.get_user_income(session, user.id, skip, limit)
     return [IncomeResponse.model_validate(item) for item in items]
@@ -39,7 +39,7 @@ async def create_income(
 ):
     """Create a new income entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await income_service.create_income(session, user.id, data)
     return success_response(
@@ -57,7 +57,7 @@ async def update_income(
 ):
     """Update an existing income entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await income_service.update_income(session, income_id, user.id, data)
     return success_response(
@@ -74,7 +74,7 @@ async def delete_income(
 ):
     """Delete an income entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     await income_service.delete_income(session, income_id, user.id)
     return success_response(message="Income deleted successfully")

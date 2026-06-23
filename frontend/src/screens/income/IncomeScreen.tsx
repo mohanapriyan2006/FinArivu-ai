@@ -3,14 +3,14 @@ import {
   View, Text, StyleSheet, Pressable, FlatList, Modal,
   TextInput, ScrollView, Alert,
 } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { IncomeService, type Income, type IncomeInput } from '@/services/IncomeService'
 
 export default function IncomeScreen() {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const [incomeList, setIncomeList] = useState<Income[]>([])
   const [loading, setLoading] = useState(true)
   const [modalVisible, setModalVisible] = useState(false)

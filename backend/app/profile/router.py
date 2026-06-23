@@ -21,7 +21,7 @@ async def get_profile(
 ):
     """Get the current user's profile."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     profile = await profile_service.get_profile(session, user.id)
 
@@ -39,7 +39,7 @@ async def create_profile(
 ):
     """Create or update the current user's profile."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
 
     profile = await profile_service.create_or_update_profile(
@@ -60,7 +60,7 @@ async def update_profile(
 ):
     """Update the current user's profile."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
 
     profile = await profile_service.create_or_update_profile(

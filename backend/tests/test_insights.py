@@ -17,7 +17,7 @@ class TestInsights:
     ):
         """List insights for a user."""
         mock_jwt_decode.return_value = {
-            "sub": "insight_user_123",
+            "sub": "dee158f7-c63d-5f50-8626-0607a2c6afdd",
             "email": "insight@example.com",
         }
 
@@ -35,7 +35,7 @@ class TestInsights:
     ):
         """Get unread insights."""
         mock_jwt_decode.return_value = {
-            "sub": "insight_user_456",
+            "sub": "ff90865e-9a74-5e24-a1d4-97e7942e1854",
             "email": "insightunread@example.com",
         }
 
@@ -54,7 +54,7 @@ class TestInsights:
     ):
         """Mark all insights as read."""
         mock_jwt_decode.return_value = {
-            "sub": "insight_user_789",
+            "sub": "f8d0f5bf-083d-5ddb-acf8-bdf35ecba384",
             "email": "insightread@example.com",
         }
 

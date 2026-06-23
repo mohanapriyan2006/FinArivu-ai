@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { useAuth as useClerkAuth, useUser } from '@clerk/clerk-expo'
+import * as SecureStore from 'expo-secure-store'
 
-import { UserService } from '@/services/UserService'
+const TOKEN_KEY = 'finarivu_access_token'
 
 interface UserProfile {
   id: string
@@ -17,49 +17,44 @@ interface AuthContextType {
   user: UserProfile | null
   loading: boolean
   isAuthenticated: boolean
-  login: () => void
-  logout: () => void
+  getToken: () => Promise<string | null>
+  setToken: (token: string) => Promise<void>
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const { user: clerkUser, isLoaded: userLoaded } = useUser()
-  const { signOut, getToken } = useClerkAuth()
   const [user, setUser] = useState<UserProfile | null>(null)
+  const [token, setTokenState] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    async function syncUser() {
-      if (!clerkUser) {
-        setUser(null)
-        setLoading(false)
-        return
-      }
-
+    async function checkAuth() {
       try {
-        const token = await getToken()
-        const email = clerkUser.primaryEmailAddress?.emailAddress || ''
-        const profile = await UserService.syncUser(email, token)
-        setUser(profile)
+        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY)
+        setTokenState(storedToken)
       } catch {
-        setUser(null)
+        setTokenState(null)
       } finally {
         setLoading(false)
       }
     }
+    checkAuth()
+  }, [])
 
-    if (userLoaded) {
-      syncUser()
-    }
-  }, [clerkUser, userLoaded])
-
-  const login = () => {
-    // Navigation handled by navigator
+  const getToken = async (): Promise<string | null> => {
+    return SecureStore.getItemAsync(TOKEN_KEY)
   }
 
-  const logout = async () => {
-    await signOut()
+  const setToken = async (newToken: string): Promise<void> => {
+    await SecureStore.setItemAsync(TOKEN_KEY, newToken)
+    setTokenState(newToken)
+  }
+
+  const logout = async (): Promise<void> => {
+    await SecureStore.deleteItemAsync(TOKEN_KEY)
+    setTokenState(null)
     setUser(null)
   }
 
@@ -68,8 +63,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         loading,
-        isAuthenticated: !!clerkUser,
-        login,
+        isAuthenticated: !!token,
+        getToken,
+        setToken,
         logout,
       }}
     >

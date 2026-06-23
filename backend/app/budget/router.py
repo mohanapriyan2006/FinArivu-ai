@@ -31,7 +31,7 @@ async def list_budgets(
 ):
     """List all budget entries for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await budget_service.get_user_budgets(session, user.id, skip, limit)
     return [BudgetResponse.model_validate(item) for item in items]
@@ -45,7 +45,7 @@ async def create_budget(
 ):
     """Create a new budget entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await budget_service.create_budget(session, user.id, data)
     return success_response(
@@ -63,7 +63,7 @@ async def update_budget(
 ):
     """Update an existing budget entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await budget_service.update_budget(session, budget_id, user.id, data)
     return success_response(
@@ -80,7 +80,7 @@ async def delete_budget(
 ):
     """Delete a budget entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     await budget_service.delete_budget(session, budget_id, user.id)
     return success_response(message="Budget deleted successfully")
@@ -93,7 +93,7 @@ async def get_budget_analysis(
 ):
     """Get budget analysis with spending vs limits."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     analysis = await budget_service.get_budget_analysis(session, user.id)
     return success_response(

@@ -26,7 +26,7 @@ async def get_financial_health(
 ):
     """Get current financial health score."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     score_data = await financial_health_service.get_current_score(session, user.id)
     return success_response(
@@ -44,7 +44,7 @@ async def get_financial_health_history(
 ):
     """Get historical financial health scores."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await financial_health_service.get_score_history(session, user.id, skip, limit)
     return success_response(
@@ -64,7 +64,7 @@ async def recalculate_financial_health(
     and compute a fresh score. For now, it computes with available data.
     """
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
 
     from engines.financial_health_engine import FinancialHealthInput

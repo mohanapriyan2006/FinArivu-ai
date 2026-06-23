@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, Pressable, FlatList, Modal,
   TextInput, ScrollView, Alert,
 } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useTheme } from '@/contexts/ThemeContext'
@@ -37,7 +37,7 @@ function getStatusLabel(status: string) {
 
 export default function BudgetScreen() {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const queryClient = useQueryClient()
   const styles = makeStyles(colors)
 

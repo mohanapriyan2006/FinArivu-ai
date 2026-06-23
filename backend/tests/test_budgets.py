@@ -17,7 +17,7 @@ class TestBudget:
     ):
         """Create budget and verify it appears in the list."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_123",
+            "sub": "b6a56802-c643-5693-af9e-6aa08182f37e",
             "email": "budget@example.com",
         }
 
@@ -65,7 +65,7 @@ class TestBudget:
     ):
         """Update an existing budget entry."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_456",
+            "sub": "cfa519ce-3ca7-5937-96c2-de5963bf2028",
             "email": "updatebudget@example.com",
         }
 
@@ -102,7 +102,7 @@ class TestBudget:
     ):
         """Delete a budget entry."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_789",
+            "sub": "f6a3ff87-5cc9-5fb2-9bba-b3be670e5a8c",
             "email": "deletebudget@example.com",
         }
 
@@ -144,7 +144,7 @@ class TestBudget:
     ):
         """Budget monthly_limit must be greater than 0."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_val",
+            "sub": "e40d30aa-5c05-51c0-a64c-c7ade2606f67",
             "email": "valbudget@example.com",
         }
 
@@ -174,7 +174,7 @@ class TestBudget:
     ):
         """Creating a budget for an already budgeted category should fail."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_dup",
+            "sub": "b7e05cf4-5108-54e5-beac-e512c5def29e",
             "email": "dupbudget@example.com",
         }
 
@@ -211,7 +211,7 @@ class TestBudget:
     ):
         """Deleting a budget that does not exist returns 404."""
         mock_jwt_decode.return_value = {
-            "sub": "budget_user_404",
+            "sub": "aeb04165-b9d0-5787-b49a-5b1bf606c3d3",
             "email": "404budget@example.com",
         }
 

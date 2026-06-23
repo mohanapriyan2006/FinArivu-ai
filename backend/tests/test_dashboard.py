@@ -17,7 +17,7 @@ class TestDashboard:
     ):
         """Dashboard should return summary with income and expenses."""
         mock_jwt_decode.return_value = {
-            "sub": "dash_user_123",
+            "sub": "133614da-f5b3-5a45-acf9-d4e2e8cfcff6",
             "email": "dash@example.com",
         }
 

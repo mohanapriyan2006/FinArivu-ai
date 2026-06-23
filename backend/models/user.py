@@ -10,7 +10,7 @@ from core.database import Base, TimestampMixin
 
 
 class User(Base, TimestampMixin):
-    """User model synced from Clerk."""
+    """User model with custom JWT authentication."""
 
     __tablename__ = "users"
 
@@ -19,10 +19,10 @@ class User(Base, TimestampMixin):
         primary_key=True,
         default=uuid.uuid4,
     )
-    clerk_id: Mapped[str] = mapped_column(
+    clerk_id: Mapped[str | None] = mapped_column(
         String(255),
         unique=True,
-        nullable=False,
+        nullable=True,
         index=True,
     )
     email: Mapped[str] = mapped_column(
@@ -30,6 +30,10 @@ class User(Base, TimestampMixin):
         unique=True,
         nullable=False,
         index=True,
+    )
+    password_hash: Mapped[str] = mapped_column(
+        String(255),
+        nullable=False,
     )
 
     # Relationships

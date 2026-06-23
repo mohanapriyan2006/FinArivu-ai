@@ -25,7 +25,7 @@ async def list_expenses(
 ):
     """List all expense entries for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await expense_service.get_user_expenses(session, user.id, skip, limit)
     return [ExpenseResponse.model_validate(item) for item in items]
@@ -39,7 +39,7 @@ async def create_expense(
 ):
     """Create a new expense entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await expense_service.create_expense(session, user.id, data)
     return success_response(
@@ -57,7 +57,7 @@ async def update_expense(
 ):
     """Update an existing expense entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await expense_service.update_expense(session, expense_id, user.id, data)
     return success_response(
@@ -74,7 +74,7 @@ async def delete_expense(
 ):
     """Delete an expense entry."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     await expense_service.delete_expense(session, expense_id, user.id)
     return success_response(message="Expense deleted successfully")

@@ -1,15 +1,56 @@
-"""Security utilities: CORS, rate limiting, input validation, secure headers."""
+"""Security utilities: CORS, rate limiting, input validation, secure headers, auth."""
 
 import re
+from datetime import datetime, timedelta, timezone
 from typing import List
 
+import jwt
 from fastapi import Request
+from passlib.context import CryptContext
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.cors import CORSMiddleware
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 from core.config import settings
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a plain password against a hash."""
+    return pwd_context.verify(plain_password, hashed_password)
+
+
+def hash_password(password: str) -> str:
+    """Hash a plain password."""
+    return pwd_context.hash(password)
+
+
+def create_access_token(user_id: str, email: str) -> str:
+    """Create a JWT access token."""
+    expire = datetime.now(timezone.utc) + timedelta(hours=settings.jwt_expiration_hours)
+    payload = {
+        "sub": user_id,
+        "email": email,
+        "exp": expire,
+        "iat": datetime.now(timezone.utc),
+    }
+    return jwt.encode(
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
+    )
+
+
+def decode_access_token(token: str) -> dict:
+    """Decode and verify a JWT access token."""
+    return jwt.decode(
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
+    )
 
 
 # Rate limiter instance

@@ -17,7 +17,7 @@ class TestProfile:
     ):
         """Create profile should return saved profile."""
         mock_jwt_decode.return_value = {
-            "sub": "profile_user_123",
+            "sub": "ed807adc-f8f1-5406-9424-5dbf48fd5037",
             "email": "profile@example.com",
         }
 
@@ -46,7 +46,7 @@ class TestProfile:
     ):
         """Get profile should return the user's profile."""
         mock_jwt_decode.return_value = {
-            "sub": "profile_user_456",
+            "sub": "1cc64a66-0627-5083-85be-2a115f633d3b",
             "email": "getprofile@example.com",
         }
 
@@ -74,7 +74,7 @@ class TestProfile:
     ):
         """Update profile should modify existing profile."""
         mock_jwt_decode.return_value = {
-            "sub": "profile_user_789",
+            "sub": "8505240d-ef11-5f4d-b551-79c5ddf539c9",
             "email": "updateprofile@example.com",
         }
 

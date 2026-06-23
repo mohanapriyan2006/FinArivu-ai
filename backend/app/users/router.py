@@ -26,11 +26,11 @@ async def sync_user(
     Creates the user and an empty profile if they don't exist.
     Returns the user's profile.
     """
-    logger.info("User sync request", extra={"clerk_id": current_user["clerk_id"]})
+    logger.info("User sync request", extra={"user_id": str(current_user["user_id"])})
 
     user = await user_service.sync_user(
         session,
-        clerk_id=current_user["clerk_id"],
+        user_id=current_user["user_id"],
         email=user_data.email or current_user.get("email", ""),
     )
 

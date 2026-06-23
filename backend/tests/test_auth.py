@@ -37,7 +37,7 @@ class TestAuthMiddleware:
     ):
         """Valid JWT token should allow access to protected endpoints."""
         mock_jwt_decode.return_value = {
-            "sub": "user_123",
+            "sub": "11111111-1111-1111-1111-111111111111",
             "email": "test@example.com",
         }
 

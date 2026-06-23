@@ -17,7 +17,7 @@ class TestIncome:
     ):
         """Create income and verify it appears in the list."""
         mock_jwt_decode.return_value = {
-            "sub": "income_user_123",
+            "sub": "c7b5ac7e-1459-52e0-8a97-aa62555cdda9",
             "email": "income@example.com",
         }
 
@@ -53,7 +53,7 @@ class TestIncome:
     ):
         """Update an existing income entry."""
         mock_jwt_decode.return_value = {
-            "sub": "income_user_456",
+            "sub": "dc01fb44-329a-56fc-873a-f69526b44daf",
             "email": "updateincome@example.com",
         }
 
@@ -80,7 +80,7 @@ class TestIncome:
     ):
         """Delete an income entry."""
         mock_jwt_decode.return_value = {
-            "sub": "income_user_789",
+            "sub": "c6c5bb54-6ae0-5682-bcf0-e431cc796c57",
             "email": "deleteincome@example.com",
         }
 
@@ -112,7 +112,7 @@ class TestIncome:
     ):
         """Missing required fields should return 422 with structured error."""
         mock_jwt_decode.return_value = {
-            "sub": "income_user_val",
+            "sub": "fc9fe1f7-18f1-529e-97ce-1789855f8c38",
             "email": "val@example.com",
         }
 

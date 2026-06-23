@@ -19,7 +19,7 @@ class TestUserSync:
     ):
         """Sync should create user and empty profile if they don't exist."""
         mock_jwt_decode.return_value = {
-            "sub": "user_test_123",
+            "sub": "295d093f-76a7-5e72-904d-f5078e36bd5c",
             "email": "newuser@example.com",
         }
 
@@ -41,7 +41,7 @@ class TestUserSync:
     ):
         """Syncing an existing user should return their profile."""
         mock_jwt_decode.return_value = {
-            "sub": "user_existing_456",
+            "sub": "3fb75fa6-2804-5237-b2a1-d325e8576f18",
             "email": "existing@example.com",
         }
 
@@ -54,7 +54,7 @@ class TestUserSync:
 
         # Second sync - mock returns new token payload
         mock_jwt_decode.return_value = {
-            "sub": "user_existing_456",
+            "sub": "3fb75fa6-2804-5237-b2a1-d325e8576f18",
             "email": "existing@example.com",
         }
         response = await async_client.post(

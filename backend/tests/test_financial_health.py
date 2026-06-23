@@ -17,7 +17,7 @@ class TestFinancialHealth:
     ):
         """Get current financial health score."""
         mock_jwt_decode.return_value = {
-            "sub": "fh_user_123",
+            "sub": "178bb3fe-2254-57b9-8545-1eb1df9bf5a3",
             "email": "fh@example.com",
         }
 
@@ -37,7 +37,7 @@ class TestFinancialHealth:
     ):
         """Get financial health history."""
         mock_jwt_decode.return_value = {
-            "sub": "fh_user_456",
+            "sub": "141b6b52-3c3b-5556-acf8-d5b27c4f613c",
             "email": "fhhist@example.com",
         }
 
@@ -56,7 +56,7 @@ class TestFinancialHealth:
     ):
         """Recalculate and save financial health score."""
         mock_jwt_decode.return_value = {
-            "sub": "fh_user_789",
+            "sub": "969c020a-603c-5fd8-92de-af7bf0ba4993",
             "email": "fhrecalc@example.com",
         }
 

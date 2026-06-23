@@ -1,24 +1,28 @@
-import { View, Text, StyleSheet, Pressable } from 'react-native'
-import { useSignUp } from '@clerk/clerk-expo'
+import { View, Text, TextInput, StyleSheet, Pressable } from 'react-native'
 import { useState } from 'react'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAuthContext } from '@/contexts/AuthContext'
+import { AuthService } from '@/services/AuthService'
 
 export default function SignUpScreen({ navigation }: { navigation: any }) {
   const { colors } = useTheme()
-  const { signUp, setActive, isLoaded } = useSignUp()
+  const { setToken } = useAuthContext()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [loading, setLoading] = useState(false)
 
   const onSignUpPress = async () => {
-    if (!isLoaded) return
+    if (!email || !password) return
+    setLoading(true)
     try {
-      const result = await signUp.create({ emailAddress: email, password })
-      if (result.status === 'complete') {
-        await setActive({ session: result.createdSessionId })
-      }
-    } catch (err) {
+      const result = await AuthService.register({ email, password })
+      await setToken(result.access_token)
+    } catch (err: any) {
       console.error(err)
+      alert(err.response?.data?.detail || 'Registration failed')
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -28,8 +32,25 @@ export default function SignUpScreen({ navigation }: { navigation: any }) {
     <View style={styles.container}>
       <Text style={styles.title}>Get Started</Text>
       <Text style={styles.subtitle}>Create your account</Text>
-      <Pressable style={styles.button} onPress={onSignUpPress}>
-        <Text style={styles.buttonText}>Sign Up</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Email"
+        placeholderTextColor={colors.textSecondary}
+        autoCapitalize="none"
+        keyboardType="email-address"
+        value={email}
+        onChangeText={setEmail}
+      />
+      <TextInput
+        style={styles.input}
+        placeholder="Password"
+        placeholderTextColor={colors.textSecondary}
+        secureTextEntry
+        value={password}
+        onChangeText={setPassword}
+      />
+      <Pressable style={styles.button} onPress={onSignUpPress} disabled={loading}>
+        <Text style={styles.buttonText}>{loading ? 'Signing up...' : 'Sign Up'}</Text>
       </Pressable>
       <Pressable onPress={() => navigation.navigate('SignIn')}>
         <Text style={styles.link}>Already have an account? Sign In</Text>
@@ -56,6 +77,17 @@ function makeStyles(colors: any) {
       fontSize: 16,
       color: colors.textSecondary,
       marginBottom: 32,
+    },
+    input: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      fontSize: 16,
+      color: colors.textPrimary,
+      backgroundColor: colors.surface,
+      marginBottom: 16,
     },
     button: {
       backgroundColor: colors.primary,

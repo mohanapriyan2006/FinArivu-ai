@@ -28,7 +28,7 @@ async def list_goals(
 ):
     """List all goals for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await goal_service.get_user_goals(session, user.id, skip, limit)
     return [GoalResponse.model_validate(item) for item in items]
@@ -42,7 +42,7 @@ async def create_goal(
 ):
     """Create a new goal."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await goal_service.create_goal(session, user.id, data)
     return success_response(
@@ -60,7 +60,7 @@ async def update_goal(
 ):
     """Update an existing goal."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await goal_service.update_goal(session, goal_id, user.id, data)
     return success_response(
@@ -77,7 +77,7 @@ async def delete_goal(
 ):
     """Delete a goal."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     await goal_service.delete_goal(session, goal_id, user.id)
     return success_response(message="Goal deleted successfully")
@@ -90,7 +90,7 @@ async def get_goals_summary(
 ):
     """Get goal summary statistics."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     summary = await goal_service.get_summary(session, user.id)
     return success_response(

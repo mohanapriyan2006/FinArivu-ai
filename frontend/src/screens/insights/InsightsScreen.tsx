@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import {
   View, Text, StyleSheet, Pressable, FlatList,
 } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 import { useTheme } from '@/contexts/ThemeContext'
@@ -28,7 +28,7 @@ function getPriorityLabel(priority: string) {
 
 export default function InsightsScreen() {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const queryClient = useQueryClient()
   const styles = makeStyles(colors)
 

@@ -29,7 +29,7 @@ async def list_insights(
 ):
     """List all insights for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await insight_service.get_user_insights(session, user.id, skip, limit)
     return [InsightResponse.model_validate(item) for item in items]
@@ -42,7 +42,7 @@ async def get_unread_insights(
 ):
     """Get unread insights for the current user."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     items = await insight_service.get_unread_insights(session, user.id)
     return success_response(
@@ -59,7 +59,7 @@ async def mark_insight_read(
 ):
     """Mark an insight as read."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     item = await insight_service.mark_insight_read(session, insight_id, user.id)
     return success_response(
@@ -75,7 +75,7 @@ async def mark_all_insights_read(
 ):
     """Mark all insights as read."""
     user = await user_service.sync_user(
-        session, current_user["clerk_id"], current_user["email"]
+        session, current_user["user_id"], current_user["email"]
     )
     count = await insight_service.mark_all_read(session, user.id)
     return success_response(

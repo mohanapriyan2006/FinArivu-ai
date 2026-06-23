@@ -3,7 +3,7 @@ import {
   View, Text, StyleSheet, Pressable, FlatList, Modal,
   TextInput, ScrollView, Alert,
 } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ExpenseService, type Expense, type ExpenseInput } from '@/services/ExpenseService'
@@ -11,7 +11,7 @@ import { CategoryService, type Category } from '@/services/CategoryService'
 
 export default function ExpensesScreen() {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const [expenseList, setExpenseList] = useState<Expense[]>([])
   const [categories, setCategories] = useState<Category[]>([])
   const [modalVisible, setModalVisible] = useState(false)

@@ -3,8 +3,6 @@ import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndic
 import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
-import { useAuth } from '@clerk/clerk-expo'
-
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { ProfileService } from '@/services/ProfileService'
@@ -23,8 +21,7 @@ type ProfileForm = z.infer<typeof profileSchema>
 
 export default function ProfileScreen() {
   const { colors } = useTheme()
-  const { logout } = useAuthContext()
-  const { getToken } = useAuth()
+  const { logout, getToken } = useAuthContext()
   const [profile, setProfile] = useState<Profile | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)

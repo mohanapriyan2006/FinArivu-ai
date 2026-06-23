@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { View, Text, StyleSheet, ScrollView, ActivityIndicator, Dimensions } from 'react-native'
-import { useAuth } from '@clerk/clerk-expo'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { PieChart } from 'react-native-chart-kit'
 
 import { useTheme } from '@/contexts/ThemeContext'
@@ -10,7 +10,7 @@ const screenWidth = Dimensions.get('window').width
 
 export default function DashboardScreen() {
   const { colors } = useTheme()
-  const { getToken } = useAuth()
+  const { getToken } = useAuthContext()
   const [summary, setSummary] = useState<DashboardSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const styles = makeStyles(colors)

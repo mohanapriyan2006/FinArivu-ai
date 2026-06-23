@@ -21,10 +21,10 @@ class Settings(BaseSettings):
     # Database
     database_url: str = "postgresql+asyncpg://postgres:postgres@localhost:5432/finarivu"
 
-    # Clerk Auth
-    clerk_secret_key: str = ""
-    clerk_jwt_public_key: str = ""
-    clerk_issuer: str = ""
+    # JWT Auth
+    jwt_secret_key: str = "super-secret-change-me-in-production"
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_hours: int = 168
 
     # AI Providers (multi-fallback)
     groq_api_key: str = ""

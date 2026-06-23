@@ -18,7 +18,7 @@ class TestGoals:
     ):
         """Create goal and verify it appears in the list."""
         mock_jwt_decode.return_value = {
-            "sub": "goal_user_123",
+            "sub": "d94cb3c9-fe29-5dc9-9c69-08336ae0cdd1",
             "email": "goal@example.com",
         }
 
@@ -56,7 +56,7 @@ class TestGoals:
     ):
         """Update an existing goal."""
         mock_jwt_decode.return_value = {
-            "sub": "goal_user_456",
+            "sub": "44d658b1-3566-5cf1-bea6-cf60a849dbed",
             "email": "updategoal@example.com",
         }
 
@@ -88,7 +88,7 @@ class TestGoals:
     ):
         """Delete a goal."""
         mock_jwt_decode.return_value = {
-            "sub": "goal_user_789",
+            "sub": "7d00e13c-3c60-548c-ae87-2ed4dbf3cdd9",
             "email": "deletegoal@example.com",
         }
 
@@ -124,7 +124,7 @@ class TestGoals:
     ):
         """Get goal summary."""
         mock_jwt_decode.return_value = {
-            "sub": "goal_user_sum",
+            "sub": "8f5197cc-d100-54ac-9612-212b73007b65",
             "email": "sumgoal@example.com",
         }
 
