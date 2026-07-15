@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 import * as SecureStore from 'expo-secure-store'
 
 const TOKEN_KEY = 'finarivu_access_token'
+const DISABLE_AUTH = process.env.EXPO_PUBLIC_DISABLE_AUTH === 'true'
 
 interface UserProfile {
   id: string
@@ -31,6 +32,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     async function checkAuth() {
+      if (DISABLE_AUTH) {
+        setLoading(false)
+        return
+      }
       try {
         const storedToken = await SecureStore.getItemAsync(TOKEN_KEY)
         setTokenState(storedToken)
@@ -48,11 +53,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const setToken = async (newToken: string): Promise<void> => {
+    if (DISABLE_AUTH) {
+      setTokenState(newToken)
+      return
+    }
     await SecureStore.setItemAsync(TOKEN_KEY, newToken)
     setTokenState(newToken)
   }
 
   const logout = async (): Promise<void> => {
+    if (DISABLE_AUTH) {
+      setUser(null)
+      return
+    }
     await SecureStore.deleteItemAsync(TOKEN_KEY)
     setTokenState(null)
     setUser(null)
@@ -63,7 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user,
         loading,
-        isAuthenticated: !!token,
+        isAuthenticated: DISABLE_AUTH || !!token,
         getToken,
         setToken,
         logout,
