@@ -39,6 +39,5 @@ Component Specifications (Based on UI Design):
 
 Execution Requirements:
 - Write the complete TypeScript implementation.
-- Use `NativeWind` class strings for styling.
 - Ensure the tab bar does not jump or flicker during state changes.
 - Modularize the single Tab Item into its own sub-component (`TabBarItem`) to keep the main component clean.

@@ -41,4 +41,4 @@ Component 2: OnboardingScreen.tsx (Based on Onboarding - Health_2.png)
 - Primary Action: 
   - Full-width dark Primary Blue container element reading "Continue →". Handle onPress layout states using interactive micro-scaling hooks.
 
-Please produce the complete TypeScript file implementations, modularized cleanly, utilizing NativeWind class strings and reanimated animation blocks.
+Please produce the complete TypeScript file implementations, modularized cleanly and reanimated animation blocks.

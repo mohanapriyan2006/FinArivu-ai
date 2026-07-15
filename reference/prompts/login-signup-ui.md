@@ -87,7 +87,6 @@
 > 
 > 
 > **Execution Requirements:**
-> * Use `NativeWind` (Tailwind classes) for styling to ensure rapid, scalable UI engineering.
 > * Use `@expo/vector-icons` (Lucide or Feather) with a strict 2px stroke width for all iconography to maintain the premium feel.
 > * Wrap the main scrollable areas in a `KeyboardAvoidingView` and `ScrollView` to ensure inputs are never blocked by the device keyboard.
 > 

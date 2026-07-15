@@ -1,382 +1,320 @@
-import { useState } from 'react'
-import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native'
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
-import { useAuthContext } from '@/contexts/AuthContext'
+import { useMemo, useState } from 'react'
+import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Zap, ChevronRight } from 'lucide-react-native'
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { ProfileService } from '@/services/ProfileService'
+import { Logo } from '@/components/layout'
+import { AIGlow, FadeInUp, ScalePress } from '@/components/animation'
+import { Typography } from '@/theme'
 
-const step1Schema = z.object({
-  fullName: z.string().min(1, 'Name is required'),
-  age: z.coerce.number().min(18, 'Min 18').max(100, 'Max 100'),
-  city: z.string().min(1, 'City is required'),
-})
+interface OnboardingScreenProps {
+  navigation: {
+    navigate: (screen: string) => void
+  }
+}
 
-const step2Schema = z.object({
-  monthlyIncome: z.coerce.number().min(0, 'Must be >= 0'),
-  occupation: z.string().min(1, 'Occupation is required'),
-})
+const TOTAL_STEPS = 3
 
-const step3Schema = z.object({
-  retirementAge: z.coerce.number().min(40, 'Min 40').max(80, 'Max 80'),
-})
-
-type Step1Form = z.infer<typeof step1Schema>
-type Step2Form = z.infer<typeof step2Schema>
-type Step3Form = z.infer<typeof step3Schema>
-
-type OnboardingData = Step1Form & Step2Form & Step3Form
-
-export default function OnboardingScreen({ navigation }: { navigation: any }) {
+export default function OnboardingScreen({ navigation }: OnboardingScreenProps) {
   const { colors } = useTheme()
-  const { getToken } = useAuthContext()
-  const [step, setStep] = useState(1)
-  const [formData, setFormData] = useState<Partial<OnboardingData>>({})
-  const [saving, setSaving] = useState(false)
-  const styles = makeStyles(colors)
+  const insets = useSafeAreaInsets()
+  const [activeIndex, setActiveIndex] = useState(0)
 
-  const step1Form = useForm<Step1Form>({
-    resolver: zodResolver(step1Schema),
-    defaultValues: { fullName: '', age: undefined, city: '' },
-  })
-
-  const step2Form = useForm<Step2Form>({
-    resolver: zodResolver(step2Schema),
-    defaultValues: { monthlyIncome: undefined, occupation: '' },
-  })
-
-  const step3Form = useForm<Step3Form>({
-    resolver: zodResolver(step3Schema),
-    defaultValues: { retirementAge: undefined },
-  })
-
-  const onStep1Next = (data: Step1Form) => {
-    setFormData((prev) => ({ ...prev, ...data }))
-    setStep(2)
-  }
-
-  const onStep2Next = (data: Step2Form) => {
-    setFormData((prev) => ({ ...prev, ...data }))
-    setStep(3)
-  }
-
-  const onStep3Submit = async (data: Step3Form) => {
-    const allData = { ...formData, ...data } as OnboardingData
-    setSaving(true)
-    try {
-      const token = await getToken()
-      await ProfileService.saveProfile(
-        {
-          fullName: allData.fullName,
-          age: allData.age,
-          city: allData.city,
-          occupation: allData.occupation,
-          monthlyIncome: allData.monthlyIncome,
-          retirementAge: allData.retirementAge,
+  const styles = useMemo(
+    () =>
+      StyleSheet.create({
+        container: {
+          flex: 1,
+          backgroundColor: colors.background,
+          paddingHorizontal: 24,
+          paddingTop: Math.max(insets.top, 24),
+          paddingBottom: Math.max(insets.bottom, 24),
         },
-        token
-      )
-      navigation.replace('Main')
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setSaving(false)
+        header: {
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          height: 56,
+        },
+        skipButton: {
+          minHeight: 44,
+          justifyContent: 'center',
+          paddingHorizontal: 8,
+        },
+        skipText: {
+          fontFamily: Typography.fontFamily,
+          fontSize: Typography.sizes.sm,
+          fontWeight: Typography.fontWeights.semibold,
+          color: colors.textSecondary,
+        },
+        content: {
+          flex: 1,
+          justifyContent: 'center',
+        },
+        card: {
+          backgroundColor: colors.surface,
+          borderRadius: 20,
+          padding: 20,
+          shadowColor: colors.shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.06,
+          shadowRadius: 12,
+          elevation: 4,
+        },
+        chartRow: {
+          flexDirection: 'row',
+          gap: 16,
+          alignItems: 'flex-end',
+          height: 160,
+        },
+        barsContainer: {
+          flex: 1,
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          justifyContent: 'space-between',
+          height: '100%',
+        },
+        bar: {
+          width: 32,
+          borderTopLeftRadius: 8,
+          borderTopRightRadius: 8,
+        },
+        aiPanel: {
+          width: 96,
+          height: '100%',
+          borderRadius: 16,
+          backgroundColor: colors.primaryBackground,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        aiPill: {
+          width: 56,
+          height: 32,
+          borderRadius: 999,
+          backgroundColor: colors.accent,
+        },
+        skeletons: {
+          marginTop: 20,
+          gap: 8,
+        },
+        skeleton: {
+          height: 10,
+          borderRadius: 999,
+          backgroundColor: colors.border,
+          opacity: 0.6,
+        },
+        badge: {
+          position: 'absolute',
+          top: 16,
+          left: 16,
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: colors.accent,
+          borderRadius: 999,
+          paddingHorizontal: 12,
+          paddingVertical: 6,
+          gap: 6,
+          shadowColor: colors.accent,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.25,
+          shadowRadius: 8,
+          elevation: 4,
+        },
+        badgeText: {
+          fontFamily: Typography.fontFamily,
+          fontSize: Typography.sizes.xs,
+          fontWeight: Typography.fontWeights.bold,
+          color: colors.primaryDark,
+        },
+        title: {
+          fontFamily: Typography.fontFamily,
+          fontSize: 30,
+          fontWeight: Typography.fontWeights.bold,
+          color: colors.textPrimary,
+          textAlign: 'center',
+          marginTop: 40,
+          lineHeight: 36,
+        },
+        subtitle: {
+          fontFamily: Typography.fontFamily,
+          fontSize: Typography.sizes.base,
+          fontWeight: Typography.fontWeights.regular,
+          color: colors.textSecondary,
+          textAlign: 'center',
+          marginTop: 16,
+          paddingHorizontal: 8,
+          lineHeight: 24,
+        },
+        pagination: {
+          flexDirection: 'row',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: 8,
+          marginTop: 32,
+        },
+        primaryButton: {
+          backgroundColor: colors.primary,
+          borderRadius: 16,
+          height: 56,
+          alignItems: 'center',
+          justifyContent: 'center',
+          flexDirection: 'row',
+          gap: 8,
+          shadowColor: colors.shadowColor,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.12,
+          shadowRadius: 12,
+          elevation: 4,
+        },
+        primaryButtonText: {
+          fontFamily: Typography.fontFamily,
+          fontSize: Typography.sizes.base,
+          fontWeight: Typography.fontWeights.semibold,
+          color: colors.surface,
+        },
+      }),
+    [colors, insets.bottom, insets.top]
+  )
+
+  const handleContinue = () => {
+    if (activeIndex < TOTAL_STEPS - 1) {
+      setActiveIndex((prev) => prev + 1)
+    } else {
+      navigation.navigate('Auth')
     }
   }
 
-  const StepIndicator = () => (
-    <View style={styles.stepRow}>
-      {[1, 2, 3].map((s) => (
-        <View key={s} style={[styles.stepDot, step === s && styles.stepDotActive]}>
-          <Text style={[styles.stepText, step === s && styles.stepTextActive]}>{s}</Text>
-        </View>
-      ))}
-    </View>
-  )
+  const handleSkip = () => {
+    navigation.navigate('Auth')
+  }
 
-  const renderStep1 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Personal Details</Text>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Full Name</Text>
-        <Controller
-          control={step1Form.control}
-          name="fullName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your name"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step1Form.formState.errors.fullName && (
-          <Text style={styles.error}>{step1Form.formState.errors.fullName.message}</Text>
-        )}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Age</Text>
-        <Controller
-          control={step1Form.control}
-          name="age"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="18-100"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step1Form.formState.errors.age && (
-          <Text style={styles.error}>{step1Form.formState.errors.age.message}</Text>
-        )}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>City</Text>
-        <Controller
-          control={step1Form.control}
-          name="city"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your city"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step1Form.formState.errors.city && (
-          <Text style={styles.error}>{step1Form.formState.errors.city.message}</Text>
-        )}
-      </View>
-
-      <Pressable style={styles.nextButton} onPress={step1Form.handleSubmit(onStep1Next)}>
-        <Text style={styles.nextButtonText}>Next</Text>
-      </Pressable>
-    </View>
-  )
-
-  const renderStep2 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Income Details</Text>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Monthly Income</Text>
-        <Controller
-          control={step2Form.control}
-          name="monthlyIncome"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step2Form.formState.errors.monthlyIncome && (
-          <Text style={styles.error}>{step2Form.formState.errors.monthlyIncome.message}</Text>
-        )}
-      </View>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Occupation</Text>
-        <Controller
-          control={step2Form.control}
-          name="occupation"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your occupation"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step2Form.formState.errors.occupation && (
-          <Text style={styles.error}>{step2Form.formState.errors.occupation.message}</Text>
-        )}
-      </View>
-
-      <View style={styles.buttonRow}>
-        <Pressable style={styles.backButton} onPress={() => setStep(1)}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <Pressable style={styles.nextButton} onPress={step2Form.handleSubmit(onStep2Next)}>
-          <Text style={styles.nextButtonText}>Next</Text>
-        </Pressable>
-      </View>
-    </View>
-  )
-
-  const renderStep3 = () => (
-    <View>
-      <Text style={styles.stepTitle}>Future Planning</Text>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Retirement Age</Text>
-        <Controller
-          control={step3Form.control}
-          name="retirementAge"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="40-80"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {step3Form.formState.errors.retirementAge && (
-          <Text style={styles.error}>{step3Form.formState.errors.retirementAge.message}</Text>
-        )}
-      </View>
-
-      <View style={styles.buttonRow}>
-        <Pressable style={styles.backButton} onPress={() => setStep(2)}>
-          <Text style={styles.backButtonText}>Back</Text>
-        </Pressable>
-        <Pressable style={styles.nextButton} onPress={step3Form.handleSubmit(onStep3Submit)} disabled={saving}>
-          <Text style={styles.nextButtonText}>{saving ? 'Saving...' : 'Finish'}</Text>
-        </Pressable>
-      </View>
-    </View>
-  )
+  const skeletonWidths = ['85%', '65%', '75%']
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Welcome to FinArivu</Text>
-      <StepIndicator />
-      {step === 1 && renderStep1()}
-      {step === 2 && renderStep2()}
-      {step === 3 && renderStep3()}
-    </ScrollView>
+    <View style={styles.container} testID="onboarding-screen">
+      <View style={styles.header}>
+        <Logo size={40} testID="onboarding-logo" />
+        <Pressable
+          onPress={handleSkip}
+          accessibilityRole="button"
+          accessibilityLabel="Skip onboarding"
+          style={styles.skipButton}
+        >
+          <Text style={styles.skipText}>Skip</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.content}>
+        <FadeInUp delay={0}>
+          <View style={styles.card} testID="onboarding-illustration">
+            <View style={styles.chartRow}>
+              <View style={styles.barsContainer}>
+                <View style={[styles.bar, { height: '40%', backgroundColor: `${colors.primary}4D` }]} />
+                <View style={[styles.bar, { height: '65%', backgroundColor: `${colors.primary}99` }]} />
+                <View style={[styles.bar, { height: '85%', backgroundColor: colors.primary }]} />
+                <View style={[styles.bar, { height: '55%', backgroundColor: colors.primaryDark }]} />
+              </View>
+
+              <View style={styles.aiPanel}>
+                <AIGlow testID="onboarding-ai-glow">
+                  <View style={styles.aiPill} />
+                </AIGlow>
+              </View>
+            </View>
+
+            <View style={styles.skeletons}>
+              {skeletonWidths.map((width, index) => (
+                <View key={index} style={[styles.skeleton, { width: width as `${number}%` }]} />
+              ))}
+            </View>
+
+            <AIGlow testID="onboarding-badge-glow">
+              <View style={styles.badge}>
+                <Zap size={12} color={colors.primaryDark} strokeWidth={2.5} />
+                <Text style={styles.badgeText}>AI ANALYSIS READY</Text>
+              </View>
+            </AIGlow>
+          </View>
+        </FadeInUp>
+
+        <FadeInUp delay={120}>
+          <Text style={styles.title}>Know Your Financial Health</Text>
+        </FadeInUp>
+
+        <FadeInUp delay={200}>
+          <Text style={styles.subtitle}>
+            Understand where your money goes and how healthy your finances
+            really are.
+          </Text>
+        </FadeInUp>
+
+        <FadeInUp delay={280}>
+          <View style={styles.pagination}>
+            {Array.from({ length: TOTAL_STEPS }).map((_, index) => (
+              <PaginationDot
+                key={index}
+                active={index === activeIndex}
+                activeColor={colors.primary}
+                inactiveColor={colors.border}
+              />
+            ))}
+          </View>
+        </FadeInUp>
+      </View>
+
+      <FadeInUp delay={360}>
+        <ScalePress
+          onPress={handleContinue}
+          testID="onboarding-continue-button"
+          accessibilityRole="button"
+          accessibilityLabel="Continue"
+        >
+          <View style={styles.primaryButton}>
+            <Text style={styles.primaryButtonText}>Continue</Text>
+            <ChevronRight size={18} color={colors.surface} strokeWidth={2.5} />
+          </View>
+        </ScalePress>
+      </FadeInUp>
+    </View>
   )
 }
 
-function makeStyles(colors: any) {
-  return StyleSheet.create({
-    scroll: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    container: {
-      padding: 24,
-    },
-    title: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      marginBottom: 24,
-      textAlign: 'center',
-    },
-    stepRow: {
-      flexDirection: 'row',
-      justifyContent: 'center',
-      gap: 12,
-      marginBottom: 32,
-    },
-    stepDot: {
-      width: 36,
-      height: 36,
-      borderRadius: 18,
-      backgroundColor: colors.border,
-      justifyContent: 'center',
-      alignItems: 'center',
-    },
-    stepDotActive: {
-      backgroundColor: colors.primary,
-    },
-    stepText: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-    },
-    stepTextActive: {
-      color: '#FFFFFF',
-    },
-    stepTitle: {
-      fontSize: 20,
-      fontWeight: '600',
-      color: colors.textPrimary,
-      marginBottom: 20,
-    },
-    field: {
-      marginBottom: 16,
-    },
-    label: {
-      fontSize: 14,
-      fontWeight: '600',
-      color: colors.textSecondary,
-      marginBottom: 6,
-    },
-    input: {
-      borderWidth: 1,
-      borderColor: colors.border,
-      borderRadius: 12,
-      paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: colors.textPrimary,
-      backgroundColor: colors.surface,
-    },
-    error: {
-      color: colors.danger,
-      fontSize: 12,
-      marginTop: 4,
-    },
-    nextButton: {
-      backgroundColor: colors.primary,
-      paddingVertical: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-      marginTop: 8,
-      flex: 1,
-    },
-    nextButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    backButton: {
-      backgroundColor: colors.border,
-      paddingVertical: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-      marginTop: 8,
-      flex: 1,
-      marginRight: 12,
-    },
-    backButtonText: {
-      color: colors.textPrimary,
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    buttonRow: {
-      flexDirection: 'row',
-      marginTop: 8,
-    },
+function PaginationDot({
+  active,
+  activeColor,
+  inactiveColor,
+}: {
+  active: boolean
+  activeColor: string
+  inactiveColor: string
+}) {
+  const width = useSharedValue(active ? 24 : 8)
+
+  width.value = withSpring(active ? 24 : 8, {
+    damping: 20,
+    stiffness: 200,
   })
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    width: width.value,
+  }))
+
+  return (
+    <Animated.View
+      style={[
+        {
+          height: 8,
+          borderRadius: 999,
+          backgroundColor: active ? activeColor : inactiveColor,
+        },
+        animatedStyle,
+      ]}
+    />
+  )
 }

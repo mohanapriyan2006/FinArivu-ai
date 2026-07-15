@@ -12,7 +12,6 @@ You specialize in:
 - React Native SVG
 - React Native Skia (when needed)
 - Moti
-- NativeWind (Tailwind RN)
 - Clean Architecture
 - Pixel-perfect UI implementation
 
