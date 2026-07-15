@@ -3,14 +3,24 @@ export interface ThemeColors {
   surface: string
   primary: string
   primaryDark: string
+  primaryBackground: string
   accent: string
+  accentBackground: string
   success: string
+  successBackground: string
   warning: string
   danger: string
   textPrimary: string
   textSecondary: string
+  textTertiary: string
   border: string
   shadow: string
+  shadowColor: string
+  socialApple: string
+  googleBlue: string
+  googleRed: string
+  googleYellow: string
+  googleGreen: string
 }
 
 export interface Theme {
