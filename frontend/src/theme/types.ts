@@ -14,6 +14,8 @@ export interface ThemeColors {
   dangerBackground: string
   dangerTint: string
   storyCardInner: string
+  chatBubbleBorder: string
+  chartMuted: string
   textPrimary: string
   textSecondary: string
   textTertiary: string

@@ -89,6 +89,7 @@ export function CustomBottomTabBar({ state, descriptors, navigation }: BottomTab
 
   const leftTabs = TABS.slice(0, 2)
   const rightTabs = TABS.slice(3)
+  const isChatActive = state.routes[state.index]?.name === 'AICopilot'
 
   return (
     <View style={styles.wrapper} pointerEvents="box-none">
@@ -113,7 +114,7 @@ export function CustomBottomTabBar({ state, descriptors, navigation }: BottomTab
         </View>
 
         <View style={styles.fabContainer}>
-          {(() => {
+          {!isChatActive && (() => {
             const routeIndex = state.routes.findIndex((route) => route.name === 'AICopilot')
             const isFocused = state.index === routeIndex
 

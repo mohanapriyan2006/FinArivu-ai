@@ -19,6 +19,8 @@ export const LightTheme: Theme = {
     dangerBackground: BaseColors.dangerLight,
     dangerTint: BaseColors.dangerTint,
     storyCardInner: BaseColors.storyCardInner,
+    chatBubbleBorder: BaseColors.chatBubbleBorderLight,
+    chartMuted: BaseColors.chartMutedLight,
     textPrimary: BaseColors.textPrimaryLight,
     textSecondary: BaseColors.textSecondaryLight,
     textTertiary: BaseColors.textTertiaryLight,
