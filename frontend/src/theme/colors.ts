@@ -1,5 +1,5 @@
 export const BaseColors = {
-  primary: '#0D47A1',
+  primary: '#0A4CC5',
   primaryDark: '#071C3F',
   primaryLight: '#EEF5FF',
   primaryDarkBackground: '#0A1A33',
@@ -16,7 +16,7 @@ export const BaseColors = {
   backgroundDark: '#0B1220',
   surfaceDark: '#111827',
   textPrimaryLight: '#0F172A',
-  textSecondaryLight: '#475569',
+  textSecondaryLight: '#64748B',
   textTertiaryLight: '#94A3B8',
   textPrimaryDark: '#F8FAFC',
   textSecondaryDark: '#CBD5E1',
