@@ -17,6 +17,8 @@ export const Typography = {
     '2.5xl': 28,
     '3xl': 30,
     '4xl': 36,
+    heading: 32,
+    score: 48,
     display: 40,
   },
 } as const

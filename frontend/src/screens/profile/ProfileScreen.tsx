@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native'
 import { useForm, Controller } from 'react-hook-form'
+import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -10,14 +11,16 @@ import type { Profile } from '@/services/ProfileService'
 
 const profileSchema = z.object({
   fullName: z.string().min(1, 'Name is required').optional().or(z.literal('')),
-  age: z.coerce.number().min(18, 'Min 18').max(100, 'Max 100').optional().or(z.literal(undefined)),
+  age: z.number().min(18, 'Min 18').max(100, 'Max 100').optional(),
   city: z.string().optional().or(z.literal('')),
   occupation: z.string().optional().or(z.literal('')),
-  monthlyIncome: z.coerce.number().min(0, 'Must be >= 0').optional().or(z.literal(undefined)),
-  retirementAge: z.coerce.number().min(40, 'Min 40').max(80, 'Max 80').optional().or(z.literal(undefined)),
+  monthlyIncome: z.number().min(0, 'Must be >= 0').optional(),
+  retirementAge: z.number().min(40, 'Min 40').max(80, 'Max 80').optional(),
 })
 
 type ProfileForm = z.infer<typeof profileSchema>
+
+const resolver = zodResolver(profileSchema) as Resolver<ProfileForm>
 
 export default function ProfileScreen() {
   const { colors } = useTheme()
@@ -32,7 +35,7 @@ export default function ProfileScreen() {
     reset,
     formState: { errors },
   } = useForm<ProfileForm>({
-    resolver: zodResolver(profileSchema),
+    resolver,
     defaultValues: {
       fullName: '',
       age: undefined,

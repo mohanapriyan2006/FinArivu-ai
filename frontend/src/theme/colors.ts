@@ -10,6 +10,7 @@ export const BaseColors = {
   success: '#16A34A',
   successLight: '#DCFCE7',
   successDarkBackground: '#0E2A18',
+  storyCardInner: '#1E5AB8',
   warning: '#F59E0B',
   danger: '#DC2626',
   dangerLight: '#FEE2E2',

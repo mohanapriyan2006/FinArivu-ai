@@ -17,6 +17,7 @@ export const DarkTheme: Theme = {
     warning: BaseColors.warning,
     danger: BaseColors.danger,
     dangerBackground: BaseColors.dangerLight,
+    storyCardInner: BaseColors.storyCardInner,
     textPrimary: BaseColors.textPrimaryDark,
     textSecondary: BaseColors.textSecondaryDark,
     textTertiary: BaseColors.textTertiaryDark,

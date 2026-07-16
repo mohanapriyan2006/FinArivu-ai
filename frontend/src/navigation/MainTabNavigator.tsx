@@ -2,7 +2,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
 import { CustomBottomTabBar } from '@/components/navigation/CustomBottomTabBar'
 import HomeScreen from '@/screens/dashboard/HomeScreen'
-import InsightsScreen from '@/screens/insights/InsightsScreen'
+import InsightsHubScreen from '@/screens/insights/InsightsHubScreen'
 import AICopilotScreen from '@/screens/chatbot/AICopilotScreen'
 import GoalsScreen from '@/screens/goals/GoalsScreen'
 import ProfileScreen from '@/screens/profile/ProfileScreen'
@@ -16,7 +16,7 @@ export default function MainTabNavigator() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Insights" component={InsightsScreen} />
+      <Tab.Screen name="Insights" component={InsightsHubScreen} />
       <Tab.Screen name="AICopilot" component={AICopilotScreen} />
       <Tab.Screen name="Goals" component={GoalsScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
