@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import * as SecureStore from 'expo-secure-store'
 
+import { DISABLE_AUTH, MOCK_BACKEND } from '@/services/mockApi'
+
 const TOKEN_KEY = 'finarivu_access_token'
-const DISABLE_AUTH = process.env.EXPO_PUBLIC_DISABLE_AUTH === 'true'
 
 interface UserProfile {
   id: string
@@ -25,14 +26,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
+const mockUser: UserProfile = {
+  id: 'mock-user',
+  fullName: 'Test User',
+  age: 30,
+  city: 'Mumbai',
+  occupation: 'Engineer',
+  monthlyIncome: 100000,
+  retirementAge: 60,
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(null)
-  const [token, setTokenState] = useState<string | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(DISABLE_AUTH ? mockUser : null)
+  const [token, setTokenState] = useState<string | null>(DISABLE_AUTH ? 'mock-token' : null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function checkAuth() {
-      if (DISABLE_AUTH) {
+      if (DISABLE_AUTH || MOCK_BACKEND) {
+        // In mock mode we start without a token unless auth is fully disabled.
         setLoading(false)
         return
       }
@@ -49,32 +61,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getToken = async (): Promise<string | null> => {
+    if (MOCK_BACKEND) return token
     return SecureStore.getItemAsync(TOKEN_KEY)
   }
 
   const setToken = async (newToken: string): Promise<void> => {
-    if (DISABLE_AUTH) {
-      setTokenState(newToken)
-      return
-    }
-    await SecureStore.setItemAsync(TOKEN_KEY, newToken)
     setTokenState(newToken)
+    if (!MOCK_BACKEND) {
+      await SecureStore.setItemAsync(TOKEN_KEY, newToken)
+    }
   }
 
   const logout = async (): Promise<void> => {
-    if (DISABLE_AUTH) {
-      setUser(null)
-      return
-    }
-    await SecureStore.deleteItemAsync(TOKEN_KEY)
     setTokenState(null)
     setUser(null)
+    if (!MOCK_BACKEND) {
+      await SecureStore.deleteItemAsync(TOKEN_KEY)
+    }
   }
 
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: DISABLE_AUTH ? mockUser : user,
         loading,
         isAuthenticated: DISABLE_AUTH || !!token,
         getToken,
