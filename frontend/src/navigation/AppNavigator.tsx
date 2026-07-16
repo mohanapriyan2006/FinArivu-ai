@@ -7,6 +7,9 @@ import SplashScreen from '@/screens/onboarding/SplashScreen'
 import OnboardingScreen from '@/screens/onboarding/OnboardingScreen'
 import FinancialHealthScreen from '@/screens/financialHealth/FinancialHealthScreen'
 import QuickAddExpenseScreen from '@/screens/expenses/QuickAddExpenseScreen'
+import BudgetAnalysisScreen from '@/screens/insights/BudgetAnalysisScreen'
+import NetWorthScreen from '@/screens/insights/NetWorthScreen'
+import TaxIntelligenceScreen from '@/screens/insights/TaxIntelligenceScreen'
 
 const Stack = createStackNavigator()
 
@@ -25,6 +28,9 @@ export default function AppNavigator() {
         <Stack.Group>
           <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen name="FinancialHealth" component={FinancialHealthScreen} />
+          <Stack.Screen name="BudgetAnalysis" component={BudgetAnalysisScreen} />
+          <Stack.Screen name="NetWorth" component={NetWorthScreen} />
+          <Stack.Screen name="TaxIntelligence" component={TaxIntelligenceScreen} />
           <Stack.Screen
             name="QuickAddExpense"
             component={QuickAddExpenseScreen}

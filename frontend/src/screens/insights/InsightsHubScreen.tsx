@@ -15,6 +15,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated'
 import { Svg, Path, Circle, G } from 'react-native-svg'
+import { useNavigation, type NavigationProp } from '@react-navigation/native'
 import {
   Bell,
   ChevronRight,
@@ -169,6 +170,7 @@ interface MetricCardProps {
   progress: number
   color: string
   iconBackgroundColor: string
+  onPress?: () => void
 }
 
 function MetricCard({
@@ -179,12 +181,13 @@ function MetricCard({
   progress,
   color,
   iconBackgroundColor,
+  onPress,
 }: MetricCardProps) {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
-  return (
-    <View style={styles.metricCard}>
+  const content = (
+    <>
       <View style={styles.metricHeader}>
         <View
           style={[styles.metricIconWrapper, { backgroundColor: iconBackgroundColor }]}
@@ -209,8 +212,18 @@ function MetricCard({
           ]}
         />
       </View>
-    </View>
+    </>
   )
+
+  if (onPress) {
+    return (
+      <Pressable onPress={onPress} style={styles.metricCard}>
+        {content}
+      </Pressable>
+    )
+  }
+
+  return <View style={styles.metricCard}>{content}</View>
 }
 
 interface InsightHeaderProps {
@@ -305,6 +318,7 @@ function FinancialStoryCard() {
 function DeepDiveSection() {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
+  const navigation = useNavigation<NavigationProp<Record<string, object | undefined>>>()
 
   return (
     <View>
@@ -312,7 +326,7 @@ function DeepDiveSection() {
         <Text style={styles.sectionTitle}>Deep-Dive Insights</Text>
         <Pressable
           style={styles.viewAllButton}
-          onPress={() => {}}
+          onPress={() => navigation.navigate('BudgetAnalysis')}
           accessibilityRole="button"
           accessibilityLabel="View all insights"
         >
@@ -329,6 +343,7 @@ function DeepDiveSection() {
           progress={0.92}
           color={colors.success}
           iconBackgroundColor={colors.successBackground}
+          onPress={() => navigation.navigate('BudgetAnalysis')}
         />
         <MetricCard
           icon={TrendingUp}
@@ -338,6 +353,7 @@ function DeepDiveSection() {
           progress={0.78}
           color={colors.primary}
           iconBackgroundColor={colors.primaryBackground}
+          onPress={() => navigation.navigate('NetWorth')}
         />
         <MetricCard
           icon={TrendingUp}
@@ -347,6 +363,7 @@ function DeepDiveSection() {
           progress={0.88}
           color={colors.accent}
           iconBackgroundColor={colors.accentBackground}
+          onPress={() => navigation.navigate('TaxIntelligence')}
         />
       </View>
     </View>

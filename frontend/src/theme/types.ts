@@ -12,6 +12,7 @@ export interface ThemeColors {
   warning: string
   danger: string
   dangerBackground: string
+  dangerTint: string
   storyCardInner: string
   textPrimary: string
   textSecondary: string

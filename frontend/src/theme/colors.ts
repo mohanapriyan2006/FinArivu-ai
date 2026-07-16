@@ -14,6 +14,8 @@ export const BaseColors = {
   warning: '#F59E0B',
   danger: '#DC2626',
   dangerLight: '#FEE2E2',
+  dangerTint: '#FEF2F2',
+  warningLight: '#FEF3C7',
   backgroundLight: '#F8FAFC',
   surfaceLight: '#FFFFFF',
   backgroundDark: '#0B1220',
