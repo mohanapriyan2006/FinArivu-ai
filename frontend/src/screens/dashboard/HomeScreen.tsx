@@ -8,6 +8,8 @@ import {
   useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 import Svg, { Path } from 'react-native-svg'
 import type { LucideIcon } from 'lucide-react-native'
 import {
@@ -25,6 +27,7 @@ import {
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
+import type { RootStackParamList } from '@/types/navigation'
 
 interface Point {
   x: number
@@ -167,6 +170,8 @@ export default function HomeScreen() {
   const cardWidth = width - 48
   const chartWidth = cardWidth - 40
 
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
+
   const Header = () => (
     <View style={styles.header}>
       <View style={styles.headerLeft}>
@@ -225,6 +230,7 @@ export default function HomeScreen() {
       </View>
       <Pressable
         style={styles.heroButton}
+        onPress={() => navigation.navigate('FinancialHealth')}
         accessibilityRole="button"
         accessibilityLabel="View health score details"
       >

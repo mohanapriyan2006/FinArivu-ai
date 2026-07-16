@@ -5,6 +5,8 @@ import AuthNavigator from './AuthNavigator'
 import MainTabNavigator from './MainTabNavigator'
 import SplashScreen from '@/screens/onboarding/SplashScreen'
 import OnboardingScreen from '@/screens/onboarding/OnboardingScreen'
+import FinancialHealthScreen from '@/screens/financialHealth/FinancialHealthScreen'
+import QuickAddExpenseScreen from '@/screens/expenses/QuickAddExpenseScreen'
 
 const Stack = createStackNavigator()
 
@@ -22,6 +24,12 @@ export default function AppNavigator() {
       ) : (
         <Stack.Group>
           <Stack.Screen name="Main" component={MainTabNavigator} />
+          <Stack.Screen name="FinancialHealth" component={FinancialHealthScreen} />
+          <Stack.Screen
+            name="QuickAddExpense"
+            component={QuickAddExpenseScreen}
+            options={{ presentation: 'modal' }}
+          />
         </Stack.Group>
       )}
     </Stack.Navigator>
