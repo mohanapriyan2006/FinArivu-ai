@@ -3,6 +3,7 @@ export interface ThemeColors {
   surface: string
   primary: string
   primaryDark: string
+  heroCard: string
   primaryBackground: string
   accent: string
   accentBackground: string
@@ -10,6 +11,7 @@ export interface ThemeColors {
   successBackground: string
   warning: string
   danger: string
+  dangerBackground: string
   textPrimary: string
   textSecondary: string
   textTertiary: string
