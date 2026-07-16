@@ -12,6 +12,8 @@ export const DarkTheme: Theme = {
     primaryBackground: BaseColors.primaryDarkBackground,
     accent: BaseColors.accent,
     accentBackground: BaseColors.accentDarkBackground,
+    accentDark: BaseColors.accentDark,
+    aiInsightBackground: BaseColors.accentDarkBackground,
     success: BaseColors.success,
     successBackground: BaseColors.successDarkBackground,
     warning: BaseColors.warning,

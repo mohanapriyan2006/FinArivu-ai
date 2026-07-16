@@ -12,6 +12,8 @@ export const LightTheme: Theme = {
     primaryBackground: BaseColors.primaryLight,
     accent: BaseColors.accent,
     accentBackground: BaseColors.accentLight,
+    accentDark: BaseColors.accentDark,
+    aiInsightBackground: BaseColors.aiInsightBackground,
     success: BaseColors.success,
     successBackground: BaseColors.successLight,
     warning: BaseColors.warning,

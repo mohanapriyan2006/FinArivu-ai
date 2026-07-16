@@ -7,6 +7,8 @@ export interface ThemeColors {
   primaryBackground: string
   accent: string
   accentBackground: string
+  accentDark: string
+  aiInsightBackground: string
   success: string
   successBackground: string
   warning: string
