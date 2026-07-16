@@ -10,6 +10,8 @@ import QuickAddExpenseScreen from '@/screens/expenses/QuickAddExpenseScreen'
 import BudgetAnalysisScreen from '@/screens/insights/BudgetAnalysisScreen'
 import NetWorthScreen from '@/screens/insights/NetWorthScreen'
 import TaxIntelligenceScreen from '@/screens/insights/TaxIntelligenceScreen'
+import CreateGoalScreen from '@/screens/goals/CreateGoalScreen'
+import GoalJourneyScreen from '@/screens/goals/GoalJourneyScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import EditProfileScreen from '@/screens/profile/EditProfileScreen'
 
@@ -22,6 +24,8 @@ export type RootStackParamList = {
   BudgetAnalysis: undefined
   NetWorth: undefined
   TaxIntelligence: undefined
+  CreateGoal: undefined
+  GoalJourney: undefined
   Notifications: undefined
   EditProfile: undefined
   QuickAddExpense: undefined
@@ -47,6 +51,8 @@ export default function AppNavigator() {
           <Stack.Screen name="BudgetAnalysis" component={BudgetAnalysisScreen} />
           <Stack.Screen name="NetWorth" component={NetWorthScreen} />
           <Stack.Screen name="TaxIntelligence" component={TaxIntelligenceScreen} />
+          <Stack.Screen name="CreateGoal" component={CreateGoalScreen} />
+          <Stack.Screen name="GoalJourney" component={GoalJourneyScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen
