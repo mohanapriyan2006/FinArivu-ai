@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 os.environ.setdefault("ENVIRONMENT", "test")
 os.environ.setdefault("DEBUG", "false")
 os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
-os.environ.setdefault("SECRET_KEY", "test-secret-key-for-jwt-signing")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-jwt-signing-32bytes")
 os.environ.setdefault("AES_KEY", "test-aes-key-32bytes-long!!!")
 os.environ.setdefault("AES_KEY_SALT", "test-salt-16bytes")
 os.environ.setdefault("LOG_LEVEL", "WARNING")
