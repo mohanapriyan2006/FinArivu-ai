@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.goals import GoalCreate, GoalListResponse, GoalResponse, GoalUpdate
 from app.services.goals import GoalService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/goals", tags=["Goals"])
 
@@ -68,10 +69,7 @@ async def get_goal(
     """Fetch a goal by ID."""
     goal = await service.get(goal_id)
     if goal.user_id != uuid.UUID(user_id):
-        return error_response(
-            message="You can only access your own goals",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only access your own goals")
     request.state.user_id = uuid.UUID(user_id)
     return success_response(
         data=GoalResponse.model_validate(goal).model_dump(),

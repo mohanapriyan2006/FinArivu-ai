@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.assets import AssetCreate, AssetListResponse, AssetResponse, AssetUpdate
 from app.services.assets import AssetService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/assets", tags=["Assets"])
 
@@ -67,10 +68,7 @@ async def get_asset(
     """Fetch an asset by ID."""
     asset = await service.get(asset_id)
     if asset.user_id != uuid.UUID(user_id):
-        return error_response(
-            message="You can only access your own assets",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only access your own assets")
     request.state.user_id = uuid.UUID(user_id)
     return success_response(
         data=AssetResponse.model_validate(asset).model_dump(),

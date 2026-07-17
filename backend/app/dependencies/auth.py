@@ -6,6 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.database import get_db_session
 from app.core.security import verify_clerk_token
 from app.exceptions import AuthenticationError
+from app.services.users import UserService
 
 
 async def get_token_payload(
@@ -19,20 +20,18 @@ async def get_token_payload(
 
 async def get_current_user_id(
     payload: dict = Depends(get_token_payload),
+    session: AsyncSession = Depends(get_db_session),
 ) -> str:
-    """Extract the user identifier (subject) from a verified JWT."""
-    user_id = payload.get("sub")
-    if not user_id:
-        raise AuthenticationError("Invalid token: missing subject claim")
-    return user_id
+    """Resolve the Clerk token to an internal user UUID, creating the user if needed."""
+    service = UserService(session)
+    user = await service.get_or_create_from_clerk(payload)
+    return str(user.id)
 
 
 async def get_current_db_user(
     user_id: str = Depends(get_current_user_id),
     session: AsyncSession = Depends(get_db_session),
 ):
-    """Placeholder: resolve the Clerk user to a local database user.
-
-    This function will be implemented in the users module (Phase 2).
-    """
-    raise NotImplementedError("get_current_db_user is implemented in Phase 2")
+    """Return the local database user for the resolved user_id."""
+    service = UserService(session)
+    return await service.get_from_id(user_id)

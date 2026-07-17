@@ -6,12 +6,14 @@ from app.api.v1 import (
     assets,
     budgets,
     categories,
+    chat,
     expenses,
     financial,
     goals,
     income,
     liabilities,
     profiles,
+    reports,
     users,
 )
 from app.utils.response import success_response
@@ -28,6 +30,8 @@ api_router.include_router(goals.router)
 api_router.include_router(assets.router)
 api_router.include_router(liabilities.router)
 api_router.include_router(financial.router)
+api_router.include_router(reports.router)
+api_router.include_router(chat.router)
 
 
 @api_router.get("/health", tags=["Health"], summary="Service health check")

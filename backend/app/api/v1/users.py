@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id, get_token_payload
+from app.exceptions import AuthorizationError
 from app.schemas.base import MessageResponse
 from app.schemas.users import UserCreate, UserResponse, UserUpdate
 from app.services.users import UserService
@@ -66,10 +67,7 @@ async def get_user(
 ) -> dict:
     """Fetch a user by ID (users can only access themselves for now)."""
     if str(user_id) != current_user_id:
-        return error_response(
-            message="You can only view your own profile",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only view your own profile")
 
     service = UserService(session)
     user = await service.get(user_id)
@@ -90,10 +88,7 @@ async def update_user(
 ) -> dict:
     """Update the authenticated user."""
     if str(user_id) != current_user_id:
-        return error_response(
-            message="You can only update your own profile",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only update your own profile")
 
     user = await service.update(user_id, data)
     request.state.user_id = user.id
@@ -117,10 +112,7 @@ async def delete_user(
 ) -> dict:
     """Soft-delete the authenticated user."""
     if str(user_id) != current_user_id:
-        return error_response(
-            message="You can only delete your own profile",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only delete your own profile")
 
     await service.delete(user_id, soft=True)
     request.state.user_id = user_id

@@ -18,7 +18,6 @@ class Goal(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     goal_name: Mapped[str] = mapped_column(

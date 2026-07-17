@@ -10,9 +10,10 @@ from app.models.base import Base
 from app.seed.categories import seed_expense_categories
 
 
-async def _run_seed(session: AsyncSession) -> None:
+async def _run_seed(session: AsyncSession) -> int:
     count = await seed_expense_categories(session)
     print(f"Seeded {count} expense categories")
+    return count
 
 
 async def main() -> None:

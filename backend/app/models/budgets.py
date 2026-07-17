@@ -16,12 +16,10 @@ class Budget(Base):
 
     user_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     category_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("expense_categories.id", ondelete="CASCADE"),
-        index=True,
         nullable=False,
     )
     monthly_limit: Mapped[float] = mapped_column(
@@ -38,6 +36,7 @@ class Budget(Base):
     category: Mapped["ExpenseCategory"] = relationship(
         "ExpenseCategory",
         back_populates="budgets",
+        lazy="selectin",
     )
 
     __table_args__ = (

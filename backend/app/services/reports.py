@@ -47,9 +47,9 @@ class ReportService:
             "weekly_income": str(weekly_income),
             "weekly_expenses": str(weekly_expenses),
             "weekly_savings": str(savings),
-            "net_worth": net_worth.model_dump(),
-            "budget_analysis": budget_analysis.model_dump(),
-            "goal_projections": goal_projections.model_dump(),
+            "net_worth": net_worth.model_dump(mode="json"),
+            "budget_analysis": budget_analysis.model_dump(mode="json"),
+            "goal_projections": goal_projections.model_dump(mode="json"),
             "insights": self._generate_insights(savings, weekly_expenses, budget_analysis),
         }
 

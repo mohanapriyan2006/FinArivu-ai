@@ -24,6 +24,7 @@ from app.repositories.income import IncomeRepository
 from app.repositories.liabilities import LiabilityRepository
 from app.repositories.profiles import ProfileRepository
 from app.schemas.financial import (
+    BudgetAnalysisCategory,
     BudgetAnalysisResponse,
     DashboardResponse,
     GoalContributionResponse,

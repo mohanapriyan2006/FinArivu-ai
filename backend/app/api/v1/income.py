@@ -8,9 +8,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.income import IncomeCreate, IncomeFilter, IncomeListResponse, IncomeResponse, IncomeUpdate
 from app.services.income import IncomeService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/income", tags=["Income"])
 
@@ -79,10 +80,7 @@ async def get_income(
     """Fetch a single income record by ID."""
     income = await service.get(income_id)
     if income.user_id != uuid.UUID(user_id):
-        return error_response(
-            message="You can only access your own income records",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only access your own income records")
     request.state.user_id = uuid.UUID(user_id)
     return success_response(
         data=IncomeResponse.model_validate(income).model_dump(),

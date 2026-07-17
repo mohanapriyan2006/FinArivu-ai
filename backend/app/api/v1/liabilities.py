@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.liabilities import (
     LiabilityCreate,
     LiabilityListResponse,
@@ -14,7 +15,7 @@ from app.schemas.liabilities import (
     LiabilityUpdate,
 )
 from app.services.liabilities import LiabilityService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/liabilities", tags=["Liabilities"])
 
@@ -72,10 +73,7 @@ async def get_liability(
     """Fetch a liability by ID."""
     liability = await service.get(liability_id)
     if liability.user_id != uuid.UUID(user_id):
-        return error_response(
-            message="You can only access your own liabilities",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only access your own liabilities")
     request.state.user_id = uuid.UUID(user_id)
     return success_response(
         data=LiabilityResponse.model_validate(liability).model_dump(),

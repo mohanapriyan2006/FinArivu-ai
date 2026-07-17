@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.budgets import BudgetCreate, BudgetListResponse, BudgetResponse, BudgetUpdate
 from app.services.budgets import BudgetService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/budgets", tags=["Budgets"])
 
@@ -66,10 +67,7 @@ async def get_budget(
     """Fetch a budget by ID."""
     budget = await service.get(budget_id)
     if budget.user_id != uuid.UUID(user_id):
-        return error_response(
-            message="You can only access your own budgets",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only access your own budgets")
     request.state.user_id = uuid.UUID(user_id)
     return success_response(
         data=BudgetResponse.model_validate(budget).model_dump(),

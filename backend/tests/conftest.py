@@ -5,8 +5,10 @@ import os
 from collections.abc import AsyncGenerator
 from typing import Any
 
+import jwt
 import pytest
 import pytest_asyncio
+import httpx
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
@@ -24,6 +26,8 @@ os.environ.setdefault("RATE_LIMIT_RPM", "1000")
 
 from app.core.database import engine as _engine, get_db_session  # noqa: E402
 from app.models.base import Base  # noqa: E402
+from app.core.config import settings  # noqa: E402
+from app.services.users import UserService  # noqa: E402
 from main import create_application  # noqa: E402
 
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -67,13 +71,18 @@ async def db_session(engine: Any) -> AsyncGenerator[AsyncSession, None]:
         await conn.rollback()
 
 
-@pytest.fixture
-def app(db_session: AsyncSession) -> Any:
+@pytest_asyncio.fixture
+async def app(db_session: AsyncSession) -> Any:
     """Create a FastAPI app with the test database session."""
     application = create_application()
 
     async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-        yield db_session
+        """Yield the test session without committing; fixture handles rollback."""
+        try:
+            yield db_session
+        except Exception:
+            await db_session.rollback()
+            raise
 
     application.dependency_overrides[get_db_session] = override_get_db
     return application
@@ -88,5 +97,33 @@ def client(app: Any) -> TestClient:
 @pytest_asyncio.fixture
 async def async_client(app: Any) -> AsyncGenerator[AsyncClient, None]:
     """Asynchronous test client."""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=httpx.ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         yield ac
+
+
+@pytest.fixture
+def auth_token() -> str:
+    """Return a signed JWT for the test user."""
+    payload = {
+        "sub": "clerk-test-user-001",
+        "email": "test@example.com",
+        "email_verified": True,
+    }
+    return jwt.encode(payload, settings.secret_key_str, algorithm="HS256")
+
+
+@pytest.fixture
+def auth_headers(auth_token: str) -> dict[str, str]:
+    """Return authorization headers for the test user."""
+    return {"Authorization": f"Bearer {auth_token}"}
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession, auth_token: str) -> Any:
+    """Create or return the test user linked to the auth token."""
+    payload = jwt.decode(auth_token, settings.secret_key_str, algorithms=["HS256"])
+    service = UserService(db_session)
+    user = await service.get_or_create_from_clerk(payload)
+    return user

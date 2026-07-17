@@ -7,9 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
+from app.exceptions import AuthorizationError
 from app.schemas.profiles import ProfileResponse, ProfileUpdate
 from app.services.profiles import ProfileService
-from app.utils.response import error_response, success_response
+from app.utils.response import success_response
 
 router = APIRouter(prefix="/profiles", tags=["Profiles"])
 
@@ -59,10 +60,7 @@ async def get_profile(
     """Fetch a profile by ID; only the owner can access it."""
     profile = await service.get(profile_id)
     if str(profile.user_id) != current_user_id:
-        return error_response(
-            message="You can only view your own profile",
-            error_code="AUTHORIZATION_ERROR",
-        )
+        raise AuthorizationError("You can only view your own profile")
     request.state.user_id = uuid.UUID(current_user_id)
     return success_response(
         data=ProfileResponse.model_validate(profile).model_dump(),

@@ -64,3 +64,9 @@ class UserService(BaseService[User]):
         if obj is None:
             raise NotFoundError("User not found")
         return obj
+
+    async def get_from_id(self, id: str | uuid.UUID) -> User:
+        """Fetch a user by a string or UUID identifier."""
+        if isinstance(id, str):
+            id = uuid.UUID(id)
+        return await self.get(id)
