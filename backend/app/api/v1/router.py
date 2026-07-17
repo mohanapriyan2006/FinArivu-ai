@@ -2,7 +2,18 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.v1 import budgets, categories, expenses, income, profiles, users
+from app.api.v1 import (
+    assets,
+    budgets,
+    categories,
+    expenses,
+    financial,
+    goals,
+    income,
+    liabilities,
+    profiles,
+    users,
+)
 from app.utils.response import success_response
 
 api_router = APIRouter(prefix="/v1")
@@ -13,6 +24,10 @@ api_router.include_router(categories.router)
 api_router.include_router(income.router)
 api_router.include_router(expenses.router)
 api_router.include_router(budgets.router)
+api_router.include_router(goals.router)
+api_router.include_router(assets.router)
+api_router.include_router(liabilities.router)
+api_router.include_router(financial.router)
 
 
 @api_router.get("/health", tags=["Health"], summary="Service health check")
