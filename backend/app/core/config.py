@@ -32,12 +32,6 @@ class Settings(BaseSettings):
     aes_key: SecretStr = Field(alias="AES_KEY")
     aes_key_salt: SecretStr = Field(alias="AES_KEY_SALT")
 
-    # Clerk authentication
-    clerk_secret_key: SecretStr | None = Field(default=None, alias="CLERK_SECRET_KEY")
-    clerk_jwks_url: str | None = Field(default=None, alias="CLERK_JWKS_URL")
-    clerk_audience: str | None = Field(default=None, alias="CLERK_AUDIENCE")
-    clerk_issuer: str | None = Field(default=None, alias="CLERK_ISSUER")
-
     # AI chatbot
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")

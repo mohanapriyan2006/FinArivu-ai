@@ -19,15 +19,15 @@ class UserService(BaseService[User]):
         super().__init__(UserRepository(session))
         self._repo: UserRepository
 
-    async def get_or_create_from_clerk(self, payload: dict) -> User:
-        """Sync a Clerk JWT payload to a local user."""
-        clerk_id = payload.get("sub")
+    async def get_or_create_user(self, payload: dict) -> User:
+        """Sync a JWT payload to a local user."""
+        external_id = payload.get("sub")
         email = payload.get("email") or payload.get("email_address")
-        if not clerk_id or not email:
+        if not external_id or not email:
             raise AuthenticationError("Invalid token: missing subject or email")
 
         email = email.lower().strip()
-        existing = await self._repo.get_by_clerk_id(clerk_id)
+        existing = await self._repo.get_by_external_id(external_id)
         if existing:
             existing.last_login_at = datetime.now(UTC)
             await self._repo._session.flush()
@@ -37,7 +37,7 @@ class UserService(BaseService[User]):
             raise ConflictError("Email already registered with another account")
 
         user = User(
-            clerk_id=clerk_id,
+            clerk_id=external_id,
             email=email,
             role="USER",
             email_verified=payload.get("email_verified", False),
@@ -49,8 +49,8 @@ class UserService(BaseService[User]):
         """Create a user with duplicate checks."""
         if await self._repo.get_by_email(str(data.email)):
             raise ConflictError("Email already registered")
-        if await self._repo.get_by_clerk_id(data.clerk_id):
-            raise ConflictError("Clerk ID already registered")
+        if await self._repo.get_by_external_id(data.clerk_id):
+            raise ConflictError("External ID already registered")
 
         user = User(**data.model_dump(exclude_unset=True))
         return await self._repo.create(user)

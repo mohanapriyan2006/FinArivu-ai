@@ -25,16 +25,16 @@ def get_user_service(session: AsyncSession = Depends(get_db_session)) -> UserSer
     "/sync",
     response_model=dict,
     status_code=status.HTTP_200_OK,
-    summary="Sync authenticated Clerk user to local database",
+    summary="Sync authenticated user to local database",
 )
 async def sync_user(
     request: Request,
     payload: dict = Depends(get_token_payload),
     session: AsyncSession = Depends(get_db_session),
 ) -> dict:
-    """Verify the Clerk token and sync/create the user record."""
+    """Verify the JWT and sync/create the user record."""
     service = UserService(session)
-    user = await service.get_or_create_from_clerk(payload)
+    user = await service.get_or_create_user(payload)
     request.state.user_id = user.id
     return success_response(
         data=UserResponse.model_validate(user).model_dump(),

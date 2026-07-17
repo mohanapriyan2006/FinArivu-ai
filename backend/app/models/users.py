@@ -10,7 +10,7 @@ from app.models.base import Base
 
 
 class User(Base):
-    """Application user mapped from a Clerk identity."""
+    """Application user mapped from an external identity provider."""
 
     __tablename__ = "users"
 

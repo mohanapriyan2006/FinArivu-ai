@@ -24,7 +24,7 @@ class UserBase(BaseSchema):
 class UserCreate(UserBase):
     """Create a user manually (e.g., admin onboarding)."""
 
-    clerk_id: str = Field(..., min_length=1, max_length=255)
+    clerk_id: str = Field(..., min_length=1, max_length=255, description="External identity provider identifier")
 
 
 class UserUpdate(BaseSchema):
@@ -51,7 +51,7 @@ class UserListResponse(PaginatedResponse[UserResponse]):
 
 
 class UserLoginResponse(BaseModel):
-    """Response for a successful Clerk authentication sync."""
+    """Response for a successful authentication sync."""
 
     message: str
     user: UserResponse

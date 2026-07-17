@@ -9,7 +9,7 @@ This document describes the high-level architecture of the FinArivu AI FastAPI b
 - **Repository + Service pattern**: Routes delegate to services, which orchestrate repositories.
 - **Async first**: SQLAlchemy 2.0 async ORM with `asyncpg` for PostgreSQL.
 - **Type safety**: Pydantic v2 schemas enforce strict validation.
-- **Security**: Clerk JWT authentication, AES-256-GCM encryption, audit logging, rate limiting.
+- **Security**: JWT authentication, AES-256-GCM encryption, audit logging, rate limiting.
 
 ## Layer Diagram
 
@@ -51,7 +51,7 @@ flowchart TB
 ## Request Flow
 
 1. **Middleware**: security headers, CORS, audit logging and rate limiting.
-2. **Authentication**: `get_current_user_id` validates the Clerk JWT (or HS256 fallback in dev/tests).
+2. **Authentication**: `get_current_user_id` validates the JWT signed with the application secret key.
 3. **Routing**: the request is dispatched to the feature router under `app/api/v1`.
 4. **Service**: the route calls a service method. Services hold business rules and orchestration.
 5. **Engine**: deterministic financial calculations live in `app/engines`.
@@ -81,7 +81,7 @@ flowchart TB
 - **SQLAlchemy 2.0** async with **asyncpg**
 - **Pydantic v2** + **pydantic-settings**
 - **Alembic** for migrations
-- **Clerk** JWT authentication
+- **JWT** authentication
 - **OpenAI / Groq / Gemini** for the AI chatbot (fallback chain)
 - **slowapi** for rate limiting
 - **pytest-asyncio** + **pytest-cov** for testing

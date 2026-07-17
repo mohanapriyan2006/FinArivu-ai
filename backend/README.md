@@ -9,7 +9,7 @@ Production-grade FastAPI backend for FinArivu AI, an AI Personal CFO for Indian 
 - SQLAlchemy 2 Async ORM + Alembic
 - PostgreSQL
 - Pydantic v2
-- Clerk JWT Authentication
+- JWT Authentication
 - OpenAI (chatbot only)
 
 ## Local Setup
@@ -57,7 +57,7 @@ The backend exposes an OpenAPI-compatible REST API. Once the server is running:
 - **OpenAPI JSON**: `http://localhost:8000/openapi.json`
 - **Static OpenAPI spec**: [`docs/openapi.json`](docs/openapi.json)
 
-Authentication endpoints and most user-facing routes require a valid Clerk JWT in the `Authorization: Bearer <token>` header.
+Authentication endpoints and most user-facing routes require a valid JWT in the `Authorization: Bearer <token>` header.
 
 ## Architecture & ER Diagrams
 

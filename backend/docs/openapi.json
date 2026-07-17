@@ -11,8 +11,8 @@
         "tags": [
           "Users"
         ],
-        "summary": "Sync authenticated Clerk user to local database",
-        "description": "Verify the Clerk token and sync/create the user record.",
+        "summary": "Sync authenticated user to local database",
+        "description": "Verify the JWT and sync/create the user record.",
         "operationId": "sync_user_api_v1_users_sync_post",
         "parameters": [
           {

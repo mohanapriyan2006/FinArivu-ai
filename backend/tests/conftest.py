@@ -107,7 +107,7 @@ async def async_client(app: Any) -> AsyncGenerator[AsyncClient, None]:
 def auth_token() -> str:
     """Return a signed JWT for the test user."""
     payload = {
-        "sub": "clerk-test-user-001",
+        "sub": "test-user-001",
         "email": "test@example.com",
         "email_verified": True,
     }
@@ -125,5 +125,5 @@ async def test_user(db_session: AsyncSession, auth_token: str) -> Any:
     """Create or return the test user linked to the auth token."""
     payload = jwt.decode(auth_token, settings.secret_key_str, algorithms=["HS256"])
     service = UserService(db_session)
-    user = await service.get_or_create_from_clerk(payload)
+    user = await service.get_or_create_user(payload)
     return user
