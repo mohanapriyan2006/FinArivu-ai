@@ -7,7 +7,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
+from app.core.ai_providers import get_chat_client
 from app.core.logger import logger
 from app.models.ai_conversations import AIConversation
 from app.repositories.ai_conversations import AIConversationRepository
@@ -50,15 +50,11 @@ class ChatbotService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._repo = AIConversationRepository(session)
-        self._openai_client: Any | None = None
-        if settings.openai_api_key:
-            try:
-                import openai
-                self._openai_client = openai.AsyncOpenAI(
-                    api_key=settings.openai_api_key.get_secret_value(),
-                )
-            except Exception:
-                logger.exception("Failed to initialize OpenAI client")
+        self._ai_client: Any | None = None
+        self._ai_provider: Any | None = None
+        client_pair = get_chat_client()
+        if client_pair:
+            self._ai_client, self._ai_provider = client_pair
 
     async def process_message(
         self,
@@ -138,15 +134,15 @@ class ChatbotService:
         return any(re.search(pattern, lowered) for pattern in patterns)
 
     async def _generate_response(self, user_id: uuid.UUID, session_id: str, message: str) -> str:
-        if self._openai_client:
+        if self._ai_client and self._ai_provider:
             try:
-                return await self._call_openai(user_id, session_id, message)
+                return await self._call_provider(user_id, session_id, message)
             except Exception as exc:
-                logger.warning("OpenAI call failed: %s", exc)
+                logger.warning("AI provider call failed: %s", exc)
 
         return self._default_response(message)
 
-    async def _call_openai(self, user_id: uuid.UUID, session_id: str, message: str) -> str:
+    async def _call_provider(self, user_id: uuid.UUID, session_id: str, message: str) -> str:
         history = await self._repo.get_recent_history(user_id, session_id, limit=6)
         messages = [{"role": "system", "content": SYSTEM_PROMPT}]
         for item in history:
@@ -154,8 +150,8 @@ class ChatbotService:
             messages.append({"role": role, "content": item.message})
         messages.append({"role": "user", "content": message})
 
-        response = await self._openai_client.chat.completions.create(
-            model=settings.openai_model,
+        response = await self._ai_client.chat.completions.create(
+            model=self._ai_provider.model,
             messages=messages,
             temperature=0.3,
             max_tokens=512,

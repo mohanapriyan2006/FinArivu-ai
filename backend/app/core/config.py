@@ -36,6 +36,11 @@ class Settings(BaseSettings):
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")
     openai_model: str = Field(default="gpt-4o-mini", alias="OPENAI_MODEL")
 
+    # AI Providers (Multi-fallback)
+    groq_api_key: SecretStr | None = Field(default=None, alias="GROQ_API_KEY")
+    gemini_api_key: SecretStr | None = Field(default=None, alias="GEMINI_API_KEY")
+    openrouter_api_key: SecretStr | None = Field(default=None, alias="OPENROUTER_API_KEY")
+
     # CORS
     cors_origins: str = Field(default="*", alias="CORS_ORIGINS")
 
