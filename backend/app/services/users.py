@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,7 +29,7 @@ class UserService(BaseService[User]):
         email = email.lower().strip()
         existing = await self._repo.get_by_external_id(external_id)
         if existing:
-            existing.last_login_at = datetime.now(UTC)
+            existing.last_login_at = datetime.now(timezone.utc)
             await self._repo._session.flush()
             return existing
 
@@ -37,11 +37,11 @@ class UserService(BaseService[User]):
             raise ConflictError("Email already registered with another account")
 
         user = User(
-            clerk_id=external_id,
+            external_id=external_id,
             email=email,
             role="USER",
             email_verified=payload.get("email_verified", False),
-            last_login_at=datetime.now(UTC),
+            last_login_at=datetime.now(timezone.utc),
         )
         return await self._repo.create(user)
 
@@ -49,7 +49,7 @@ class UserService(BaseService[User]):
         """Create a user with duplicate checks."""
         if await self._repo.get_by_email(str(data.email)):
             raise ConflictError("Email already registered")
-        if await self._repo.get_by_external_id(data.clerk_id):
+        if await self._repo.get_by_external_id(data.external_id):
             raise ConflictError("External ID already registered")
 
         user = User(**data.model_dump(exclude_unset=True))

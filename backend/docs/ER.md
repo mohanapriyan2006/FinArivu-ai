@@ -23,8 +23,9 @@ erDiagram
 
     USER {
         uuid id PK
-        string clerk_id UK
+        string external_id UK
         string email UK
+        string password_hash
         string role
         boolean is_active
         boolean email_verified

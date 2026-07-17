@@ -26,7 +26,7 @@ class BudgetCreate(BudgetBase):
 class BudgetUpdate(BaseSchema):
     """Update a budget."""
 
-    monthly_limit: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, gt=0)
+    monthly_limit: Decimal | None = Field(default=None, gt=0)
     period: BudgetPeriod | None = None
 
 

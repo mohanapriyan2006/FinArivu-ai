@@ -23,7 +23,8 @@ export const ExpenseService = {
     const response = await api.get('/v1/expenses', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return response.data || []
+    const payload = response.data?.data ?? response.data
+    return Array.isArray(payload) ? payload : []
   },
 
   async create(data: ExpenseInput, token: string | null): Promise<Expense> {

@@ -6,7 +6,7 @@ Production-grade FastAPI backend for FinArivu AI, an AI Personal CFO for Indian 
 
 - Python 3.13+
 - FastAPI
-- SQLAlchemy 2 Async ORM + Alembic
+- SQLAlchemy 2 Async ORM
 - PostgreSQL
 - Pydantic v2
 - JWT Authentication
@@ -24,22 +24,18 @@ pip install -r requirements.txt
 
 4. Copy `.env.example` to `.env` and fill in secrets.
 5. Start PostgreSQL and create the database.
-6. Run migrations:
-
-```bash
-alembic upgrade head
-```
-
-7. Seed master data:
+6. Seed master data:
 
 ```bash
 python -m app.seed.cli
 ```
 
-8. Start the server:
+7. Start the server (migrations run automatically on startup):
 
 ```bash
 uvicorn main:app --reload
+# or
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ## Testing
@@ -80,7 +76,6 @@ backend/
 │   ├── exceptions/      # Custom exceptions and handlers
 │   └── seed/            # Master data seeding
 ├── tests/               # pytest-asyncio test suite
-├── alembic/             # Database migrations
 └── docs/                # Architecture and ER documentation
 ```
 

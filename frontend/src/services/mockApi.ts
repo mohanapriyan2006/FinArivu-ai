@@ -1,10 +1,9 @@
 import type { AxiosRequestConfig } from 'axios'
 
-// When EXPO_PUBLIC_DISABLE_AUTH is present (true or false) the app is in local
-// development/testing mode and should use mocked backend responses.
+// Set EXPO_PUBLIC_DISABLE_AUTH=true (or 1) to skip login and use the mock backend.
 const envValue = process.env.EXPO_PUBLIC_DISABLE_AUTH
-export const DISABLE_AUTH = envValue === 'true'
-export const MOCK_BACKEND = envValue !== undefined && envValue !== ''
+export const DISABLE_AUTH = envValue?.toLowerCase() === 'true' || envValue === '1'
+export const MOCK_BACKEND = DISABLE_AUTH
 
 const now = new Date().toISOString()
 const today = now.split('T')[0]

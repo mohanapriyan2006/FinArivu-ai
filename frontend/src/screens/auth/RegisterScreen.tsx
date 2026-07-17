@@ -3,7 +3,6 @@ import { StyleSheet, Text, View } from 'react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { AuthService } from '@/services/AuthService'
 import {
   AuthScreenWrapper,
   AuthHeader,
@@ -14,9 +13,6 @@ import {
 import { RegisterForm } from '@/components/forms'
 import { Typography } from '@/theme'
 
-// TODO: Clerk integration — import { useSignUp } from '@clerk/clerk-expo'
-// const { signUp } = useSignUp()
-
 interface RegisterScreenProps {
   navigation: {
     navigate: (screen: string) => void
@@ -26,7 +22,7 @@ interface RegisterScreenProps {
 
 export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const { colors } = useTheme()
-  const { setToken } = useAuthContext()
+  const { register } = useAuthContext()
   const [loading, setLoading] = useState(false)
 
   const onCreateAccountPress = async (data: {
@@ -36,13 +32,11 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   }) => {
     setLoading(true)
     try {
-      // TODO: Replace with Clerk signUp.create({ emailAddress: email, password })
-      const result = await AuthService.register({
+      await register({
         email: data.email,
         password: data.password,
+        fullName: data.fullName,
       })
-      await setToken(result.access_token)
-      // TODO: Clerk — await signUp.update({ firstName: data.fullName })
     } catch (err: unknown) {
       console.error(err)
       alert('Account creation failed. Please try again.')

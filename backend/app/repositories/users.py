@@ -18,7 +18,7 @@ class UserRepository(BaseRepository[User]):
     async def get_by_external_id(self, external_id: str) -> User | None:
         """Fetch a user by their external identity provider identifier."""
         query = select(User).where(
-            User.clerk_id == external_id,
+            User.external_id == external_id,
             User.deleted_at.is_(None),
         )
         return (await self._session.execute(query)).scalar_one_or_none()

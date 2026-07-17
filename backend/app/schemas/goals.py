@@ -32,8 +32,8 @@ class GoalUpdate(BaseSchema):
     """Update a financial goal."""
 
     goal_name: str | None = Field(default=None, min_length=1, max_length=255)
-    target_amount: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, gt=0)
-    current_amount: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, ge=0)
+    target_amount: Decimal | None = Field(default=None, gt=0)
+    current_amount: Decimal | None = Field(default=None, ge=0)
     target_date: date | None = None
     priority: GoalPriority | None = None
     status: GoalStatus | None = None

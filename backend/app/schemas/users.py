@@ -24,7 +24,7 @@ class UserBase(BaseSchema):
 class UserCreate(UserBase):
     """Create a user manually (e.g., admin onboarding)."""
 
-    clerk_id: str = Field(..., min_length=1, max_length=255, description="External identity provider identifier")
+    external_id: str = Field(..., min_length=1, max_length=255, description="External identity provider identifier")
 
 
 class UserUpdate(BaseSchema):
@@ -40,7 +40,7 @@ class UserUpdate(BaseSchema):
 class UserResponse(AuditedSchema, UserBase):
     """User response DTO."""
 
-    clerk_id: str
+    external_id: str
     last_login_at: datetime | None
 
 

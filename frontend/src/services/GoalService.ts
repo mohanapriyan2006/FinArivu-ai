@@ -34,7 +34,8 @@ export const GoalService = {
     const response = await api.get('/v1/goals', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return response.data || []
+    const payload = response.data?.data ?? response.data
+    return Array.isArray(payload) ? payload : []
   },
 
   async create(data: GoalInput, token: string | null): Promise<Goal> {

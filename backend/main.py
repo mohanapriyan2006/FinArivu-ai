@@ -8,6 +8,7 @@ from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.logger import logger
+from app.core.migrations import apply_migrations
 from app.exceptions.handlers import add_exception_handlers
 from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import setup_rate_limiting
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI) -> None:
         "Starting FinArivu API",
         extra={"environment": settings.environment},
     )
+    await apply_migrations(engine)
     yield
     await engine.dispose()
     logger.info("FinArivu API shutdown")

@@ -7,14 +7,30 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
+def to_camel(snake: str) -> str:
+    """Convert a snake_case string to camelCase."""
+    parts = snake.split("_")
+    return parts[0] + "".join(word.capitalize() for word in parts[1:])
+
+
 class BaseSchema(BaseModel):
-    """Base Pydantic schema with ORM mapping enabled."""
+    """Base Pydantic schema with ORM mapping and camelCase serialization."""
 
     model_config = ConfigDict(
         from_attributes=True,
         populate_by_name=True,
         str_strip_whitespace=True,
+        alias_generator=to_camel,
+        ser_json_by_alias=True,
     )
+
+    def model_dump(self, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump(**kwargs)
+
+    def model_dump_json(self, **kwargs):
+        kwargs.setdefault("by_alias", True)
+        return super().model_dump_json(**kwargs)
 
 
 class AuditedSchema(BaseSchema):

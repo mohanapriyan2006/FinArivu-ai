@@ -4,6 +4,7 @@ from fastapi import APIRouter
 
 from app.api.v1 import (
     assets,
+    auth,
     budgets,
     categories,
     chat,
@@ -20,6 +21,7 @@ from app.utils.response import success_response
 
 api_router = APIRouter(prefix="/v1")
 
+api_router.include_router(auth.router)
 api_router.include_router(users.router)
 api_router.include_router(profiles.router)
 api_router.include_router(categories.router)

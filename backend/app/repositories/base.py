@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any, Generic, Sequence, TypeVar
 
 from sqlalchemy import asc, desc, func, select, update
@@ -52,7 +52,7 @@ class BaseRepository(Generic[ModelType]):
             return await self.get_by_id(id)
 
         if hasattr(self._model, "updated_at") and "updated_at" not in data:
-            data["updated_at"] = datetime.now(UTC)
+            data["updated_at"] = datetime.now(timezone.utc)
 
         stmt = (
             update(self._model)

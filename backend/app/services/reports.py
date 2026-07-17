@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,7 +25,7 @@ class ReportService:
 
     async def generate_weekly_report(self, user_id: uuid.UUID) -> WeeklyReport:
         """Generate and persist a weekly report for a user."""
-        today = datetime.now(UTC).date()
+        today = datetime.now(timezone.utc).date()
         week_start = today - timedelta(days=today.weekday())
         week_end = week_start + timedelta(days=6)
 
@@ -56,7 +56,7 @@ class ReportService:
         report = WeeklyReport(
             user_id=user_id,
             report_json=report_data,
-            generated_at=datetime.now(UTC),
+            generated_at=datetime.now(timezone.utc),
         )
         return await self._report_repo.create(report)
 

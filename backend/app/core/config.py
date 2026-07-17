@@ -31,6 +31,8 @@ class Settings(BaseSettings):
     secret_key: SecretStr = Field(alias="SECRET_KEY")
     aes_key: SecretStr = Field(alias="AES_KEY")
     aes_key_salt: SecretStr = Field(alias="AES_KEY_SALT")
+    access_token_expire_minutes: int = Field(default=30, alias="ACCESS_TOKEN_EXPIRE_MINUTES")
+    refresh_token_expire_days: int = Field(default=7, alias="REFRESH_TOKEN_EXPIRE_DAYS")
 
     # AI chatbot
     openai_api_key: SecretStr | None = Field(default=None, alias="OPENAI_API_KEY")

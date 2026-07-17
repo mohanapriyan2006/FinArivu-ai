@@ -4,9 +4,8 @@ import asyncio
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import settings
 from app.core.database import engine
-from app.models.base import Base
+from app.core.migrations import apply_migrations
 from app.seed.categories import seed_expense_categories
 
 
@@ -18,8 +17,7 @@ async def _run_seed(session: AsyncSession) -> int:
 
 async def main() -> None:
     """CLI entrypoint to seed master data."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    await apply_migrations(engine)
 
     async with AsyncSession(engine) as session:
         try:

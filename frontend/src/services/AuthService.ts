@@ -8,17 +8,32 @@ export interface LoginRequest {
 export interface RegisterRequest {
   email: string
   password: string
+  fullName?: string
+}
+
+export interface UserSummary {
+  id: string
+  email: string
+  externalId: string
+  fullName?: string
+  role: string
+  isActive: boolean
+  emailVerified: boolean
+  createdAt: string
+  updatedAt: string
+  preferences?: Record<string, unknown> | null
 }
 
 export interface AuthResponse {
-  access_token: string
-  token_type: string
-  user?: {
-    id: string
-    email: string
-    created_at: string
-    updated_at: string
-  }
+  accessToken: string
+  refreshToken: string
+  tokenType: string
+  user: UserSummary
+}
+
+export interface RefreshResponse {
+  accessToken: string
+  tokenType: string
 }
 
 export const AuthService = {
@@ -29,6 +44,24 @@ export const AuthService = {
 
   async register(data: RegisterRequest): Promise<AuthResponse> {
     const response = await api.post('/v1/auth/register', data)
+    return response.data?.data
+  },
+
+  async refresh(refreshToken: string): Promise<RefreshResponse> {
+    const response = await api.post(
+      '/v1/auth/refresh',
+      {},
+      { headers: { Authorization: `Bearer ${refreshToken}` } }
+    )
+    return response.data?.data
+  },
+
+  async logout(): Promise<void> {
+    await api.post('/v1/auth/logout', {})
+  },
+
+  async me(): Promise<UserSummary> {
+    const response = await api.get('/v1/auth/me')
     return response.data?.data
   },
 }

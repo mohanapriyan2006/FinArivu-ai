@@ -1,58 +1,70 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import * as SecureStore from 'expo-secure-store'
 
+import { AuthService, type UserSummary } from '@/services/AuthService'
+import {
+  ACCESS_TOKEN_KEY,
+  REFRESH_TOKEN_KEY,
+} from '@/services/api'
 import { DISABLE_AUTH, MOCK_BACKEND } from '@/services/mockApi'
 
-const TOKEN_KEY = 'finarivu_access_token'
-
-interface UserProfile {
-  id: string
-  fullName: string | null
-  age: number | null
-  city: string | null
-  occupation: string | null
-  monthlyIncome: number | null
-  retirementAge: number | null
-}
-
 interface AuthContextType {
-  user: UserProfile | null
+  user: UserSummary | null
   loading: boolean
   isAuthenticated: boolean
   getToken: () => Promise<string | null>
-  setToken: (token: string) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
+  register: (data: { email: string; password: string; fullName?: string }) => Promise<void>
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const mockUser: UserProfile = {
+function deriveFullName(user: UserSummary): string | undefined {
+  return (
+    (user.preferences?.fullName as string | undefined) ||
+    (user.preferences?.full_name as string | undefined) ||
+    user.fullName
+  )
+}
+
+const mockUser: UserSummary = {
   id: 'mock-user',
+  email: 'user@example.com',
+  externalId: 'mock-user',
   fullName: 'Test User',
-  age: 30,
-  city: 'Mumbai',
-  occupation: 'Engineer',
-  monthlyIncome: 100000,
-  retirementAge: 60,
+  role: 'USER',
+  isActive: true,
+  emailVerified: false,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+  preferences: { fullName: 'Test User' },
+}
+
+async function loadTokens() {
+  const access = await SecureStore.getItemAsync(ACCESS_TOKEN_KEY)
+  const refresh = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
+  return { access, refresh }
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<UserProfile | null>(DISABLE_AUTH ? mockUser : null)
-  const [token, setTokenState] = useState<string | null>(DISABLE_AUTH ? 'mock-token' : null)
+  const [user, setUser] = useState<UserSummary | null>(DISABLE_AUTH ? mockUser : null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function checkAuth() {
       if (DISABLE_AUTH || MOCK_BACKEND) {
-        // In mock mode we start without a token unless auth is fully disabled.
         setLoading(false)
         return
       }
       try {
-        const storedToken = await SecureStore.getItemAsync(TOKEN_KEY)
-        setTokenState(storedToken)
+        const { access } = await loadTokens()
+        if (access) {
+          const me = await AuthService.me()
+          setUser({ ...me, fullName: deriveFullName(me) })
+        }
       } catch {
-        setTokenState(null)
+        setUser(null)
       } finally {
         setLoading(false)
       }
@@ -61,22 +73,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const getToken = async (): Promise<string | null> => {
-    if (MOCK_BACKEND) return token
-    return SecureStore.getItemAsync(TOKEN_KEY)
+    if (MOCK_BACKEND) return 'mock-token'
+    return SecureStore.getItemAsync(ACCESS_TOKEN_KEY)
   }
 
-  const setToken = async (newToken: string): Promise<void> => {
-    setTokenState(newToken)
-    if (!MOCK_BACKEND) {
-      await SecureStore.setItemAsync(TOKEN_KEY, newToken)
-    }
+  const saveSession = async (tokens: {
+    accessToken: string
+    refreshToken: string
+    user: UserSummary
+  }) => {
+    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, tokens.accessToken)
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, tokens.refreshToken)
+    setUser({ ...tokens.user, fullName: deriveFullName(tokens.user) })
   }
 
-  const logout = async (): Promise<void> => {
-    setTokenState(null)
+  const login = async (email: string, password: string) => {
+    const result = await AuthService.login({ email: email.toLowerCase().trim(), password })
+    await saveSession(result)
+  }
+
+  const register = async (data: { email: string; password: string; fullName?: string }) => {
+    const result = await AuthService.register({
+      email: data.email.toLowerCase().trim(),
+      password: data.password,
+      fullName: data.fullName,
+    })
+    await saveSession(result)
+  }
+
+  const logout = async () => {
     setUser(null)
-    if (!MOCK_BACKEND) {
-      await SecureStore.deleteItemAsync(TOKEN_KEY)
+    try {
+      await AuthService.logout()
+    } catch {
+      // ignore network errors on logout
+    } finally {
+      await SecureStore.deleteItemAsync(ACCESS_TOKEN_KEY)
+      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
     }
   }
 
@@ -85,9 +118,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       value={{
         user: DISABLE_AUTH ? mockUser : user,
         loading,
-        isAuthenticated: DISABLE_AUTH || !!token,
+        isAuthenticated: DISABLE_AUTH || !!user,
         getToken,
-        setToken,
+        login,
+        register,
         logout,
       }}
     >

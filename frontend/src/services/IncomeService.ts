@@ -23,7 +23,8 @@ export const IncomeService = {
     const response = await api.get('/v1/income', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return response.data || []
+    const payload = response.data?.data ?? response.data
+    return Array.isArray(payload) ? payload : []
   },
 
   async create(data: IncomeInput, token: string | null): Promise<Income> {

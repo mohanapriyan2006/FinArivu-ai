@@ -17,7 +17,8 @@ export const InsightService = {
     const response = await api.get('/v1/insights', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return response.data || []
+    const payload = response.data?.data ?? response.data
+    return Array.isArray(payload) ? payload : []
   },
 
   async getUnread(token: string | null): Promise<Insight[]> {

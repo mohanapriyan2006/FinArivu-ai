@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import Boolean, CheckConstraint, DateTime, Index, JSON, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -10,11 +10,11 @@ from app.models.base import Base
 
 
 class User(Base):
-    """Application user mapped from an external identity provider."""
+    """Application user with optional local credentials and external identity."""
 
     __tablename__ = "users"
 
-    clerk_id: Mapped[str] = mapped_column(
+    external_id: Mapped[str] = mapped_column(
         String(255),
         unique=True,
         index=True,
@@ -25,6 +25,10 @@ class User(Base):
         unique=True,
         index=True,
         nullable=False,
+    )
+    password_hash: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
     role: Mapped[str] = mapped_column(
         String(50),

@@ -30,7 +30,7 @@ class ExpenseUpdate(BaseSchema):
     """Update an expense record."""
 
     category_id: UUID | None = None
-    amount: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, gt=0)
+    amount: Decimal | None = Field(default=None, gt=0)
     description: str | None = Field(default=None, max_length=1000)
     expense_date: date | None = None
     payment_method: str | None = Field(default=None, max_length=100)

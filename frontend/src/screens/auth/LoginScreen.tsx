@@ -4,7 +4,6 @@ import { Mail, Lock } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { AuthService } from '@/services/AuthService'
 import {
   AuthScreenWrapper,
   AuthHeader,
@@ -15,9 +14,6 @@ import {
 import { AuthInput, PrimaryButton, SocialAuthRow } from '@/components/forms'
 import { Typography } from '@/theme'
 
-// TODO: Clerk integration — import { useSignIn } from '@clerk/clerk-expo'
-// const { signIn, setActive } = useSignIn()
-
 interface LoginScreenProps {
   navigation: {
     navigate: (screen: string) => void
@@ -27,7 +23,7 @@ interface LoginScreenProps {
 
 export default function LoginScreen({ navigation }: LoginScreenProps) {
   const { colors } = useTheme()
-  const { setToken } = useAuthContext()
+  const { login } = useAuthContext()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,10 +32,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
     if (!email || !password) return
     setLoading(true)
     try {
-      // TODO: Replace with Clerk signIn.create({ identifier: email, password })
-      const result = await AuthService.login({ email, password })
-      await setToken(result.access_token)
-      // TODO: Clerk — await setActive({ session: signIn.createdSessionId })
+      await login(email, password)
     } catch (err: unknown) {
       console.error(err)
       alert('Login failed. Please check your credentials and try again.')

@@ -33,7 +33,7 @@ class AssetUpdate(BaseSchema):
 
     asset_type: AssetType | None = None
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    value: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, ge=0)
+    value: Decimal | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, min_length=1, max_length=10)
     as_of_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)

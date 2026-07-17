@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import DateTime, Uuid
@@ -21,12 +21,12 @@ class Base(DeclarativeBase):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(timezone.utc),
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
-        default=lambda: datetime.now(UTC),
+        default=lambda: datetime.now(timezone.utc),
     )
     deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
@@ -46,7 +46,7 @@ class Base(DeclarativeBase):
 
     def soft_delete(self) -> None:
         """Mark the record as deleted without removing it."""
-        self.deleted_at = datetime.now(UTC)
+        self.deleted_at = datetime.now(timezone.utc)
 
     @property
     def is_deleted(self) -> bool:

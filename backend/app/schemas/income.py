@@ -39,7 +39,7 @@ class IncomeCreate(IncomeBase):
 class IncomeUpdate(BaseSchema):
     """Update an income record."""
 
-    amount: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, gt=0)
+    amount: Decimal | None = Field(default=None, gt=0)
     source: str | None = Field(default=None, min_length=1, max_length=255)
     income_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)

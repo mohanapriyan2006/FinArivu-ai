@@ -17,8 +17,8 @@ class LiabilityBase(BaseSchema):
     name: str = Field(..., min_length=1, max_length=255)
     amount: Decimal = Field(..., decimal_places=2, max_digits=15, ge=0)
     currency: str = Field(default="INR", min_length=1, max_length=10)
-    interest_rate: Decimal | None = Field(default=None, decimal_places=2, max_digits=5, ge=0)
-    emi: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, ge=0)
+    interest_rate: Decimal | None = Field(default=None, ge=0)
+    emi: Decimal | None = Field(default=None, ge=0)
     remaining_tenure_months: int | None = Field(default=None, ge=0)
     start_date: date | None = None
     end_date: date | None = None
@@ -36,10 +36,10 @@ class LiabilityUpdate(BaseSchema):
 
     liability_type: LiabilityType | None = None
     name: str | None = Field(default=None, min_length=1, max_length=255)
-    amount: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, ge=0)
+    amount: Decimal | None = Field(default=None, ge=0)
     currency: str | None = Field(default=None, min_length=1, max_length=10)
-    interest_rate: Decimal | None = Field(default=None, decimal_places=2, max_digits=5, ge=0)
-    emi: Decimal | None = Field(default=None, decimal_places=2, max_digits=15, ge=0)
+    interest_rate: Decimal | None = Field(default=None, ge=0)
+    emi: Decimal | None = Field(default=None, ge=0)
     remaining_tenure_months: int | None = Field(default=None, ge=0)
     start_date: date | None = None
     end_date: date | None = None

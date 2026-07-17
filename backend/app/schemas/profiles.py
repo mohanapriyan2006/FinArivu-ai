@@ -18,12 +18,7 @@ class ProfileBase(BaseSchema):
     city: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
     pan: str | None = Field(default=None, max_length=50)
-    monthly_income: Decimal | None = Field(
-        default=None,
-        decimal_places=2,
-        max_digits=15,
-        ge=0,
-    )
+    monthly_income: Decimal | None = Field(default=None, ge=0)
     retirement_age: int | None = Field(default=None, ge=18, le=100)
     risk_profile: str | None = Field(default=None, max_length=50)
     investment_experience: str | None = Field(default=None, max_length=50)
