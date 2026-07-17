@@ -1,99 +1,62 @@
-"""FinArivu AI FastAPI application entry point."""
+from __future__ import annotations
 
-from fastapi import FastAPI, HTTPException, Request, status
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
+from contextlib import asynccontextmanager
 
-from api.v1.router import api_router
-from core.config import settings
-from core.logging import logger
-from core.security import setup_security_middleware
-from utils.exceptions import FinArivuException
-from utils.response import error_response
+from fastapi import FastAPI
+
+from app.api.v1.router import api_router
+from app.core.config import settings
+from app.core.database import engine
+from app.core.logger import logger
+from app.exceptions.handlers import add_exception_handlers
+from app.middleware.audit import AuditMiddleware
+from app.middleware.rate_limit import setup_rate_limiting
+from app.middleware.security import SecurityHeadersMiddleware, setup_cors
+from app.utils.response import success_response
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> None:
+    """Manage application startup and shutdown lifecycle."""
+    logger.info(
+        "Starting FinArivu API",
+        extra={"environment": settings.environment},
+    )
+    yield
+    await engine.dispose()
+    logger.info("FinArivu API shutdown")
 
 
 def create_application() -> FastAPI:
-    """Application factory for FinArivu API."""
+    """Application factory for the FinArivu API."""
     app = FastAPI(
         title="FinArivu AI API",
         description="AI Personal CFO for Indian Salaried Professionals",
         version="1.0.0",
         docs_url="/docs" if not settings.is_production else None,
         redoc_url="/redoc" if not settings.is_production else None,
+        lifespan=lifespan,
     )
 
-    # Security middleware
-    setup_security_middleware(app)
+    # Middleware stack (order matters: CORS innermost, audit outermost)
+    setup_cors(app)
+    setup_rate_limiting(app)
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuditMiddleware)
 
-    # Include API routers
+    # Routes
     app.include_router(api_router, prefix="/api")
 
+    @app.get("/health", tags=["Health"], summary="Root health check")
+    async def root_health() -> dict:
+        """Root health endpoint for load balancers."""
+        return success_response(
+            data={"status": "ok"},
+            message="Service is healthy",
+        )
+
     # Global exception handlers
-    @app.exception_handler(FinArivuException)
-    async def finarivu_exception_handler(
-        request: Request,
-        exc: FinArivuException,
-    ):
-        logger.error(
-            "Application exception",
-            extra={
-                "error_code": exc.error_code,
-                "path": request.url.path,
-                "detail": exc.detail,
-            },
-        )
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=error_response(
-                message=str(exc.detail),
-                error_code=exc.error_code,
-            ),
-        )
-
-    @app.exception_handler(RequestValidationError)
-    async def validation_exception_handler(request: Request, exc: RequestValidationError):
-        errors = exc.errors()
-        message = errors[0]["msg"] if errors else "Validation error"
-        logger.warning(
-            "Validation error",
-            extra={"path": request.url.path, "errors": str(errors)},
-        )
-        return JSONResponse(
-            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-            content=error_response(
-                message=message,
-                error_code="VAL_001",
-            ),
-        )
-
-    @app.exception_handler(HTTPException)
-    async def http_exception_handler(request: Request, exc: HTTPException):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=error_response(
-                message=exc.detail,
-                error_code=f"HTTP_{exc.status_code}",
-            ),
-        )
-
-    @app.exception_handler(Exception)
-    async def generic_exception_handler(request: Request, exc: Exception):
-        logger.error(
-            "Unhandled exception",
-            extra={"path": request.url.path, "error": str(exc)},
-        )
-        return JSONResponse(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            content=error_response(
-                message="Internal server error",
-                error_code="GEN_001",
-            ),
-        )
-
-    @app.get("/health", tags=["Health"])
-    async def health_check():
-        """Health check endpoint."""
-        return {"status": "healthy"}
+    add_exception_handlers(app)
 
     return app
 

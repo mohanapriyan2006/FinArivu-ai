@@ -1,91 +1,92 @@
-"""Pytest configuration and shared fixtures."""
+from __future__ import annotations
 
 import asyncio
-import sys
-from pathlib import Path
-from typing import AsyncGenerator
+import os
+from collections.abc import AsyncGenerator
+from typing import Any
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
-from sqlalchemy.pool import StaticPool
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-# Add backend to path (resolve from this file's location)
-BACKEND_DIR = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(BACKEND_DIR))
+# Set required environment variables before any application modules are imported.
+os.environ.setdefault("ENVIRONMENT", "test")
+os.environ.setdefault("DEBUG", "false")
+os.environ.setdefault("DATABASE_URL", "sqlite+aiosqlite:///:memory:")
+os.environ.setdefault("SECRET_KEY", "test-secret-key-for-jwt-signing")
+os.environ.setdefault("AES_KEY", "test-aes-key-32bytes-long!!!")
+os.environ.setdefault("AES_KEY_SALT", "test-salt-16bytes")
+os.environ.setdefault("LOG_LEVEL", "WARNING")
+os.environ.setdefault("CORS_ORIGINS", "*")
+os.environ.setdefault("RATE_LIMIT_RPM", "1000")
 
-from main import app
-from core.database import Base, get_db
+from app.core.database import engine as _engine, get_db_session  # noqa: E402
+from app.models.base import Base  # noqa: E402
+from main import create_application  # noqa: E402
 
-# Use file-based SQLite for tests
-import tempfile
-import os
-
-TEST_DB_PATH = os.path.join(tempfile.gettempdir(), "finarivu_test.db")
-TEST_DATABASE_URL = f"sqlite+aiosqlite:///{TEST_DB_PATH}"
-
-
-test_engine = create_async_engine(TEST_DATABASE_URL, echo=False)
-TestSessionLocal = async_sessionmaker(
-    bind=test_engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-    autoflush=False,
-    autocommit=False,
-)
+TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
 
 
-async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
-    """Override the DB dependency for tests."""
-    async with TestSessionLocal() as session:
-        yield session
-
-
-app.dependency_overrides[get_db] = override_get_db
+@pytest.fixture(scope="session")
+def event_loop() -> Any:
+    """Provide a session-scoped event loop."""
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
 
 
 @pytest_asyncio.fixture(scope="session")
-async def setup_database():
-    """Create and drop test database tables."""
-    if os.path.exists(TEST_DB_PATH):
-        os.remove(TEST_DB_PATH)
-    async with test_engine.begin() as conn:
+async def engine() -> Any:
+    """Create an in-memory SQLite engine and initialize the schema."""
+    eng = create_async_engine(TEST_DATABASE_URL, echo=False, future=True)
+    async with eng.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-
-    # Seed default expense categories for tests
-    import uuid
-    from models.expense_category import ExpenseCategory
-
-    async with TestSessionLocal() as session:
-        category_names = [
-            "Food", "Rent", "Travel", "Utilities", "Healthcare",
-            "Shopping", "Insurance", "Entertainment", "Education", "Other",
-        ]
-        for name in category_names:
-            session.add(ExpenseCategory(id=uuid.uuid4(), name=name))
-        await session.commit()
-
-    yield
-    async with test_engine.begin() as conn:
-        await conn.run_sync(Base.metadata.drop_all)
-    await test_engine.dispose()
-    if os.path.exists(TEST_DB_PATH):
-        os.remove(TEST_DB_PATH)
+    yield eng
+    await eng.dispose()
 
 
 @pytest_asyncio.fixture
-async def db_session(setup_database) -> AsyncGenerator[AsyncSession, None]:
-    """Provide a database session for each test."""
-    async with TestSessionLocal() as session:
+async def db_session(engine: Any) -> AsyncGenerator[AsyncSession, None]:
+    """Yield a database session rolled back after each test."""
+    async with engine.connect() as conn:
+        await conn.begin()
+        TestingSessionLocal = async_sessionmaker(
+            conn,
+            class_=AsyncSession,
+            expire_on_commit=False,
+            autoflush=False,
+            autocommit=False,
+            join_transaction_mode="create_savepoint",
+        )
+        session = TestingSessionLocal()
         yield session
-        # Rollback after each test to keep DB clean
         await session.rollback()
+        await session.close()
+        await conn.rollback()
+
+
+@pytest.fixture
+def app(db_session: AsyncSession) -> Any:
+    """Create a FastAPI app with the test database session."""
+    application = create_application()
+
+    async def override_get_db() -> AsyncGenerator[AsyncSession, None]:
+        yield db_session
+
+    application.dependency_overrides[get_db_session] = override_get_db
+    return application
+
+
+@pytest.fixture
+def client(app: Any) -> TestClient:
+    """Synchronous test client."""
+    return TestClient(app)
 
 
 @pytest_asyncio.fixture
-async def async_client(setup_database) -> AsyncGenerator[AsyncClient, None]:
-    """Provide an async HTTP client."""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        yield client
+async def async_client(app: Any) -> AsyncGenerator[AsyncClient, None]:
+    """Asynchronous test client."""
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        yield ac
