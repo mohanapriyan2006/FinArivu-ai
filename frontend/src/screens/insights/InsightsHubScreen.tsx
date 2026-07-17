@@ -16,6 +16,7 @@ import Animated, {
 } from 'react-native-reanimated'
 import { Svg, Path, Circle, G } from 'react-native-svg'
 import { useNavigation, type NavigationProp } from '@react-navigation/native'
+import type { RootStackParamList } from '@/types/navigation'
 import {
   Bell,
   ChevronRight,
@@ -373,9 +374,15 @@ function DeepDiveSection() {
 function AIFutureForecastCard() {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>()
 
   return (
-    <View style={styles.forecastCard}>
+    <Pressable
+      style={styles.forecastCard}
+      onPress={() => navigation.navigate('WeeklyReport')}
+      accessibilityRole="button"
+      accessibilityLabel="Open weekly report story"
+    >
       <View style={styles.forecastIconWrapper}>
         <Sparkles size={22} color={colors.accent} strokeWidth={2.5} />
       </View>
@@ -385,15 +392,10 @@ function AIFutureForecastCard() {
         <Text style={styles.forecastHighlight}>4 months earlier</Text> than
         previously estimated.
       </Text>
-      <Pressable
-        style={styles.forecastButton}
-        onPress={() => {}}
-        accessibilityRole="button"
-        accessibilityLabel="Apply adjustments"
-      >
+      <View style={styles.forecastButton}>
         <Text style={styles.forecastButtonText}>Apply Adjustments</Text>
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   )
 }
 
@@ -441,6 +443,7 @@ function AnimatedBar({
 function WealthAccumulationChart() {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
+  const navigation = useNavigation<NavigationProp<RootStackParamList>>()
   const [layoutWidth, setLayoutWidth] = useState(0)
   const screenWidth = useMemo(
     () => Dimensions.get('window').width - 40,
@@ -480,7 +483,12 @@ function WealthAccumulationChart() {
 
   return (
     <View style={styles.chartCard}>
-      <View style={styles.chartHeader}>
+      <Pressable
+        style={styles.chartHeader}
+        onPress={() => navigation.navigate('WealthSimulator')}
+        accessibilityRole="button"
+        accessibilityLabel="Open wealth simulator"
+      >
         <Text style={styles.chartTitle}>Wealth Accumulation Strategy</Text>
         <View style={styles.legendRow}>
           <View style={styles.legendItem}>
@@ -492,7 +500,7 @@ function WealthAccumulationChart() {
             <Text style={styles.legendLabel}>AI Optimized</Text>
           </View>
         </View>
-      </View>
+      </Pressable>
       <View
         style={styles.chartContainer}
         onLayout={(event) => setLayoutWidth(event.nativeEvent.layout.width)}

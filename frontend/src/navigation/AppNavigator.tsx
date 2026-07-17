@@ -14,6 +14,8 @@ import CreateGoalScreen from '@/screens/goals/CreateGoalScreen'
 import GoalJourneyScreen from '@/screens/goals/GoalJourneyScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import EditProfileScreen from '@/screens/profile/EditProfileScreen'
+import WealthSimulatorScreen from '@/screens/wealth/WealthSimulatorScreen'
+import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 
 export type RootStackParamList = {
   Splash: undefined
@@ -29,6 +31,8 @@ export type RootStackParamList = {
   Notifications: undefined
   EditProfile: undefined
   QuickAddExpense: undefined
+  WealthSimulator: undefined
+  WeeklyReport: undefined
 }
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -60,6 +64,8 @@ export default function AppNavigator() {
             component={QuickAddExpenseScreen}
             options={{ presentation: 'modal' }}
           />
+          <Stack.Screen name="WealthSimulator" component={WealthSimulatorScreen} />
+          <Stack.Screen name="WeeklyReport" component={WeeklyReportStoryScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>
