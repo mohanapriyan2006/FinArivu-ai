@@ -42,30 +42,32 @@ export function TabBarItem({
           flex: 1,
           alignItems: 'center',
           justifyContent: 'center',
-          paddingHorizontal: 4,
+          paddingHorizontal: 2,
           minHeight: 44,
         },
         pill: {
           flexDirection: 'row',
           alignItems: 'center',
           justifyContent: 'center',
-          paddingHorizontal: 14,
+          paddingHorizontal: 8,
           paddingVertical: 8,
           borderRadius: 16,
           backgroundColor: colors.primary,
-          gap: 6,
+          gap: 4,
         },
         standardContent: {
           alignItems: 'center',
           justifyContent: 'center',
-          paddingHorizontal: 14,
+          paddingHorizontal: 4,
           paddingVertical: 8,
         },
         label: {
           fontFamily: Typography.fontFamily,
-          fontSize: 12,
+          fontSize: 11,
           fontWeight: Typography.fontWeights.medium,
           marginTop: 2,
+          textAlign: 'center',
+          width: '100%',
         },
       }),
     [colors.primary]
@@ -94,12 +96,12 @@ export function TabBarItem({
       {isActive ? (
         <MotiView layout={LinearTransition.springify().damping(14)} style={styles.pill}>
           <Icon size={20} color={activeColor} strokeWidth={2} />
-          <Text style={[styles.label, { color: activeColor }]}>{label}</Text>
+          <Text style={[styles.label, { color: activeColor }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         </MotiView>
       ) : (
         <View style={styles.standardContent}>
           <Icon size={22} color={inactiveColor} strokeWidth={2} />
-          <Text style={[styles.label, { color: inactiveColor }]}>{label}</Text>
+          <Text style={[styles.label, { color: inactiveColor }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
         </View>
       )}
     </Pressable>

@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import {
+  ActivityIndicator,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -15,6 +16,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated'
 import { ArrowUp, Bot, Mic, Plus, Search } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { sendChatMessage } from '@/services/ChatService'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 
@@ -115,10 +117,11 @@ function ActionChip({ styles }: { styles: ReturnType<typeof makeStyles> }) {
 }
 
 function AIRichMessage({ text, styles }: { text: string; styles: ReturnType<typeof makeStyles> }) {
+  const cleanText = text.replace(/\*\*/g, '')
   return (
     <View style={styles.aiMessageWrapper}>
       <View style={styles.aiBubbleContainer}>
-        <Text style={styles.aiBubbleText}>{text}</Text>
+        <Text style={styles.aiBubbleText}>{cleanText}</Text>
         <MetricCards styles={styles} />
         <BarChart styles={styles} />
       </View>
@@ -128,10 +131,12 @@ function AIRichMessage({ text, styles }: { text: string; styles: ReturnType<type
 }
 
 function AIPlainMessage({ text, styles }: { text: string; styles: ReturnType<typeof makeStyles> }) {
+  // Avoid showing raw ** bold markers if the model emits markdown.
+  const cleanText = text.replace(/\*\*/g, '')
   return (
     <View style={styles.aiMessageWrapper}>
       <View style={styles.aiBubbleContainer}>
-        <Text style={styles.aiBubbleText}>{text}</Text>
+        <Text style={styles.aiBubbleText}>{cleanText}</Text>
       </View>
     </View>
   )
@@ -162,12 +167,13 @@ function ChatMessage({ message, styles }: { message: Message; styles: ReturnType
 interface ChatInputProps {
   value: string
   onChangeText: (text: string) => void
-  onSend: () => void
+  onSend: () => void | Promise<void>
+  isLoading: boolean
   colors: ThemeColors
   styles: ReturnType<typeof makeStyles>
 }
 
-function ChatInput({ value, onChangeText, onSend, colors, styles }: ChatInputProps) {
+function ChatInput({ value, onChangeText, onSend, isLoading, colors, styles }: ChatInputProps) {
   return (
     <View style={styles.inputOuterContainer}>
       <View style={styles.inputCapsule}>
@@ -189,12 +195,17 @@ function ChatInput({ value, onChangeText, onSend, colors, styles }: ChatInputPro
           <Mic size={22} color={colors.textSecondary} strokeWidth={2} />
         </Pressable>
         <Pressable
-          style={styles.sendButton}
+          style={[styles.sendButton, isLoading && { opacity: 0.7 }]}
           onPress={onSend}
+          disabled={isLoading}
           accessibilityRole="button"
           accessibilityLabel="Send message"
         >
-          <ArrowUp size={20} color={colors.surface} strokeWidth={2.5} />
+          {isLoading ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <ArrowUp size={20} color={colors.surface} strokeWidth={2.5} />
+          )}
         </Pressable>
       </View>
     </View>
@@ -208,30 +219,41 @@ export default function AIChatScreen() {
   const styles = useMemo(() => makeStyles(colors, insets, tabBarHeight), [colors, insets, tabBarHeight])
   const [messages, setMessages] = useState<Message[]>(INITIAL_MESSAGES)
   const [inputText, setInputText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [sessionId] = useState(
+    () => `chat-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`
+  )
   const listRef = useRef<FlatList<Message>>(null)
 
   const scrollToEnd = useCallback(() => {
     listRef.current?.scrollToEnd({ animated: true })
   }, [])
 
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = inputText.trim()
-    if (!trimmed) return
+    if (!trimmed || isLoading) return
 
     const userMessage: Message = { id: Date.now().toString(), type: 'user', text: trimmed }
     setMessages((prev) => [...prev, userMessage])
     setInputText('')
+    setIsLoading(true)
+    setError(null)
 
-    // Mock CFO reply to demonstrate the generic ChatMessage wrapper and animation.
-    setTimeout(() => {
+    try {
+      const reply = await sendChatMessage(sessionId, trimmed)
       const aiReply: Message = {
         id: (Date.now() + 1).toString(),
         type: 'ai',
-        text: "I've reviewed your vacation goal. Cutting back on dining out and subscriptions could free up ₹8,500/month.",
+        text: reply.message,
       }
       setMessages((prev) => [...prev, aiReply])
-    }, 800)
-  }, [inputText])
+    } catch (err) {
+      setError('Unable to reach FinArivu AI. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }, [inputText, isLoading, sessionId])
 
   const renderItem: ListRenderItem<Message> = useCallback(
     ({ item }) => <ChatMessage message={item} styles={styles} />,
@@ -261,10 +283,16 @@ export default function AIChatScreen() {
           onContentSizeChange={scrollToEnd}
           onLayout={scrollToEnd}
         />
+        {error && (
+          <View style={styles.errorContainer}>
+            <Text style={styles.errorText}>{error}</Text>
+          </View>
+        )}
         <ChatInput
           value={inputText}
           onChangeText={setInputText}
           onSend={handleSend}
+          isLoading={isLoading}
           colors={colors}
           styles={styles}
         />
@@ -300,8 +328,9 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets, tabBarHeight: numbe
     headerContainer: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
+      paddingHorizontal: 20,
+      paddingTop: 16,
+      paddingBottom: 12,
       backgroundColor: colors.surface,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
@@ -316,6 +345,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets, tabBarHeight: numbe
     },
     headerTitleGroup: {
       flex: 1,
+      justifyContent: 'center',
       marginHorizontal: 12,
     },
     headerTitle: {
@@ -465,6 +495,18 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets, tabBarHeight: numbe
       lineHeight: 22,
     },
 
+    errorContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+    },
+    errorText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.medium,
+      color: colors.danger,
+      textAlign: 'center',
+    },
+
     // Chat Input
     inputOuterContainer: {
       paddingHorizontal: 16,
@@ -478,7 +520,8 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets, tabBarHeight: numbe
       backgroundColor: colors.surface,
       borderRadius: 999,
       paddingHorizontal: 12,
-      paddingVertical: 6,
+      paddingVertical: 8,
+      minHeight: 52,
       shadowColor: colors.shadowColor,
       shadowOffset: { width: 0, height: 8 },
       shadowOpacity: 0.1,
@@ -499,6 +542,7 @@ function makeStyles(colors: ThemeColors, insets: EdgeInsets, tabBarHeight: numbe
       color: colors.textPrimary,
       marginHorizontal: 4,
       paddingVertical: 0,
+      textAlignVertical: 'center',
       maxHeight: 100,
     },
     sendButton: {

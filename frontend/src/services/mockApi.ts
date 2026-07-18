@@ -257,6 +257,17 @@ export function getMockResponse(config: AxiosRequestConfig) {
     return { data: profile }
   }
 
+  if (url === '/v1/chat' && method === 'post') {
+    const userMessage = payload?.message || ''
+    return {
+      data: {
+        message: `This is a mock CFO reply. You asked: "${userMessage}". Try disabling MOCK_BACKEND to use the real AI backend.`,
+        guardrail_triggered: false,
+        disclaimer: '',
+      },
+    }
+  }
+
   // Generic fallback for create/update endpoints.
   if (method === 'post' || method === 'put') {
     return { data: { id: generateId(), ...payload, createdAt: now, updatedAt: now } }

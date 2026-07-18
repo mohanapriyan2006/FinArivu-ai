@@ -33,40 +33,32 @@ class ProviderConfig:
 GROQ = ProviderConfig(
     name="groq",
     base_url="https://api.groq.com/openai/v1",
-    default_model="llama-3.1-70b-versatile",
+    default_model="llama-3.3-70b-versatile",
     api_key_attr="groq_api_key",
 )
 
 GEMINI = ProviderConfig(
     name="gemini",
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    default_model="gemini-1.5-flash",
+    default_model="gemini-2.5-flash",
     api_key_attr="gemini_api_key",
 )
 
 OPENROUTER = ProviderConfig(
     name="openrouter",
     base_url="https://openrouter.ai/api/v1",
-    default_model="openai/gpt-4o-mini",
+    default_model="tencent/hy3:free",
     api_key_attr="openrouter_api_key",
-)
-
-OPENAI = ProviderConfig(
-    name="openai",
-    base_url="https://api.openai.com/v1",
-    default_model=settings.openai_model,
-    api_key_attr="openai_api_key",
 )
 
 # Priority order for the fallback chain.
 PROVIDERS: dict[str, ProviderConfig] = {
-    "openai": OPENAI,
     "groq": GROQ,
     "gemini": GEMINI,
     "openrouter": OPENROUTER,
 }
 
-FALLBACK_ORDER: tuple[str, ...] = ("openai", "groq", "gemini", "openrouter")
+FALLBACK_ORDER: tuple[str, ...] = ("groq", "gemini", "openrouter")
 
 
 def configured_providers() -> list[ProviderConfig]:
@@ -83,9 +75,28 @@ def get_chat_client() -> tuple[Any, ProviderConfig] | None:
             client = openai.AsyncOpenAI(
                 api_key=provider.api_key,
                 base_url=provider.base_url,
+                timeout=30.0,
             )
             return client, provider
         except Exception:
             logger.exception("Failed to initialize %s client", provider.name)
 
     return None
+
+
+def get_all_chat_clients() -> list[tuple[Any, ProviderConfig]]:
+    """Return OpenAI-compatible async clients for every configured provider."""
+    import openai
+
+    clients: list[tuple[Any, ProviderConfig]] = []
+    for provider in configured_providers():
+        try:
+            client = openai.AsyncOpenAI(
+                api_key=provider.api_key,
+                base_url=provider.base_url,
+                timeout=30.0,
+            )
+            clients.append((client, provider))
+        except Exception:
+            logger.exception("Failed to initialize %s client", provider.name)
+    return clients
