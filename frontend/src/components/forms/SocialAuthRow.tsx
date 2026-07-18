@@ -37,9 +37,6 @@ export function SocialAuthRow({ onSocialPress, testID }: SocialAuthRowProps) {
         <View style={styles.socialButton}>
           <SocialButton provider="google" onPress={() => onSocialPress('google')} />
         </View>
-        <View style={styles.socialButton}>
-          <SocialButton provider="apple" onPress={() => onSocialPress('apple')} />
-        </View>
       </View>
     </View>
   )

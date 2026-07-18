@@ -75,7 +75,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           alignSelf: 'flex-end',
           marginTop: 4,
           marginBottom: 4,
-          minHeight: 44,
           justifyContent: 'center',
           paddingHorizontal: 8,
         },
@@ -116,14 +115,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             onChangeText={setEmail}
             testID="login-email-input"
           />
-          <Pressable
-            style={styles.forgotPasswordRow}
-            onPress={() => console.log('Forgot password — Clerk placeholder')}
-            accessibilityRole="button"
-            accessibilityLabel="Forgot password"
-          >
-            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-          </Pressable>
+          
           <AuthInput
             leadingIcon={Lock}
             placeholder="••••••••"
@@ -133,6 +125,15 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             testID="login-password-input"
           />
         </View>
+
+        <Pressable
+            style={styles.forgotPasswordRow}
+            onPress={() => console.log('Forgot password — Clerk placeholder')}
+            accessibilityRole="button"
+            accessibilityLabel="Forgot password"
+          >
+            <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
+          </Pressable>
 
         <View style={styles.primaryButtonSpacing}>
           <PrimaryButton

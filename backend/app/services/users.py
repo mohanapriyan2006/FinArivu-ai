@@ -52,12 +52,12 @@ class UserService(BaseService[User]):
         if await self._repo.get_by_external_id(data.external_id):
             raise ConflictError("External ID already registered")
 
-        user = User(**data.model_dump(exclude_unset=True))
+        user = User(**data.model_dump(exclude_unset=True, by_alias=False))
         return await self._repo.create(user)
 
     async def update(self, id: uuid.UUID, data: UserUpdate) -> User:
         """Update an existing user."""
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         if "email" in update_dict:
             update_dict["email"] = update_dict["email"].lower().strip()
         obj = await self._repo.update(id, update_dict)
