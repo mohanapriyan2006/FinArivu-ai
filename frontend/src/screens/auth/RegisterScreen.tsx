@@ -89,9 +89,9 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
           financial planning tailored to your goals.
         </Text>
 
-        <View style={styles.trustBadges}>
+        {/* <View style={styles.trustBadges}>
           <RegisterTrustBadges />
-        </View>
+        </View> */}
 
         <RegisterForm loading={loading} onSubmit={onCreateAccountPress} />
 
