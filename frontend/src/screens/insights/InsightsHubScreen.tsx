@@ -281,7 +281,7 @@ export default function InsightsHubScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Section */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Cognitive Finance</Text>
+          <Text style={styles.headerTitle}>Insights</Text>
         </View>
 
         <ScrollView
@@ -441,7 +441,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   scrollContent: {
-    paddingTop: 16, // Spacing scale
+    // paddingTop: 4, // Spacing scale
   },
   // Vitality Gauge styling
   heroSection: {

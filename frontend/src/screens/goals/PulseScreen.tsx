@@ -436,13 +436,9 @@ export default function PulseScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* 1. Header Section */}
       <View style={styles.header}>
-        <View style={styles.avatarContainer}>
-          <Bot size={20} color={colors.primary} strokeWidth={2.5} />
-        </View>
-        <Text style={styles.headerTitle}>Cognitive Finance</Text>
-        <Pressable style={styles.settingsButton} accessibilityRole="button">
-          <Settings size={20} color={colors.textTertiary} strokeWidth={2} />
-        </Pressable>
+        
+        <Text style={styles.headerTitle}>Pulse</Text>
+        
       </View>
 
       <ScrollView
@@ -494,7 +490,7 @@ function makeStyles(colors: any) {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'space-between',
+      justifyContent: 'center',
       paddingHorizontal: 20,
       paddingVertical: 14,
       borderBottomWidth: 1,

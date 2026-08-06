@@ -78,8 +78,14 @@ export function TabBarItem({
 
   if (variant === 'fab') {
     return (
-      <AIFABWrapper onPress={onPress} accessibilityLabel={accessibilityLabel ?? label} testID={testID}>
-        <Icon size={28} color={colors.surface} strokeWidth={2} />
+      <AIFABWrapper
+        onPress={onPress}
+        accessibilityLabel={accessibilityLabel ?? label}
+        testID={testID}
+        isActive={isActive}
+        label={label}
+      >
+        <Icon size={24} color={colors.surface} strokeWidth={2.5} />
       </AIFABWrapper>
     )
   }
@@ -113,9 +119,18 @@ interface AIFABWrapperProps {
   onPress: () => void
   accessibilityLabel: string
   testID?: string
+  isActive: boolean
+  label: string
 }
 
-function AIFABWrapper({ children, onPress, accessibilityLabel, testID }: AIFABWrapperProps) {
+function AIFABWrapper({
+  children,
+  onPress,
+  accessibilityLabel,
+  testID,
+  isActive,
+  label,
+}: AIFABWrapperProps) {
   const { colors } = useTheme()
   const pressScale = useSharedValue(1)
 
@@ -136,29 +151,39 @@ function AIFABWrapper({ children, onPress, accessibilityLabel, testID }: AIFABWr
       StyleSheet.create({
         breathing: {
           position: 'absolute',
-          top: -43,
+          top: -38,
           left: '50%',
           marginLeft: -35,
           zIndex: 10,
+          alignItems: 'center',
         },
         fab: {
-          width: 70,
-          height: 70,
-          borderRadius: 35,
+          width: 64,
+          height: 64,
+          borderRadius: 32,
           backgroundColor: colors.primary,
-          borderWidth: 6,
+          borderWidth: 5,
           borderColor: colors.surface,
           alignItems: 'center',
           justifyContent: 'center',
           shadowColor: colors.shadowColor,
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 1,
-          shadowRadius: 12,
-          elevation: 10,
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.3,
+          shadowRadius: 8,
+          elevation: 8,
+        },
+        fabLabel: {
+          fontFamily: Typography.fontFamily,
+          fontSize: 10,
+          fontWeight: Typography.fontWeights.semibold,
+          marginTop: 4,
+          textAlign: 'center',
         },
       }),
     [colors.primary, colors.surface, colors.shadowColor]
   )
+
+  const labelColor = isActive ? colors.primary : colors.textSecondary
 
   return (
     <MotiView
@@ -183,6 +208,7 @@ function AIFABWrapper({ children, onPress, accessibilityLabel, testID }: AIFABWr
       >
         {children}
       </AnimatedPressable>
+      <Text style={[styles.fabLabel, { color: labelColor }]}>{label}</Text>
     </MotiView>
   )
 }

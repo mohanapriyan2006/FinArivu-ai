@@ -16,9 +16,9 @@ export default function MainTabNavigator() {
       screenOptions={{ headerShown: false }}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Insights" component={InsightsHubScreen} />
+      <Tab.Screen name="Pulse" component={PulseScreen} />
       <Tab.Screen name="AICopilot" component={CopilotScreen} />
-      <Tab.Screen name="Goals" component={PulseScreen} />
+      <Tab.Screen name="Insights" component={InsightsHubScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )

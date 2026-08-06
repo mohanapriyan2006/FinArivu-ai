@@ -16,9 +16,9 @@ interface TabConfig {
 
 const TABS: TabConfig[] = [
   { name: 'Home', label: 'Home', icon: Home, variant: 'standard' },
-  { name: 'Insights', label: 'Insights', icon: BarChart2, variant: 'standard' },
+  { name: 'Pulse', label: 'Pulse', icon: Target, variant: 'standard' },
   { name: 'AICopilot', label: 'AI Copilot', icon: Bot, variant: 'fab' },
-  { name: 'Goals', label: 'Goals', icon: Target, variant: 'standard' },
+  { name: 'Insights', label: 'Insights', icon: BarChart2, variant: 'standard' },
   { name: 'Profile', label: 'Profile', icon: User, variant: 'standard' },
 ]
 
@@ -114,7 +114,7 @@ export function CustomBottomTabBar({ state, descriptors, navigation }: BottomTab
         </View>
 
         <View style={styles.fabContainer}>
-          {!isChatActive && (() => {
+          {(() => {
             const routeIndex = state.routes.findIndex((route) => route.name === 'AICopilot')
             const isFocused = state.index === routeIndex
 
