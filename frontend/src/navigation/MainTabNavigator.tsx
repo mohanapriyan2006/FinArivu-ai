@@ -4,7 +4,7 @@ import { CustomBottomTabBar } from '@/components/navigation/CustomBottomTabBar'
 import HomeScreen from '@/screens/dashboard/HomeScreen'
 import InsightsHubScreen from '@/screens/insights/InsightsHubScreen'
 import AIChatScreen from '@/screens/chatbot/AIChatScreen'
-import GoalsDashboardScreen from '@/screens/goals/GoalsDashboardScreen'
+import PulseScreen from '@/screens/goals/PulseScreen'
 import ProfileScreen from '@/screens/profile/ProfileScreen'
 
 const Tab = createBottomTabNavigator()
@@ -18,7 +18,7 @@ export default function MainTabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Insights" component={InsightsHubScreen} />
       <Tab.Screen name="AICopilot" component={AIChatScreen} />
-      <Tab.Screen name="Goals" component={GoalsDashboardScreen} />
+      <Tab.Screen name="Goals" component={PulseScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )
