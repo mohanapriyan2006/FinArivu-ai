@@ -1,823 +1,491 @@
-import { useMemo } from 'react'
+import React, { useMemo, useEffect } from 'react'
 import {
-  Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
+  ScrollView,
   useWindowDimensions,
+  Pressable,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { useNavigation } from '@react-navigation/native'
-import type { StackNavigationProp } from '@react-navigation/stack'
+import { StatusBar } from 'expo-status-bar'
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+} from 'react-native-reanimated'
 import Svg, { Path } from 'react-native-svg'
-import type { LucideIcon } from 'lucide-react-native'
+import { BlurView } from 'expo-blur'
 import {
-  ArrowRight,
-  ArrowUpRight,
-  Banknote,
-  Bell,
-  PiggyBank,
-  Sparkles,
+  Landmark,
   TrendingUp,
-  User,
-  Wallet,
+  CreditCard,
+  Banknote,
+  RefreshCw,
 } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
-import type { ThemeColors } from '@/theme'
-import type { RootStackParamList } from '@/types/navigation'
 
-interface Point {
-  x: number
-  y: number
+interface WaveBackgroundProps {
+  isDark: boolean
+  colors: any
 }
 
-interface SnapshotItemData {
-  type: string
-  amount: string
-  colorKey: 'success' | 'danger' | 'primary'
-  icon: LucideIcon
-}
+// 1. AnimatedWaveBackground Component (Performance Optimized for Android)
+const AnimatedWaveBackground: React.FC<WaveBackgroundProps> = ({ isDark }) => {
+  const { width, height } = useWindowDimensions()
+  const translateX1 = useSharedValue(0)
+  const translateX2 = useSharedValue(0)
 
-interface GoalData {
-  name: string
-  progress: number
-}
+  useEffect(() => {
+    translateX1.value = 0
+    translateX2.value = 0
 
-interface TransactionData {
-  id: string
-  merchant: string
-  category: string
-  date: string
-  amount: number
-  icon: LucideIcon
-  iconBg: 'primary' | 'border'
-}
+    // Smooth translation running on the UI thread (60 FPS)
+    translateX1.value = withRepeat(
+      withTiming(-width, {
+        duration: 24000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    )
 
-const HEALTH_SCORE = {
-  score: 84,
-  total: 100,
-  trend: '+4',
-  status: 'Excellent',
-}
+    translateX2.value = withRepeat(
+      withTiming(-width, {
+        duration: 16000,
+        easing: Easing.linear,
+      }),
+      -1,
+      false
+    )
+  }, [width])
 
-const NET_WORTH = {
-  value: '₹12.8 Lakh',
-  change: '+8.4%',
-  label: 'vs prev. month',
-}
-
-const SNAPSHOTS: SnapshotItemData[] = [
-  { type: 'INCOME', amount: '₹85,000', colorKey: 'success', icon: Wallet },
-  { type: 'EXPENSE', amount: '₹52,000', colorKey: 'danger', icon: Banknote },
-  { type: 'SAVINGS', amount: '₹33,000', colorKey: 'primary', icon: PiggyBank },
-]
-
-const INSIGHT = {
-  title: 'FinArivu Insight',
-  body: 'You saved 18% more this month compared to last month. This keeps you on track for your Home Fund goal.',
-  action: 'View Insight',
-}
-
-const GOALS: GoalData[] = [
-  { name: 'House Fund', progress: 0.75 },
-  { name: 'Emergency Fund', progress: 0.6 },
-  { name: 'Vacation', progress: 0.4 },
-]
-
-const TRANSACTIONS: TransactionData[] = [
-  {
-    id: '1',
-    merchant: 'Swiggy',
-    category: 'Food',
-    date: 'Oct 24',
-    amount: -320,
-    icon: Wallet,
-    iconBg: 'primary',
-  },
-  {
-    id: '2',
-    merchant: 'Amazon',
-    category: 'Shopping',
-    date: 'Oct 23',
-    amount: -1299,
-    icon: Banknote,
-    iconBg: 'border',
-  },
-  {
-    id: '3',
-    merchant: 'Uber',
-    category: 'Transport',
-    date: 'Oct 22',
-    amount: -180,
-    icon: Wallet,
-    iconBg: 'primary',
-  },
-  {
-    id: '4',
-    merchant: 'Netflix',
-    category: 'Entertainment',
-    date: 'Oct 21',
-    amount: -199,
-    icon: Banknote,
-    iconBg: 'border',
-  },
-]
-
-const NET_WORTH_CHART_DATA = [10, 15, 12, 20, 28, 35, 42, 50, 55, 70]
-const HERO_WATERMARK_DATA = [20, 40, 30, 55, 45, 70, 60, 80]
-
-function buildSmoothPath(points: Point[]): string {
-  if (points.length < 2) return ''
-  let d = `M ${points[0].x.toFixed(2)} ${points[0].y.toFixed(2)}`
-  for (let i = 0; i < points.length - 1; i += 1) {
-    const p0 = points[i - 1] ?? points[i]
-    const p1 = points[i]
-    const p2 = points[i + 1]
-    const p3 = points[i + 2] ?? p2
-    const cp1x = p1.x + (p2.x - p0.x) / 6
-    const cp1y = p1.y + (p2.y - p0.y) / 6
-    const cp2x = p2.x - (p3.x - p1.x) / 6
-    const cp2y = p2.y - (p3.y - p1.y) / 6
-    d += ` C ${cp1x.toFixed(2)} ${cp1y.toFixed(2)}, ${cp2x.toFixed(2)} ${cp2y.toFixed(2)}, ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`
-  }
-  return d
-}
-
-function getChartPoints(
-  data: number[],
-  chartWidth: number,
-  chartHeight: number,
-  padding = 10
-): Point[] {
-  const min = Math.min(...data) * 0.8
-  const max = Math.max(...data) * 1.1
-  const range = max - min || 1
-  return data.map((value, index) => ({
-    x: padding + (index / (data.length - 1)) * (chartWidth - 2 * padding),
-    y: chartHeight - padding - ((value - min) / range) * (chartHeight - 2 * padding),
+  const animatedStyle1 = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX1.value }],
   }))
+
+  const animatedStyle2 = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX2.value }],
+  }))
+
+  const bgBase = isDark ? '#0B1220' : '#F8FAFC'
+
+  // Dynamic wave colors using transparent overlays of indigo primary
+  const wave1Color = isDark
+    ? 'rgba(79, 70, 229, 0.12)' // 12% opacity primary indigo accent
+    : 'rgba(79, 70, 229, 0.05)' // 5% opacity for clean light mode
+
+  const wave2Color = isDark
+    ? 'rgba(79, 70, 229, 0.06)'
+    : 'rgba(79, 70, 229, 0.02)'
+
+  // Generates smooth periodic sine wave paths that repeat seamlessly
+  const path1 = useMemo(() => {
+    const w = width * 2
+    const h = height
+    const offset = h * 0.4
+    const amplitude = 32
+    const points = []
+    const segments = 40
+    const step = w / segments
+    for (let i = 0; i <= segments; i += 1) {
+      const x = i * step
+      const y = offset + Math.sin((i / segments) * Math.PI * 4) * amplitude
+      points.push(`${x.toFixed(1)} ${y.toFixed(1)}`)
+    }
+    return `M 0 ${h} L 0 ${offset} ${points.map((p) => `L ${p}`).join(' ')} L ${w} ${h} Z`
+  }, [width, height])
+
+  const path2 = useMemo(() => {
+    const w = width * 2
+    const h = height
+    const offset = h * 0.48
+    const amplitude = 20
+    const points = []
+    const segments = 40
+    const step = w / segments
+    for (let i = 0; i <= segments; i += 1) {
+      const x = i * step
+      const y = offset + Math.cos((i / segments) * Math.PI * 4) * amplitude
+      points.push(`${x.toFixed(1)} ${y.toFixed(1)}`)
+    }
+    return `M 0 ${h} L 0 ${offset} ${points.map((p) => `L ${p}`).join(' ')} L ${w} ${h} Z`
+  }, [width, height])
+
+  return (
+    <View style={[StyleSheet.absoluteFill, { backgroundColor: bgBase }]}>
+      {/* Wave Layer 1 */}
+      <Animated.View
+        style={[styles.waveContainer, animatedStyle1, { width: width * 2 }]}
+      >
+        <Svg width={width * 2} height={height}>
+          <Path d={path1} fill={wave1Color} />
+        </Svg>
+      </Animated.View>
+
+      {/* Wave Layer 2 */}
+      <Animated.View
+        style={[styles.waveContainer, animatedStyle2, { width: width * 2 }]}
+      >
+        <Svg width={width * 2} height={height}>
+          <Path d={path2} fill={wave2Color} />
+        </Svg>
+      </Animated.View>
+    </View>
+  )
 }
 
+interface GlassCardProps {
+  children: React.ReactNode
+  style?: any
+  isDark: boolean
+}
+
+// 2. GlassCard Reusable Component using expo-blur
+const GlassCard: React.FC<GlassCardProps> = ({ children, style, isDark }) => {
+  return (
+    <View
+      style={[
+        styles.glassContainer,
+        isDark ? styles.glassContainerDark : styles.glassContainerLight,
+        style,
+      ]}
+    >
+      <BlurView
+        intensity={isDark ? 35 : 55}
+        tint={isDark ? 'dark' : 'light'}
+        style={StyleSheet.absoluteFill}
+      />
+      <View style={styles.cardPadding}>{children}</View>
+    </View>
+  )
+}
+
+interface CardData {
+  id: string
+  title: string
+  label: 'Assets' | 'Liabilities'
+  value: string
+  subtitle: string
+  icon: React.ComponentType<any>
+  subtitleColorType: 'primary' | 'success' | 'muted'
+}
+
+// Updated data set for Indian context
+const CARDS_DATA: CardData[] = [
+  {
+    id: 'checking',
+    title: 'Checking',
+    label: 'Assets',
+    value: '₹45,200.00',
+    subtitle: 'Primary Account',
+    icon: Landmark,
+    subtitleColorType: 'primary',
+  },
+  {
+    id: 'investments',
+    title: 'Investments',
+    label: 'Assets',
+    value: '₹1,24,500.00',
+    subtitle: '+12.5% this week',
+    icon: TrendingUp,
+    subtitleColorType: 'success',
+  },
+  {
+    id: 'credit_cards',
+    title: 'Credit Cards',
+    label: 'Liabilities',
+    value: '-₹4,250.00',
+    subtitle: 'Next payment in 4 days',
+    icon: CreditCard,
+    subtitleColorType: 'muted',
+  },
+  {
+    id: 'loan',
+    title: 'Loan',
+    label: 'Liabilities',
+    value: '-₹4,85,000.00',
+    subtitle: '3.2% Fixed Rate',
+    icon: Banknote,
+    subtitleColorType: 'muted',
+  },
+]
+
+// 3. HomeScreen Component
 export default function HomeScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
-  const { width } = useWindowDimensions()
-  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark])
 
-  const cardWidth = width - 48
-  const chartWidth = cardWidth - 40
-
-  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
-
-  const Header = () => (
-    <View style={styles.header}>
-      <View style={styles.headerLeft}>
-        <View style={styles.avatar}>
-          <User size={20} color={colors.primary} />
-        </View>
-        <Text style={styles.welcome}>Welcome !</Text>
-      </View>
-      <Pressable
-        style={styles.bellButton}
-        accessibilityRole="button"
-        accessibilityLabel="Notifications"
-      >
-        <Bell size={24} color={colors.primary} />
-      </Pressable>
-    </View>
+  const heroValue = useMemo(
+    () => ({
+      currency: '₹',
+      integer: '14,28,950',
+      decimal: '.00',
+    }),
+    []
   )
 
-  const Watermark = () => {
-    const w = 140
-    const h = 90
-    const padding = 8
-    const points = HERO_WATERMARK_DATA.map((value, index) => ({
-      x: padding + (index / (HERO_WATERMARK_DATA.length - 1)) * (w - 2 * padding),
-      y: h - padding - ((value - 10) / 80) * (h - 2 * padding),
-    }))
-    const d = buildSmoothPath(points)
-    return (
-      <View style={styles.heroWatermark}>
-        <Svg width={w} height={h}>
-          <Path
-            d={d}
-            stroke="#FFFFFF"
-            strokeOpacity={0.1}
-            strokeWidth={2}
-            fill="none"
-          />
-        </Svg>
-      </View>
-    )
-  }
+  const renderCardItem = (card: CardData) => {
+    const IconComponent = card.icon
 
-  const FinancialHealthCard = () => (
-    <View style={styles.heroCard}>
-      <Watermark />
-      <Text style={styles.heroLabel}>FINANCIAL HEALTH SCORE</Text>
-      <View style={styles.heroScoreRow}>
-        <Text style={styles.heroScore}>{HEALTH_SCORE.score}/{HEALTH_SCORE.total}</Text>
-        <View style={styles.heroBadge}>
-          <Text style={styles.heroBadgeText}>{HEALTH_SCORE.status}</Text>
-        </View>
-      </View>
-      <View style={styles.heroTrend}>
-        <ArrowUpRight size={16} color={isDark ? colors.textPrimary : colors.surface} />
-        <Text style={styles.heroTrendText}>{HEALTH_SCORE.trend} from last month</Text>
-      </View>
-      <Pressable
-        style={styles.heroButton}
-        onPress={() => navigation.navigate('FinancialHealth')}
-        accessibilityRole="button"
-        accessibilityLabel="View health score details"
-      >
-        <Text style={styles.heroButtonText}>View Details</Text>
-        <ArrowRight size={16} color={isDark ? colors.textPrimary : colors.primary} />
-      </Pressable>
-    </View>
-  )
-
-  const Chart = ({ chartW, chartH }: { chartW: number; chartH: number }) => {
-    const points = getChartPoints(NET_WORTH_CHART_DATA, chartW, chartH, 10)
-    const line = buildSmoothPath(points)
-    const area = `${line} L ${points[points.length - 1].x.toFixed(2)} ${chartH} L ${points[0].x.toFixed(2)} ${chartH} Z`
-    return (
-      <Svg width={chartW} height={chartH}>
-        <Path d={area} fill={colors.primary} fillOpacity={0.1} />
-        <Path d={line} stroke={colors.primary} strokeWidth={3} fill="none" />
-      </Svg>
-    )
-  }
-
-  const NetWorthCard = () => (
-    <View style={styles.card}>
-      <Text style={styles.netWorthLabel}>Net Worth</Text>
-      <View style={styles.netWorthRow}>
-        <Text style={styles.netWorthValue}>{NET_WORTH.value}</Text>
-        <View style={styles.netWorthTrend}>
-          <TrendingUp size={14} color={colors.success} />
-          <Text style={styles.netWorthTrendText}>{NET_WORTH.change}</Text>
-        </View>
-      </View>
-      <Text style={styles.netWorthTrendLabel}>{NET_WORTH.label}</Text>
-      <View style={styles.chartContainer}>
-        <Chart chartW={chartWidth} chartH={100} />
-      </View>
-    </View>
-  )
-
-  const SnapshotItem = ({ item }: { item: SnapshotItemData }) => {
-    const colorMap = {
-      success: colors.success,
-      danger: colors.danger,
-      primary: colors.primary,
+    // Define subtitle color based on dynamic theme and specification
+    let subtitleColor = colors.textSecondary
+    if (card.subtitleColorType === 'primary') {
+      subtitleColor = '#4F46E5' // Primary Indigo
+    } else if (card.subtitleColorType === 'success') {
+      subtitleColor = '#22C55E' // Success Green
+    } else if (card.subtitleColorType === 'muted') {
+      subtitleColor = colors.textSecondary
     }
-    const bgMap = {
-      success: colors.successBackground,
-      danger: colors.dangerBackground,
-      primary: colors.primaryBackground,
-    }
-    const color = colorMap[item.colorKey]
-    const bg = bgMap[item.colorKey]
-    const Icon = item.icon
+
     return (
-      <View style={[styles.snapshotItem, { borderLeftColor: color }]}>
-        <View style={styles.snapshotInfo}>
-          <Text style={styles.snapshotLabel}>{item.type}</Text>
-          <Text style={styles.snapshotAmount}>{item.amount}</Text>
-        </View>
-        <View style={[styles.snapshotIconContainer, { backgroundColor: bg }]}>
-          <Icon size={24} color={color} />
-        </View>
-      </View>
-    )
-  }
-
-  const InsightCard = () => (
-    <View style={styles.insightCard}>
-      <View style={styles.insightHeader}>
-        <View style={styles.insightIconBox}>
-          <Sparkles size={20} color={colors.surface} />
-        </View>
-        <Text style={styles.insightTitle}>{INSIGHT.title}</Text>
-        <View style={styles.insightBadge}>
-          <Text style={styles.insightBadgeText}>SMART</Text>
-        </View>
-      </View>
-      <Text style={styles.insightBody}>{INSIGHT.body}</Text>
-      <Pressable
-        style={styles.insightLink}
-        accessibilityRole="button"
-        accessibilityLabel={INSIGHT.action}
-      >
-        <Text style={styles.insightLinkText}>{INSIGHT.action}</Text>
-        <ArrowUpRight size={16} color={colors.accent} />
-      </Pressable>
-    </View>
-  )
-
-  const GoalRow = ({ name, progress }: GoalData) => (
-    <View style={styles.goalRow}>
-      <View style={styles.goalHeader}>
-        <Text style={styles.goalName}>{name}</Text>
-        <Text style={styles.goalPercent}>{Math.round(progress * 100)}%</Text>
-      </View>
-      <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
-      </View>
-    </View>
-  )
-
-  const TransactionRow = ({ item }: { item: TransactionData }) => {
-    const Icon = item.icon
-    const isExpense = item.amount < 0
-    const amountText = `₹${Math.abs(item.amount).toLocaleString()}`
-    const iconBg = item.iconBg === 'primary' ? colors.primaryBackground : colors.border
-    const iconColor =
-      isDark || item.iconBg !== 'primary' ? colors.textPrimary : colors.primary
-    return (
-      <View style={styles.transactionRow}>
-        <View style={styles.merchantCell}>
-          <View style={[styles.transactionIcon, { backgroundColor: iconBg }]}>
-            <Icon size={20} color={iconColor} />
+      <GlassCard key={card.id} isDark={isDark} style={styles.cardSpacing}>
+        {/* Top Row */}
+        <View style={styles.cardTopRow}>
+          <View
+            style={[
+              styles.iconContainer,
+              {
+                backgroundColor: isDark
+                  ? 'rgba(79, 70, 229, 0.12)'
+                  : 'rgba(79, 70, 229, 0.08)',
+              },
+            ]}
+          >
+            <IconComponent size={20} color="#4F46E5" />
           </View>
-          <View style={styles.transactionMeta}>
-            <Text style={styles.transactionMerchant} numberOfLines={1}>
-              {item.merchant}
+          <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+            {card.title}
+          </Text>
+          <View style={styles.cardTopRight}>
+            <Text style={[styles.cardTypeLabel, { color: colors.textSecondary }]}>
+              {card.label}
             </Text>
+            <Pressable
+              style={({ pressed }) => [
+                styles.refreshButton,
+                pressed && styles.refreshButtonPressed,
+              ]}
+              onPress={() => {
+                // Micro-feedback action can go here
+              }}
+              hitSlop={8}
+            >
+              <RefreshCw size={14} color={colors.textSecondary} />
+            </Pressable>
           </View>
         </View>
-        <Text style={[styles.tableCell, styles.transactionCategory, styles.categoryCol]} numberOfLines={1}>
-          {item.category}
+
+        {/* Middle Row */}
+        <Text style={[styles.cardAmount, { color: colors.textPrimary }]}>
+          {card.value}
         </Text>
-        <Text style={[styles.tableCell, styles.dateCol]} numberOfLines={1}>
-          {item.date}
+
+        {/* Bottom Row */}
+        <Text style={[styles.cardSubtitle, { color: subtitleColor }]}>
+          {card.subtitle}
         </Text>
-        <Text
-          style={[
-            styles.tableCell,
-            styles.amountCol,
-            isExpense ? styles.transactionAmountExpense : styles.transactionAmountNeutral,
-          ]}
-          numberOfLines={1}
-        >
-          {amountText}
-        </Text>
-      </View>
+      </GlassCard>
     )
   }
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.content,
-          { paddingBottom: insets.bottom + 90 },
-        ]}
-      >
-        <Header />
-        <FinancialHealthCard />
-        <NetWorthCard />
-        <View style={styles.snapshotList}>
-          {SNAPSHOTS.map((s) => (
-            <SnapshotItem key={s.type} item={s} />
-          ))}
-        </View>
-        <InsightCard />
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Goals Preview</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="Manage all goals">
-              <Text style={styles.link}>MANAGE ALL</Text>
-            </Pressable>
+    <View style={styles.container}>
+      <StatusBar style={isDark ? 'light' : 'dark'} translucent />
+      <AnimatedWaveBackground isDark={isDark} colors={colors} />
+
+      <SafeAreaView style={styles.safeArea} edges={['top']}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 100 }, // Safe bottom padding
+          ]}
+        >
+          {/* Hero Section */}
+          <View style={styles.heroSection}>
+            <Text
+              style={[
+                styles.heroSubtitle,
+                { color: colors.textSecondary },
+              ]}
+            >
+              CURRENT PORTFOLIO VALUE
+            </Text>
+            <View style={styles.heroValueRow}>
+              <Text
+                style={[styles.heroValueMain, { color: colors.textPrimary }]}
+              >
+                {heroValue.currency}
+                {heroValue.integer}
+              </Text>
+              <Text
+                style={[
+                  styles.heroValueDecimal,
+                  { color: colors.textPrimary, opacity: 0.5 },
+                ]}
+              >
+                {heroValue.decimal}
+              </Text>
+            </View>
+            <View style={styles.badgeContainer}>
+              <View
+                style={[
+                  styles.pillBadge,
+                  {
+                    backgroundColor: isDark
+                      ? 'rgba(79, 70, 229, 0.16)'
+                      : 'rgba(79, 70, 229, 0.08)',
+                  },
+                ]}
+              >
+                <Text style={styles.pillBadgeText}>📈 +2.4% Today</Text>
+              </View>
+            </View>
           </View>
-          {GOALS.map((g) => (
-            <GoalRow key={g.name} name={g.name} progress={g.progress} />
-          ))}
-        </View>
-        <View style={styles.card}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Recent Transactions</Text>
-            <Pressable accessibilityRole="button" accessibilityLabel="View all transactions">
-              <Text style={styles.link}>VIEW ALL</Text>
-            </Pressable>
+
+          {/* Cards Section */}
+          <View style={styles.cardsSection}>
+            {CARDS_DATA.map((card) => renderCardItem(card))}
           </View>
-          <View style={styles.tableHeader}>
-            <Text style={[styles.tableHeaderText, styles.merchantCol]}>MERCHANT</Text>
-            <Text style={[styles.tableHeaderText, styles.categoryCol]}>CATEGORY</Text>
-            <Text style={[styles.tableHeaderText, styles.dateCol]}>DATE</Text>
-            <Text style={[styles.tableHeaderText, styles.amountCol]}>AMOUNT</Text>
-          </View>
-          {TRANSACTIONS.map((t) => (
-            <TransactionRow key={t.id} item={t} />
-          ))}
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+        </ScrollView>
+      </SafeAreaView>
+    </View>
   )
 }
 
-function makeStyles(colors: ThemeColors, isDark: boolean) {
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: colors.background,
-    },
-    content: {
-      paddingHorizontal: 24,
-      paddingTop: 8,
-      gap: 24,
-    },
-    header: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-    },
-    headerLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    avatar: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      backgroundColor: colors.primaryBackground,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    welcome: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes['2xl'],
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.primary,
-    },
-    bellButton: {
-      width: 44,
-      height: 44,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    heroCard: {
-      backgroundColor: colors.heroCard,
-      borderRadius: 24,
-      padding: 20,
-      overflow: 'hidden',
-    },
-    heroWatermark: {
-      position: 'absolute',
-      right: 0,
-      top: 0,
-      bottom: 0,
-      justifyContent: 'center',
-    },
-    heroLabel: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xs,
-      fontWeight: Typography.fontWeights.semibold,
-      color: isDark ? colors.textPrimary : colors.primaryBackground,
-      textTransform: 'uppercase',
-      letterSpacing: 1,
-    },
-    heroScoreRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 12,
-      gap: 12,
-    },
-    heroScore: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.display,
-      fontWeight: Typography.fontWeights.bold,
-      color: isDark ? colors.textPrimary : colors.surface,
-    },
-    heroBadge: {
-      backgroundColor: colors.success,
-      borderRadius: 16,
-      paddingHorizontal: 10,
-      paddingVertical: 4,
-    },
-    heroBadgeText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xs,
-      fontWeight: Typography.fontWeights.semibold,
-      color: isDark ? colors.textPrimary : colors.surface,
-    },
-    heroTrend: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 8,
-      gap: 4,
-    },
-    heroTrendText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.medium,
-      color: isDark ? colors.textPrimary : colors.surface,
-    },
-    heroButton: {
-      alignSelf: 'flex-start',
-      flexDirection: 'row',
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderRadius: 18,
-      paddingHorizontal: 16,
-      paddingVertical: 10,
-      marginTop: 20,
-      gap: 6,
-    },
-    heroButtonText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: isDark ? colors.textPrimary : colors.primary,
-    },
-    card: {
-      backgroundColor: colors.surface,
-      borderRadius: 24,
-      padding: 20,
-      shadowColor: isDark ? colors.shadowColor : colors.textPrimary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.2 : 0.05,
-      shadowRadius: 10,
-      elevation: isDark ? 8 : 4,
-    },
-    netWorthLabel: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.medium,
-      color: colors.textSecondary,
-    },
-    netWorthRow: {
-      flexDirection: 'row',
-      alignItems: 'baseline',
-      marginTop: 4,
-      gap: 8,
-    },
-    netWorthValue: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes['2.5xl'],
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.textPrimary,
-    },
-    netWorthTrend: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    netWorthTrendText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.success,
-    },
-    netWorthTrendLabel: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    chartContainer: {
-      marginTop: 16,
-      height: 100,
-      borderRadius: 16,
-      overflow: 'hidden',
-    },
-    snapshotList: {
-      gap: 12,
-    },
-    snapshotItem: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      backgroundColor: colors.surface,
-      borderRadius: 16,
-      borderLeftWidth: 4,
-      padding: 16,
-      shadowColor: isDark ? colors.shadowColor : colors.textPrimary,
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: isDark ? 0.2 : 0.05,
-      shadowRadius: 10,
-      elevation: isDark ? 8 : 4,
-    },
-    snapshotInfo: {
-      justifyContent: 'center',
-    },
-    snapshotLabel: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xs,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-      letterSpacing: 0.5,
-    },
-    snapshotAmount: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xl,
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.textPrimary,
-      marginTop: 4,
-    },
-    snapshotIconContainer: {
-      width: 48,
-      height: 48,
-      borderRadius: 24,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    insightCard: {
-      backgroundColor: colors.accentBackground,
-      borderWidth: 1,
-      borderColor: colors.accent,
-      borderRadius: 24,
-      padding: 20,
-    },
-    insightHeader: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    insightIconBox: {
-      width: 40,
-      height: 40,
-      borderRadius: 12,
-      backgroundColor: colors.accent,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    insightTitle: {
-      flex: 1,
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.base,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textPrimary,
-    },
-    insightBadge: {
-      borderWidth: 1,
-      borderColor: colors.accent,
-      borderRadius: 8,
-      paddingHorizontal: 6,
-      paddingVertical: 2,
-    },
-    insightBadgeText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xxs,
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.accent,
-    },
-    insightBody: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.base,
-      fontWeight: Typography.fontWeights.regular,
-      color: colors.textSecondary,
-      marginTop: 12,
-      lineHeight: 22,
-    },
-    insightLink: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginTop: 16,
-      gap: 4,
-    },
-    insightLinkText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.accent,
-    },
-    sectionHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 16,
-    },
-    sectionTitle: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.lg,
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.textPrimary,
-    },
-    link: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.primary,
-    },
-    goalRow: {
-      marginBottom: 16,
-    },
-    goalHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: 8,
-    },
-    goalName: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.base,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textPrimary,
-    },
-    goalPercent: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textSecondary,
-    },
-    progressTrack: {
-      height: 8,
-      backgroundColor: colors.border,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    progressFill: {
-      height: '100%',
-      backgroundColor: colors.primary,
-      borderRadius: 4,
-    },
-    tableHeader: {
-      flexDirection: 'row',
-      paddingBottom: 8,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-      marginBottom: 8,
-    },
-    tableHeaderText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xxs,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textSecondary,
-      textTransform: 'uppercase',
-    },
-    merchantCol: {
-      flex: 2,
-    },
-    merchantCell: {
-      flex: 2,
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    categoryCol: {
-      flex: 1,
-    },
-    dateCol: {
-      flex: 1,
-    },
-    amountCol: {
-      flex: 1,
-      textAlign: 'right',
-    },
-    transactionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      paddingVertical: 12,
-      borderBottomWidth: 1,
-      borderBottomColor: colors.border,
-    },
-    transactionIcon: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginRight: 12,
-    },
-    transactionMeta: {
-      flex: 1,
-    },
-    transactionMerchant: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textPrimary,
-    },
-    transactionCategory: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.xs,
-      color: colors.textSecondary,
-      marginTop: 2,
-    },
-    tableCell: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      color: colors.textSecondary,
-    },
-    transactionDate: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      color: colors.textSecondary,
-    },
-    transactionAmountExpense: {
-      color: colors.danger,
-      fontWeight: Typography.fontWeights.semibold,
-    },
-    transactionAmountNeutral: {
-      color: colors.textPrimary,
-      fontWeight: Typography.fontWeights.semibold,
-    },
-  })
-}
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+  safeArea: {
+    flex: 1,
+  },
+  waveContainer: {
+    position: 'absolute',
+    left: 0,
+    top: 0,
+    bottom: 0,
+  },
+  scrollContent: {
+    paddingHorizontal: 24, // Strict spacing scale
+    paddingTop: 24,
+  },
+  // Hero Section Styling
+  heroSection: {
+    alignItems: 'center',
+    marginVertical: 24, // Strict spacing scale
+  },
+  heroSubtitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 12,
+    fontWeight: Typography.fontWeights.bold,
+    letterSpacing: 1,
+    textTransform: 'uppercase',
+  },
+  heroValueRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginTop: 12, // Strict spacing scale
+  },
+  heroValueMain: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 40,
+    fontWeight: Typography.fontWeights.bold,
+  },
+  heroValueDecimal: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 24,
+    fontWeight: Typography.fontWeights.bold,
+  },
+  badgeContainer: {
+    marginTop: 12, // Strict spacing scale
+    alignItems: 'center',
+  },
+  pillBadge: {
+    paddingHorizontal: 12, // Strict spacing scale
+    paddingVertical: 4, // Strict spacing scale
+    borderRadius: 9999,
+  },
+  pillBadgeText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 12,
+    fontWeight: Typography.fontWeights.semibold,
+    color: '#4F46E5', // Primary Indigo
+  },
+  // Cards Section Styling
+  cardsSection: {
+    marginTop: 12, // Strict spacing scale
+  },
+  glassContainer: {
+    borderRadius: 24, // Strict spacing scale
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  glassContainerLight: {
+    borderColor: 'rgba(135, 135, 135, 0.37)',
+    backgroundColor: 'rgba(255, 255, 255, 0.75)',
+    
+  },
+  glassContainerDark: {
+    borderColor: 'rgba(255, 255, 255, 0.37)',
+    backgroundColor: 'rgba(17, 24, 39, 0.45)',
+    
+  },
+  cardPadding: {
+    padding: 20, // Strict spacing scale
+  },
+  cardSpacing: {
+    marginBottom: 16, // Strict spacing scale
+  },
+  cardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconContainer: {
+    width: 48, // Strict spacing scale (6 * 8)
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cardTitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 16,
+    fontWeight: Typography.fontWeights.semibold,
+    marginLeft: 12, // Strict spacing scale
+  },
+  cardTopRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginLeft: 'auto',
+  },
+  cardTypeLabel: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 12,
+    fontWeight: Typography.fontWeights.medium,
+  },
+  refreshButton: {
+    marginLeft: 8, // Strict spacing scale
+    padding: 4, // Strict spacing scale
+  },
+  refreshButtonPressed: {
+    opacity: 0.6,
+  },
+  cardAmount: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 24,
+    fontWeight: Typography.fontWeights.bold,
+    marginTop: 16, // Strict spacing scale
+  },
+  cardSubtitle: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 13, // Pixel-perfect subtitle font size
+    fontWeight: Typography.fontWeights.medium,
+    marginTop: 8, // Strict spacing scale
+  },
+})
