@@ -101,13 +101,11 @@ export function TabBarItem({
     >
       {isActive ? (
         <MotiView layout={LinearTransition.springify().damping(14)} style={styles.pill}>
-          <Icon size={20} color={activeColor} strokeWidth={2} />
-          <Text style={[styles.label, { color: activeColor }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+          <Icon size={24} color={activeColor} strokeWidth={2} />
         </MotiView>
       ) : (
         <View style={styles.standardContent}>
-          <Icon size={22} color={inactiveColor} strokeWidth={2} />
-          <Text style={[styles.label, { color: inactiveColor }]} numberOfLines={1} ellipsizeMode="tail">{label}</Text>
+          <Icon size={28} color={inactiveColor} strokeWidth={2} />
         </View>
       )}
     </Pressable>
@@ -208,7 +206,6 @@ function AIFABWrapper({
       >
         {children}
       </AnimatedPressable>
-      <Text style={[styles.fabLabel, { color: labelColor }]}>{label}</Text>
     </MotiView>
   )
 }

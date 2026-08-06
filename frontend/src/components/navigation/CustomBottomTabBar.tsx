@@ -43,7 +43,7 @@ export function CustomBottomTabBar({ state, descriptors, navigation }: BottomTab
           alignItems: 'center',
           justifyContent: 'space-between',
           paddingTop: 6,
-          paddingBottom: Math.max(insets.bottom, 8),
+          paddingBottom: Math.max(insets.bottom, 16),
           paddingHorizontal: 4,
           backgroundColor: colors.surface,
           borderTopLeftRadius: 24,
