@@ -281,13 +281,7 @@ export default function InsightsHubScreen() {
       <SafeAreaView style={styles.safeArea} edges={['top']}>
         {/* Header Section */}
         <View style={styles.header}>
-          <View style={styles.avatarContainer}>
-            <Bot size={20} color="#4F46E5" />
-          </View>
           <Text style={styles.headerTitle}>Cognitive Finance</Text>
-          <Pressable style={styles.settingsButton} hitSlop={8}>
-            <Settings size={20} color={colors.textSecondary} />
-          </Pressable>
         </View>
 
         <ScrollView
@@ -424,7 +418,7 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignItems: 'center',
     paddingHorizontal: 24, // Spacing scale
     paddingVertical: 16, // Spacing scale
