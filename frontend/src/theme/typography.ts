@@ -72,4 +72,65 @@ export const Typography = {
     textTransform: 'uppercase',
     letterSpacing: 0.8,
   } as TextStyle,
+  // Standard Extended Presets
+  bodySmall: {
+    fontFamily: 'Inter',
+    fontSize: 12,
+    fontWeight: '400',
+    lineHeight: 16,
+  } as TextStyle,
+  bodyMedium: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '400',
+    lineHeight: 20,
+  } as TextStyle,
+  labelSmall: {
+    fontFamily: 'Inter',
+    fontSize: 11,
+    fontWeight: '600',
+    lineHeight: 14,
+  } as TextStyle,
+  labelMedium: {
+    fontFamily: 'Inter',
+    fontSize: 13,
+    fontWeight: '600',
+    lineHeight: 18,
+  } as TextStyle,
+  titleSmall: {
+    fontFamily: 'Inter',
+    fontSize: 14,
+    fontWeight: '600',
+    lineHeight: 18,
+  } as TextStyle,
+  titleMedium: {
+    fontFamily: 'Inter',
+    fontSize: 16,
+    fontWeight: '600',
+    lineHeight: 22,
+  } as TextStyle,
+  titleLarge: {
+    fontFamily: 'Inter',
+    fontSize: 20,
+    fontWeight: '700',
+    lineHeight: 26,
+  } as TextStyle,
+  headlineMedium: {
+    fontFamily: 'Inter',
+    fontSize: 18,
+    fontWeight: '700',
+    lineHeight: 24,
+  } as TextStyle,
+  displaySmall: {
+    fontFamily: 'Inter',
+    fontSize: 24,
+    fontWeight: '800',
+    lineHeight: 30,
+  } as TextStyle,
+  displayMedium: {
+    fontFamily: 'Inter',
+    fontSize: 32,
+    fontWeight: '800',
+    lineHeight: 38,
+  } as TextStyle,
 } as const
