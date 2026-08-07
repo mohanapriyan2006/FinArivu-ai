@@ -18,7 +18,7 @@ from app.ai.schemas import (
     CopilotChatRequest,
     CopilotFeedbackRequest,
 )
-from app.ai.controller import CopilotController
+from app.ai.controller import AIController, CopilotController
 from app.ai.metrics import ai_metrics
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
@@ -36,6 +36,12 @@ def _get_copilot_controller(
     return CopilotController(session)
 
 
+def _get_ai_controller(
+    session: AsyncSession = Depends(get_db_session),
+) -> AIController:
+    return AIController(session)
+
+
 # ── Chat (synchronous response) ──────────────────────────────────────────
 
 @router.post(
@@ -47,12 +53,12 @@ def _get_copilot_controller(
 async def copilot_chat(
     request: Request,
     body: CopilotChatRequest,
-    controller: CopilotController = Depends(_get_copilot_controller),
+    ai_controller: AIController = Depends(_get_ai_controller),
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
-    """Process a user message through the multi-agent AI Copilot pipeline."""
+    """Process a user message through the new AI orchestration pipeline."""
     user_uuid = uuid.UUID(user_id)
-    response = await controller.chat(user_uuid, body)
+    response = await ai_controller.chat(user_uuid, body)
     request.state.user_id = user_uuid
     return success_response(
         data=response.model_dump(),
