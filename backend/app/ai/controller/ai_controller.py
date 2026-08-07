@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 import uuid
-from typing import Any
+from typing import Any, AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,6 +10,8 @@ from app.ai.context.builder import ContextBuilder
 from app.ai.guardrails.guardrail import Guardrail
 from app.ai.intent.classifier import IntentClassifier
 from app.ai.memory.conversation_memory import ConversationMemory
+from app.ai.agents.insight_agent import InsightAgent
+from app.ai.agents.recommendation_agent import RecommendationAgent
 from app.ai.orchestrator.orchestrator import Orchestrator
 from app.ai.orchestrator.response_builder import ResponseBuilder
 from app.ai.planner.planner import Planner
@@ -40,6 +42,8 @@ class AIController:
         self._context_builder = ContextBuilder(session)
         self._planner = Planner()
         self._orchestrator = Orchestrator(session)
+        self._insight_agent = InsightAgent(session)
+        self._recommendation_agent = RecommendationAgent(session)
         self._memory = ConversationMemory(session)
         self._response_builder: ResponseBuilder | None = None
 
@@ -93,47 +97,66 @@ class AIController:
             intent_result.entities,
         )
 
-        # 8. Build final explanation
+        # 8. Run insight and recommendation agents
+        insight_context = {
+            "user_message": message,
+            "financial_context": financial_context,
+            "agent_results": agent_results,
+            "entities": intent_result.entities,
+            "session_id": session_id,
+        }
+        insight_result = await self._insight_agent.safe_execute(user_id, insight_context)
+        recommendation_result = await self._recommendation_agent.safe_execute(user_id, insight_context)
+        full_results = agent_results + [insight_result, recommendation_result]
+
+        # 9. Build final explanation with artifacts, recommendations, metadata
         provider = get_ai_provider()
         self._response_builder = ResponseBuilder(provider)
         planner_output = self._to_planner_output(execution_plan)
 
-        response_text, merged_data, ai_response = await self._response_builder.build(
+        build = await self._response_builder.build_full(
             message,
             planner_output,
-            agent_results,
+            full_results,
+            start,
         )
 
-        # 9. Persist assistant message with full metadata
+        # 10. Persist assistant message with full metadata
         latency = int((time.perf_counter() - start) * 1000)
         msg = await self._memory.save_message(
             user_id,
             session_id,
             "assistant",
-            response_text,
+            build.message,
             intent=execution_plan.intent.value,
-            provider=ai_response.provider_name if ai_response else None,
-            model=ai_response.model if ai_response else None,
-            tokens_input=ai_response.tokens_input if ai_response else 0,
-            tokens_output=ai_response.tokens_output if ai_response else 0,
+            provider=build.ai_response.provider_name if build.ai_response else None,
+            model=build.ai_response.model if build.ai_response else None,
+            tokens_input=build.ai_response.tokens_input if build.ai_response else 0,
+            tokens_output=build.ai_response.tokens_output if build.ai_response else 0,
             latency_ms=latency,
             agent_chain={
-                "agents": [r.agent_name for r in agent_results],
+                "agents": [r.agent_name for r in full_results if not r.error],
                 "intent": execution_plan.intent.value,
             },
         )
 
-        # 10. Return structured response
+        # 11. Return structured response
         return CopilotChatResponse(
             message_id=msg.id,
-            message=response_text,
+            message=build.message,
+            summary=build.summary,
             intent=self._map_intent(execution_plan.intent.value),
-            agents_used=[r.agent_name for r in agent_results if not r.error],
-            data=merged_data,
-            provider=ai_response.provider_name if ai_response else None,
-            model=ai_response.model if ai_response else None,
-            tokens_input=ai_response.tokens_input if ai_response else 0,
-            tokens_output=ai_response.tokens_output if ai_response else 0,
+            agents_used=build.metadata.agents_used,
+            data=build.merged_data,
+            artifacts=build.artifacts,
+            recommendations=build.recommendations,
+            follow_up_questions=build.follow_up_questions,
+            suggested_actions=build.suggested_actions,
+            metadata=build.metadata,
+            provider=build.ai_response.provider_name if build.ai_response else None,
+            model=build.ai_response.model if build.ai_response else None,
+            tokens_input=build.ai_response.tokens_input if build.ai_response else 0,
+            tokens_output=build.ai_response.tokens_output if build.ai_response else 0,
             guardrail_triggered=False,
         )
 
@@ -170,6 +193,61 @@ class AIController:
             healthy=healthy,
             latency_ms=0,
         )
+
+    async def chat_stream(
+        self,
+        user_id: uuid.UUID,
+        request: CopilotChatRequest,
+    ) -> AsyncIterator[StreamEvent]:
+        """Stream a copilot response with agent progress and tokens."""
+        from app.ai.schemas import StreamEvent, StreamEventType
+
+        session_id = request.session_id
+        message = request.message.strip()
+
+        if not message:
+            yield StreamEvent(
+                event_type=StreamEventType.ERROR,
+                data="No message provided.",
+            )
+            yield StreamEvent(event_type=StreamEventType.DONE)
+            return
+
+        # 1. Guardrail
+        guard_result = self._guardrail.check(message)
+        if not guard_result.allowed or self._guardrail.is_investment_advice(message):
+            reason = guard_result.reason if not guard_result.allowed else "investment_advice"
+            chat_response = self._guardrail.build_response(reason)
+            yield StreamEvent(
+                event_type=StreamEventType.DATA,
+                data=chat_response.message,
+            )
+            yield StreamEvent(event_type=StreamEventType.DONE)
+            return
+
+        # 2. Classify, build context, plan, execute
+        await self._memory.save_message(user_id, session_id, "user", message)
+        intent_result = self._intent.classify(message)
+        financial_context = await self._context_builder.build(user_id, session_id)
+        execution_plan = self._planner.plan(intent_result)
+        agent_results = await self._orchestrator.execute(
+            user_id,
+            session_id,
+            execution_plan,
+            financial_context,
+            message,
+            intent_result.entities,
+        )
+
+        # 3. Stream explanation tokens
+        provider = get_ai_provider()
+        self._response_builder = ResponseBuilder(provider)
+        planner_output = self._to_planner_output(execution_plan)
+
+        async for event in self._response_builder.build_stream(
+            message, planner_output, agent_results,
+        ):
+            yield event
 
     async def _blocked_response(
         self,

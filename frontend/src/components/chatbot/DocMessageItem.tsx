@@ -18,9 +18,12 @@ export interface ChatMessageItemData {
   id: string
   role: 'user' | 'assistant'
   content: string
+  summary?: string
   intent?: string
   agentsUsed?: string[]
   data?: Record<string, any>
+  followUpQuestions?: string[]
+  suggestedActions?: { label: string; action: string; route?: string }[]
   disclaimer?: string
   guardrailTriggered?: boolean
   createdAt?: string
@@ -77,6 +80,10 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
       <View style={styles.docBody}>
         <Text style={styles.explanationText}>{item.content}</Text>
 
+        {item.summary ? (
+          <Text style={styles.summaryText}>{item.summary}</Text>
+        ) : null}
+
         {/* Render Artifact Cards */}
         {hasHealthData && (
           <HealthArtifactCard data={agentData.HealthAgent || agentData} />
@@ -101,7 +108,7 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
       </View>
 
       {/* Follow-up Chips at bottom */}
-      <FollowUpChips onSelect={onSelectFollowUp} />
+      <FollowUpChips onSelect={onSelectFollowUp} suggestions={item.followUpQuestions} />
     </Animated.View>
   )
 }
@@ -187,6 +194,14 @@ const makeStyles = (colors: any) =>
       fontSize: 14,
       lineHeight: 22,
       marginBottom: 4,
+    },
+    summaryText: {
+      ...Typography.bodySmall,
+      color: colors.textTertiary,
+      fontSize: 12,
+      lineHeight: 18,
+      marginBottom: 8,
+      fontStyle: 'italic',
     },
     disclaimerText: {
       ...Typography.bodySmall,

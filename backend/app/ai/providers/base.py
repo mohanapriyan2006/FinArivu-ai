@@ -68,6 +68,32 @@ class BaseAIProvider(abc.ABC):
     async def health(self) -> bool:
         """Return ``True`` if the provider is reachable and operational."""
 
+    @property
+    def supports_streaming(self) -> bool:
+        """Return ``True`` if the provider supports SSE streaming."""
+        return True
+
+    @property
+    def supports_json(self) -> bool:
+        """Return ``True`` if the provider supports structured JSON output."""
+        return True
+
+    async def generate(
+        self,
+        messages: list[dict[str, str]],
+        *,
+        temperature: float = 0.3,
+        max_tokens: int = 2048,
+        response_format: dict[str, str] | None = None,
+    ) -> AIProviderResponse:
+        """Alias for ``chat`` — unified generate interface."""
+        return await self.chat(
+            messages,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            response_format=response_format,
+        )
+
     @staticmethod
     def _elapsed_ms(start: float) -> int:
         """Compute elapsed milliseconds from a ``time.perf_counter`` start."""

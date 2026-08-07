@@ -36,12 +36,44 @@ export interface CopilotAgentData {
   [agentName: string]: Record<string, unknown>
 }
 
+export interface CopilotArtifact {
+  type: string
+  title: string
+  content: CopilotAgentData
+}
+
+export interface CopilotRecommendation {
+  title: string
+  description: string
+  category: string
+}
+
+export interface CopilotSuggestedAction {
+  label: string
+  action: string
+  route?: string
+}
+
+export interface CopilotMetadata {
+  intent: string
+  agentsUsed: string[]
+  provider?: string
+  model?: string
+  executionTimeMs: number
+}
+
 export interface CopilotChatResponse {
   messageId: string | null
   message: string
+  summary?: string
   intent: string
   agentsUsed: string[]
   data: CopilotAgentData
+  artifacts?: CopilotArtifact[]
+  recommendations?: CopilotRecommendation[]
+  followUpQuestions?: string[]
+  suggestedActions?: CopilotSuggestedAction[]
+  metadata?: CopilotMetadata
   disclaimer: string
   guardrailTriggered: boolean
   provider?: string

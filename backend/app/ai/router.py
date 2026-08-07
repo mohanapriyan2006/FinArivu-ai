@@ -19,7 +19,9 @@ from app.ai.schemas import (
     CopilotFeedbackRequest,
 )
 from app.ai.controller import AIController, CopilotController
+from app.ai.memory.session_memory import SessionMemory
 from app.ai.metrics import ai_metrics
+from app.core.ai_providers import configured_providers
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
 from app.models.ai_feedback import AIFeedback
@@ -76,7 +78,7 @@ async def copilot_chat(
 async def copilot_chat_stream(
     request: Request,
     body: CopilotChatRequest,
-    controller: CopilotController = Depends(_get_copilot_controller),
+    ai_controller: AIController = Depends(_get_ai_controller),
     user_id: str = Depends(get_current_user_id),
 ) -> EventSourceResponse:
     """Stream copilot response tokens via Server-Sent Events."""
@@ -84,7 +86,7 @@ async def copilot_chat_stream(
     request.state.user_id = user_uuid
 
     async def event_generator():
-        async for event in controller.chat_stream(user_uuid, body):
+        async for event in ai_controller.chat_stream(user_uuid, body):
             yield {
                 "event": event.event_type.value,
                 "data": json.dumps(event.model_dump(), default=str),
@@ -180,4 +182,68 @@ async def copilot_metrics() -> dict:
     return success_response(
         data=ai_metrics.summary(),
         message="Metrics retrieved",
+    )
+
+
+# ── Providers ─────────────────────────────────────────────────────────────
+
+_session_memory = SessionMemory()
+
+
+@router.get(
+    "/providers",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="List configured AI providers",
+)
+async def copilot_providers() -> dict:
+    """Return the configured AI providers and their models."""
+    providers = [
+        {
+            "name": p.name,
+            "model": p.model,
+            "enabled": p.enabled,
+        }
+        for p in configured_providers()
+    ]
+    return success_response(
+        data={"providers": providers},
+        message="Providers retrieved",
+    )
+
+
+# ── Session ───────────────────────────────────────────────────────────────
+
+@router.get(
+    "/session",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Get temporary session state",
+)
+async def copilot_session(
+    session_id: str = Query(..., min_length=1, max_length=255),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Return the in-memory session state for the user."""
+    state = _session_memory.get(session_id)
+    return success_response(
+        data={"session_id": session_id, "state": state, "user_id": user_id},
+        message="Session retrieved",
+    )
+
+
+@router.delete(
+    "/session",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Clear temporary session state",
+)
+async def copilot_clear_session(
+    session_id: str = Query(..., min_length=1, max_length=255),
+) -> dict:
+    """Clear the in-memory session state."""
+    _session_memory.clear(session_id)
+    return success_response(
+        data={"session_id": session_id},
+        message="Session cleared",
     )

@@ -57,6 +57,13 @@ class Settings(BaseSettings):
     ai_copilot_temperature: float = Field(default=0.3, alias="AI_COPILOT_TEMPERATURE")
     ai_copilot_max_tokens: int = Field(default=2048, alias="AI_COPILOT_MAX_TOKENS")
     ai_copilot_timeout: int = Field(default=30, alias="AI_COPILOT_TIMEOUT")
+    ai_retry_count: int = Field(default=3, alias="AI_RETRY_COUNT")
+    ai_streaming_enabled: bool = Field(default=True, alias="AI_STREAMING_ENABLED")
+
+    # Provider routing per task type
+    ai_provider_fast: str = Field(default="groq", alias="AI_PROVIDER_FAST")
+    ai_provider_reasoning: str = Field(default="gemini", alias="AI_PROVIDER_REASONING")
+    ai_provider_long_context: str = Field(default="openrouter", alias="AI_PROVIDER_LONG_CONTEXT")
 
     @property
     def is_development(self) -> bool:

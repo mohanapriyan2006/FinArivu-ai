@@ -7,7 +7,9 @@ from app.ai.agents.budget_agent import BudgetAgent
 from app.ai.agents.education_agent import EducationAgent
 from app.ai.agents.goal_agent import GoalAgent
 from app.ai.agents.health_agent import HealthAgent
+from app.ai.agents.insight_agent import InsightAgent
 from app.ai.agents.networth_agent import NetWorthAgent
+from app.ai.agents.recommendation_agent import RecommendationAgent
 from app.ai.agents.report_agent import ReportAgent
 from app.ai.agents.retirement_agent import RetirementAgent
 from app.ai.agents.tax_agent import TaxAgent
@@ -28,6 +30,8 @@ class AgentRegistry:
         "NetWorthAgent": NetWorthAgent,
         "EducationAgent": EducationAgent,
         "ReportAgent": ReportAgent,
+        "InsightAgent": InsightAgent,
+        "RecommendationAgent": RecommendationAgent,
     }
 
     def __init__(self) -> None:

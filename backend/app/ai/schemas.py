@@ -132,14 +132,60 @@ class StreamEvent(BaseSchema):
 
 # ── Response schemas ─────────────────────────────────────────────────────
 
+class Artifact(BaseSchema):
+    """Structured artifact returned with the chat response."""
+
+    type: str
+    title: str
+    content: dict[str, Any] = Field(default_factory=dict)
+
+
+class SuggestedAction(BaseSchema):
+    """Suggested next action for the user."""
+
+    label: str
+    action: str
+    route: str | None = None
+
+
+class FollowUpQuestion(BaseSchema):
+    """Follow-up question the user can ask next."""
+
+    text: str
+
+
+class Recommendation(BaseSchema):
+    """Educational, personalised recommendation."""
+
+    title: str
+    description: str
+    category: str = "general"
+
+
+class ChatMetadata(BaseSchema):
+    """Execution and routing metadata for the response."""
+
+    intent: str = "general"
+    agents_used: list[str] = Field(default_factory=list)
+    provider: str | None = None
+    model: str | None = None
+    execution_time_ms: int = 0
+
+
 class CopilotChatResponse(BaseSchema):
     """Full copilot response returned to the client."""
 
     message_id: UUID | None = None
     message: str
+    summary: str = ""
     intent: CopilotIntent = CopilotIntent.GENERAL
     agents_used: list[str] = Field(default_factory=list)
     data: dict[str, Any] = Field(default_factory=dict)
+    artifacts: list[Artifact] = Field(default_factory=list)
+    recommendations: list[Recommendation] = Field(default_factory=list)
+    follow_up_questions: list[FollowUpQuestion] = Field(default_factory=list)
+    suggested_actions: list[SuggestedAction] = Field(default_factory=list)
+    metadata: ChatMetadata = Field(default_factory=ChatMetadata)
     disclaimer: str = (
         "The information provided is for educational purposes only "
         "and is not financial, investment, tax, or legal advice."
