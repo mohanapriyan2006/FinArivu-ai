@@ -149,6 +149,10 @@ class CopilotService:
             agents_used=[r.agent_name for r in results],
             data=merged_data,
             guardrail_triggered=False,
+            provider=ai_response.provider_name if ai_response else None,
+            model=ai_response.model if ai_response else None,
+            tokens_input=ai_response.tokens_input if ai_response else 0,
+            tokens_output=ai_response.tokens_output if ai_response else 0,
         )
 
     async def chat_stream(

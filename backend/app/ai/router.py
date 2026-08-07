@@ -18,7 +18,8 @@ from app.ai.schemas import (
     CopilotChatRequest,
     CopilotFeedbackRequest,
 )
-from app.ai.service import CopilotService
+from app.ai.controller import CopilotController
+from app.ai.metrics import ai_metrics
 from app.core.database import get_db_session
 from app.dependencies.auth import get_current_user_id
 from app.models.ai_feedback import AIFeedback
@@ -29,10 +30,10 @@ router = APIRouter(prefix="/copilot", tags=["AI Copilot"])
 
 # ── Dependency ────────────────────────────────────────────────────────────
 
-def _get_copilot_service(
+def _get_copilot_controller(
     session: AsyncSession = Depends(get_db_session),
-) -> CopilotService:
-    return CopilotService(session)
+) -> CopilotController:
+    return CopilotController(session)
 
 
 # ── Chat (synchronous response) ──────────────────────────────────────────
@@ -46,12 +47,12 @@ def _get_copilot_service(
 async def copilot_chat(
     request: Request,
     body: CopilotChatRequest,
-    service: CopilotService = Depends(_get_copilot_service),
+    controller: CopilotController = Depends(_get_copilot_controller),
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
     """Process a user message through the multi-agent AI Copilot pipeline."""
     user_uuid = uuid.UUID(user_id)
-    response = await service.chat(user_uuid, body)
+    response = await controller.chat(user_uuid, body)
     request.state.user_id = user_uuid
     return success_response(
         data=response.model_dump(),
@@ -69,7 +70,7 @@ async def copilot_chat(
 async def copilot_chat_stream(
     request: Request,
     body: CopilotChatRequest,
-    service: CopilotService = Depends(_get_copilot_service),
+    controller: CopilotController = Depends(_get_copilot_controller),
     user_id: str = Depends(get_current_user_id),
 ) -> EventSourceResponse:
     """Stream copilot response tokens via Server-Sent Events."""
@@ -77,7 +78,7 @@ async def copilot_chat_stream(
     request.state.user_id = user_uuid
 
     async def event_generator():
-        async for event in service.chat_stream(user_uuid, body):
+        async for event in controller.chat_stream(user_uuid, body):
             yield {
                 "event": event.event_type.value,
                 "data": json.dumps(event.model_dump(), default=str),
@@ -128,11 +129,11 @@ async def copilot_history(
     session_id: str = Query(..., min_length=1, max_length=255),
     skip: int = Query(0, ge=0),
     limit: int = Query(50, ge=1, le=100),
-    service: CopilotService = Depends(_get_copilot_service),
+    controller: CopilotController = Depends(_get_copilot_controller),
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
     """Return paginated conversation history for a session."""
-    messages = await service.get_history(
+    messages = await controller.get_history(
         uuid.UUID(user_id), session_id, skip=skip, limit=limit,
     )
     return success_response(
@@ -150,11 +151,27 @@ async def copilot_history(
     summary="AI provider health check",
 )
 async def copilot_health(
-    service: CopilotService = Depends(_get_copilot_service),
+    controller: CopilotController = Depends(_get_copilot_controller),
 ) -> dict:
     """Check whether the AI provider is reachable and responsive."""
-    result = await service.check_health()
+    result = await controller.check_health()
     return success_response(
         data=result.model_dump(),
         message="Health check complete",
+    )
+
+
+# ── Metrics ────────────────────────────────────────────────────────────────
+
+@router.get(
+    "/metrics",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Get AI provider metrics",
+)
+async def copilot_metrics() -> dict:
+    """Return in-memory provider request, token, and error metrics."""
+    return success_response(
+        data=ai_metrics.summary(),
+        message="Metrics retrieved",
     )

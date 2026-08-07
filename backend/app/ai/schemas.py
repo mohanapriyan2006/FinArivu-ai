@@ -145,6 +145,10 @@ class CopilotChatResponse(BaseSchema):
         "and is not financial, investment, tax, or legal advice."
     )
     guardrail_triggered: bool = False
+    provider: str | None = None
+    model: str | None = None
+    tokens_input: int = 0
+    tokens_output: int = 0
 
 
 class CopilotHealthResponse(BaseSchema):

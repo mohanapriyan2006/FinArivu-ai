@@ -111,21 +111,18 @@ export default function CopilotScreen({ navigation }: any) {
 
       setMessages((prev) => [...prev, aiMsg])
     } catch (error) {
-      console.warn('Copilot API call failed, falling back to offline simulation:', error)
+      console.warn('Copilot API call failed:', error)
 
-      // Graceful offline fallback simulation
-      const fallbackIntent = detectLocalIntent(text)
-      const fallbackMsg: ChatMessageItemData = {
+      const errorMsg: ChatMessageItemData = {
         id: `ai_${Date.now()}`,
         role: 'assistant',
-        content: getLocalFallbackText(fallbackIntent, text),
-        intent: fallbackIntent,
-        data: getLocalFallbackData(fallbackIntent),
-        disclaimer: 'The information provided is for educational purposes only.',
+        content: 'Sorry, I am unable to connect to the AI service right now. Please check your connection and try again.',
+        intent: 'error',
+        data: {},
         createdAt: new Date().toISOString(),
       }
 
-      setMessages((prev) => [...prev, fallbackMsg])
+      setMessages((prev) => [...prev, errorMsg])
     } finally {
       setIsLoading(false)
       scrollToBottom()
@@ -184,88 +181,6 @@ export default function CopilotScreen({ navigation }: any) {
   )
 }
 
-// ── LOCAL FALLBACK HELPERS ──────────────────────────────────────────────
-function detectLocalIntent(query: string): string {
-  const q = query.toLowerCase()
-  if (q.includes('budget') || q.includes('spend')) return 'budget_analysis'
-  if (q.includes('tax') || q.includes('regime') || q.includes('80c')) return 'tax_planning'
-  if (q.includes('goal') || q.includes('house') || q.includes('car')) return 'goal_tracking'
-  if (q.includes('retire') || q.includes('pension')) return 'retirement_planning'
-  if (q.includes('health') || q.includes('score')) return 'health_score'
-  return 'general'
-}
-
-function getLocalFallbackText(intent: string, query: string): string {
-  switch (intent) {
-    case 'budget_analysis':
-      return 'I have analyzed your monthly budget. Your overall utilization is at 88%, but Food & Dining has exceeded its allocation by 18%. Here is your breakdown:'
-    case 'tax_planning':
-      return 'Based on your gross annual income, here is the comparison between the Old and New Tax Regimes. Switching to the New Regime will save you ₹9,000 in tax outgo:'
-    case 'goal_tracking':
-      return 'You are making steady progress on your House Deposit goal. At your current rate, saving ₹12,500/month will keep you exactly on track for your 5-year target:'
-    case 'retirement_planning':
-      return 'To maintain your current standard of living adjusted for 6% inflation, your target retirement corpus is projected at ₹4.32 Cr over 25 years:'
-    case 'health_score':
-      return 'Your Financial Health Score is currently 82/100 (Excellent). You have an ideal debt ratio and strong emergency fund coverage:'
-    default:
-      return `I am FinArivu AI, your Personal CFO. I analyzed your query "${query}". How else can I assist with your finances today?`
-  }
-}
-
-function getLocalFallbackData(intent: string): Record<string, any> {
-  switch (intent) {
-    case 'budget_analysis':
-      return {
-        BudgetAgent: {
-          totalBudget: 50000,
-          totalSpent: 44000,
-          overspendCategory: 'Food & Dining',
-          overspendAmount: 6500,
-          overspendPercentage: 18,
-        },
-      }
-    case 'tax_planning':
-      return {
-        TaxAgent: {
-          oldRegimeTax: 52000,
-          newRegimeTax: 43000,
-          savings: 9000,
-          betterRegime: 'new',
-        },
-      }
-    case 'goal_tracking':
-      return {
-        GoalAgent: {
-          goalName: 'House Deposit',
-          progressPercentage: 42,
-          targetAmount: 2500000,
-          currentAmount: 1050000,
-          monthlyRequired: 12500,
-          status: 'on_track',
-        },
-      }
-    case 'retirement_planning':
-      return {
-        RetirementAgent: {
-          corpusRequired: 43200000,
-          yearsRemaining: 25,
-          futureMonthlyExpense: 180000,
-        },
-      }
-    case 'health_score':
-      return {
-        HealthAgent: {
-          overallScore: 82,
-          savingsScore: 25,
-          emergencyScore: 15,
-          debtScore: 20,
-          status: 'Excellent',
-        },
-      }
-    default:
-      return {}
-  }
-}
 
 const makeStyles = (colors: any) =>
   StyleSheet.create({

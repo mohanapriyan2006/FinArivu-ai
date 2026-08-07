@@ -44,6 +44,10 @@ export interface CopilotChatResponse {
   data: CopilotAgentData
   disclaimer: string
   guardrailTriggered: boolean
+  provider?: string
+  model?: string
+  tokensInput?: number
+  tokensOutput?: number
 }
 
 export interface CopilotFeedbackRequest {
