@@ -6,7 +6,14 @@ so the React Native frontend receives consistent JSON keys.
 
 from __future__ import annotations
 
-from enum import StrEnum
+try:
+    from enum import StrEnum
+except ImportError:
+    from enum import Enum
+
+    class StrEnum(str, Enum):
+        """Backwards compatibility for Python < 3.11."""
+        pass
 from typing import Any
 from uuid import UUID
 
