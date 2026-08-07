@@ -1,21 +1,42 @@
-import { useEffect, useState } from 'react'
-import { View, Text, TextInput, StyleSheet, Pressable, ScrollView, ActivityIndicator } from 'react-native'
+import React, { useEffect, useState } from 'react'
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native'
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import { useNavigation } from '@react-navigation/native'
 import { useForm, Controller } from 'react-hook-form'
 import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
+import {
+  Briefcase,
+  Building2,
+  Calendar,
+  ChevronLeft,
+  DollarSign,
+  User,
+  UserCheck,
+} from 'lucide-react-native'
+
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { ProfileService } from '@/services/ProfileService'
-import type { Profile } from '@/services/ProfileService'
+import { ProfileService, type Profile } from '@/services/ProfileService'
+import { Typography } from '@/theme'
+import type { ThemeColors } from '@/theme'
 
 const profileSchema = z.object({
   fullName: z.string().min(1, 'Name is required').optional().or(z.literal('')),
-  age: z.number().min(18, 'Min 18').max(100, 'Max 100').optional(),
+  age: z.number().min(18, 'Min age 18').max(100, 'Max age 100').optional(),
   city: z.string().optional().or(z.literal('')),
   occupation: z.string().optional().or(z.literal('')),
-  monthlyIncome: z.number().min(0, 'Must be >= 0').optional(),
-  retirementAge: z.number().min(40, 'Min 40').max(80, 'Max 80').optional(),
+  monthlyIncome: z.number().min(0, 'Must be positive').optional(),
+  retirementAge: z.number().min(40, 'Min retirement age 40').max(80, 'Max retirement age 80').optional(),
 })
 
 type ProfileForm = z.infer<typeof profileSchema>
@@ -24,10 +45,14 @@ const resolver = zodResolver(profileSchema) as Resolver<ProfileForm>
 
 export default function EditProfileScreen() {
   const { colors } = useTheme()
-  const { logout, getToken } = useAuthContext()
-  const [profile, setProfile] = useState<Profile | null>(null)
+  const insets = useSafeAreaInsets()
+  const navigation = useNavigation()
+  const { getToken } = useAuthContext()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [saveSuccess, setSaveSuccess] = useState(false)
+
+  const styles = makeStyles(colors)
 
   const {
     control,
@@ -51,7 +76,6 @@ export default function EditProfileScreen() {
       try {
         const token = await getToken()
         const data = await ProfileService.getProfile(token)
-        setProfile(data)
         if (data) {
           reset({
             fullName: data.fullName || '',
@@ -63,7 +87,7 @@ export default function EditProfileScreen() {
           })
         }
       } catch (err) {
-        console.error(err)
+        console.error('Failed to load profile:', err)
       } finally {
         setLoading(false)
       }
@@ -73,6 +97,7 @@ export default function EditProfileScreen() {
 
   const onSubmit = async (formData: ProfileForm) => {
     setSaving(true)
+    setSaveSuccess(false)
     try {
       const token = await getToken()
       const payload = {
@@ -83,221 +108,351 @@ export default function EditProfileScreen() {
         monthlyIncome: formData.monthlyIncome ?? undefined,
         retirementAge: formData.retirementAge ?? undefined,
       }
-      const updated = await ProfileService.updateProfile(payload, token)
-      setProfile(updated)
+      await ProfileService.updateProfile(payload, token)
+      setSaveSuccess(true)
+      setTimeout(() => {
+        if (navigation.canGoBack()) {
+          navigation.goBack()
+        }
+      }, 800)
     } catch (err) {
-      console.error(err)
+      console.error('Failed to update profile:', err)
     } finally {
       setSaving(false)
     }
   }
 
-  const styles = makeStyles(colors)
+  const handleBack = () => {
+    if (navigation.canGoBack()) {
+      navigation.goBack()
+    }
+  }
 
   if (loading) {
     return (
-      <View style={[styles.container, styles.center]}>
+      <SafeAreaView style={[styles.container, styles.center]} edges={['top']}>
         <ActivityIndicator size="large" color={colors.primary} />
-      </View>
+      </SafeAreaView>
     )
   }
 
   return (
-    <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
-      <Text style={styles.title}>Profile</Text>
-
-      <View style={styles.field}>
-        <Text style={styles.label}>Full Name</Text>
-        <Controller
-          control={control}
-          name="fullName"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your name"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
-            />
-          )}
-        />
-        {errors.fullName && <Text style={styles.error}>{errors.fullName.message}</Text>}
+    <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Header Bar */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={handleBack}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go Back"
+        >
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Edit Profile</Text>
+        <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Age</Text>
-        <Controller
-          control={control}
-          name="age"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="18-100"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: Math.max(insets.bottom, 24) + 40 },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.formCard}>
+          <Text style={styles.formSectionTitle}>Personal Information</Text>
+
+          {/* Full Name */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Full Name</Text>
+            <Controller
+              control={control}
+              name="fullName"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <User size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your full name"
+                    placeholderTextColor={colors.textSecondary}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
             />
-          )}
-        />
-        {errors.age && <Text style={styles.error}>{errors.age.message}</Text>}
-      </View>
+            {errors.fullName && <Text style={styles.errorText}>{errors.fullName.message}</Text>}
+          </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>City</Text>
-        <Controller
-          control={control}
-          name="city"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your city"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
+          {/* Age */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Age (Years)</Text>
+            <Controller
+              control={control}
+              name="age"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <Calendar size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 28"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(text) => onChange(text ? Number(text) : undefined)}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
             />
-          )}
-        />
-      </View>
+            {errors.age && <Text style={styles.errorText}>{errors.age.message}</Text>}
+          </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Occupation</Text>
-        <Controller
-          control={control}
-          name="occupation"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="Enter your occupation"
-              placeholderTextColor={colors.textSecondary}
-              value={value}
-              onChangeText={onChange}
-              onBlur={onBlur}
+          {/* City */}
+          <View style={styles.field}>
+            <Text style={styles.label}>City / Region</Text>
+            <Controller
+              control={control}
+              name="city"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <Building2 size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Bengaluru"
+                    placeholderTextColor={colors.textSecondary}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
             />
-          )}
-        />
-      </View>
+          </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Monthly Income</Text>
-        <Controller
-          control={control}
-          name="monthlyIncome"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="0"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
+          {/* Occupation */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Occupation</Text>
+            <Controller
+              control={control}
+              name="occupation"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <Briefcase size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. Senior Software Engineer"
+                    placeholderTextColor={colors.textSecondary}
+                    value={value}
+                    onChangeText={onChange}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
             />
-          )}
-        />
-        {errors.monthlyIncome && <Text style={styles.error}>{errors.monthlyIncome.message}</Text>}
-      </View>
+          </View>
+        </View>
 
-      <View style={styles.field}>
-        <Text style={styles.label}>Retirement Age</Text>
-        <Controller
-          control={control}
-          name="retirementAge"
-          render={({ field: { onChange, onBlur, value } }) => (
-            <TextInput
-              style={styles.input}
-              placeholder="40-80"
-              placeholderTextColor={colors.textSecondary}
-              keyboardType="numeric"
-              value={value?.toString() || ''}
-              onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-              onBlur={onBlur}
+        {/* Financial Preferences Form Card */}
+        <View style={styles.formCard}>
+          <Text style={styles.formSectionTitle}>Financial Parameters</Text>
+
+          {/* Monthly Income */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Monthly Net Income (₹)</Text>
+            <Controller
+              control={control}
+              name="monthlyIncome"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <DollarSign size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 150000"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(text) => onChange(text ? Number(text) : undefined)}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
             />
+            {errors.monthlyIncome && (
+              <Text style={styles.errorText}>{errors.monthlyIncome.message}</Text>
+            )}
+          </View>
+
+          {/* Retirement Age */}
+          <View style={styles.field}>
+            <Text style={styles.label}>Target Retirement Age</Text>
+            <Controller
+              control={control}
+              name="retirementAge"
+              render={({ field: { onChange, onBlur, value } }) => (
+                <View style={styles.inputWrapper}>
+                  <UserCheck size={18} color={colors.textSecondary} style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="e.g. 55"
+                    placeholderTextColor={colors.textSecondary}
+                    keyboardType="numeric"
+                    value={value !== undefined ? String(value) : ''}
+                    onChangeText={(text) => onChange(text ? Number(text) : undefined)}
+                    onBlur={onBlur}
+                  />
+                </View>
+              )}
+            />
+            {errors.retirementAge && (
+              <Text style={styles.errorText}>{errors.retirementAge.message}</Text>
+            )}
+          </View>
+        </View>
+
+        {/* Save Button */}
+        <Pressable
+          style={[styles.saveButton, saveSuccess && styles.saveSuccessButton]}
+          onPress={handleSubmit(onSubmit)}
+          disabled={saving}
+          accessibilityRole="button"
+        >
+          {saving ? (
+            <ActivityIndicator size="small" color={colors.surface} />
+          ) : (
+            <Text style={styles.saveButtonText}>
+              {saveSuccess ? '✓ Saved Successfully' : 'Save Changes'}
+            </Text>
           )}
-        />
-        {errors.retirementAge && <Text style={styles.error}>{errors.retirementAge.message}</Text>}
-      </View>
-
-      <Pressable style={styles.saveButton} onPress={handleSubmit(onSubmit)} disabled={saving}>
-        <Text style={styles.saveButtonText}>{saving ? 'Saving...' : 'Save Profile'}</Text>
-      </Pressable>
-
-      <Pressable style={styles.logoutButton} onPress={logout}>
-        <Text style={styles.logoutButtonText}>Sign Out</Text>
-      </Pressable>
-    </ScrollView>
+        </Pressable>
+      </ScrollView>
+    </SafeAreaView>
   )
 }
 
-function makeStyles(colors: any) {
+function makeStyles(colors: ThemeColors) {
   return StyleSheet.create({
-    scroll: {
+    container: {
       flex: 1,
       backgroundColor: colors.background,
-    },
-    container: {
-      padding: 20,
     },
     center: {
       justifyContent: 'center',
       alignItems: 'center',
     },
-    title: {
-      fontSize: 28,
-      fontWeight: '700',
-      color: colors.textPrimary,
-      marginBottom: 24,
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.background,
     },
-    field: {
+    iconButton: {
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    headerTitle: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 18,
+      fontWeight: Typography.fontWeights.bold,
+      color: colors.textPrimary,
+    },
+    headerSpacer: {
+      width: 40,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
+    },
+
+    formCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    formSectionTitle: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 14,
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.textPrimary,
       marginBottom: 16,
     },
+    field: {
+      marginBottom: 14,
+    },
     label: {
-      fontSize: 14,
-      fontWeight: '600',
+      fontFamily: Typography.fontFamily,
+      fontSize: 13,
+      fontWeight: Typography.fontWeights.medium,
       color: colors.textSecondary,
       marginBottom: 6,
     },
-    input: {
+    inputWrapper: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderRadius: 16,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 12,
       paddingHorizontal: 14,
-      paddingVertical: 12,
-      fontSize: 16,
-      color: colors.textPrimary,
-      backgroundColor: colors.surface,
+      height: 48,
     },
-    error: {
-      color: colors.danger,
+    inputIcon: {
+      marginRight: 10,
+    },
+    input: {
+      flex: 1,
+      fontFamily: Typography.fontFamily,
+      fontSize: 15,
+      fontWeight: Typography.fontWeights.regular,
+      color: colors.textPrimary,
+    },
+    errorText: {
+      fontFamily: Typography.fontFamily,
       fontSize: 12,
+      color: colors.danger,
       marginTop: 4,
     },
+
     saveButton: {
       backgroundColor: colors.primary,
-      paddingVertical: 16,
-      borderRadius: 12,
+      borderRadius: 20,
+      height: 52,
       alignItems: 'center',
+      justifyContent: 'center',
       marginTop: 8,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 3,
+    },
+    saveSuccessButton: {
+      backgroundColor: colors.success,
     },
     saveButtonText: {
-      color: '#FFFFFF',
+      fontFamily: Typography.fontFamily,
       fontSize: 16,
-      fontWeight: '600',
-    },
-    logoutButton: {
-      backgroundColor: colors.danger,
-      paddingVertical: 16,
-      borderRadius: 12,
-      alignItems: 'center',
-      marginTop: 16,
-    },
-    logoutButtonText: {
-      color: '#FFFFFF',
-      fontSize: 16,
-      fontWeight: '600',
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.surface,
     },
   })
 }

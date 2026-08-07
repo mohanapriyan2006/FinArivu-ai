@@ -11,18 +11,18 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
-import { Svg, Circle, G } from 'react-native-svg'
 import {
   Bell,
-  Bot,
   CheckCircle2,
   ChevronLeft,
   Link,
   LogOut,
+  Monitor,
+  Moon,
   Pencil,
-  Settings,
   Shield,
-  SlidersHorizontal,
+  Sparkles,
+  Sun,
   Target,
   User,
   Wallet,
@@ -31,117 +31,21 @@ import {
 import { ProfileStatCard } from './ProfileStatCard'
 import { SettingsListItem } from './SettingsListItem'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { useTheme } from '@/contexts/ThemeContext'
+import { useTheme, type ThemeMode } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-
-interface CompletionRingProps {
-  progress: number
-  size?: number
-  strokeWidth?: number
-  value: string
-  label: string
-}
-
-function CompletionRing({
-  progress,
-  size = 140,
-  strokeWidth = 12,
-  value,
-  label,
-}: CompletionRingProps) {
-  const { colors } = useTheme()
-  const styles = makeCompletionStyles(colors, size)
-
-  const radius = (size - strokeWidth) / 2
-  const circumference = 2 * Math.PI * radius
-  const offset = circumference * (1 - progress)
-
-  return (
-    <View style={styles.container}>
-      <Svg width={size} height={size} style={styles.svg}>
-        <Circle
-          cx={size / 2}
-          cy={size / 2}
-          r={radius}
-          stroke={colors.border}
-          strokeWidth={strokeWidth}
-          fill="none"
-        />
-        <G rotation="-90" origin={`${size / 2}, ${size / 2}`}>
-          <Circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            stroke={colors.primaryDark}
-            strokeWidth={strokeWidth}
-            fill="none"
-            strokeLinecap="round"
-            strokeDasharray={`${circumference}, ${circumference}`}
-            strokeDashoffset={offset}
-          />
-        </G>
-      </Svg>
-      <View style={styles.textOverlay}>
-        <Text style={styles.valueText}>{value}</Text>
-        <Text style={styles.labelText}>{label}</Text>
-      </View>
-    </View>
-  )
-}
-
-function makeCompletionStyles(colors: ThemeColors, size: number) {
-  return StyleSheet.create({
-    container: {
-      width: size,
-      height: size,
-      alignItems: 'center',
-      justifyContent: 'center',
-      alignSelf: 'center',
-    },
-    svg: {
-      position: 'absolute',
-    },
-    textOverlay: {
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    valueText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 32,
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.textPrimary,
-    },
-    labelText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 10,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.textSecondary,
-      marginTop: 2,
-      letterSpacing: 1,
-      textTransform: 'uppercase',
-    },
-  })
-}
-
-const CARD_SHADOW = {
-  shadowColor: '#0F172A',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 10,
-  elevation: 2,
-}
 
 const AVATAR_URI = 'https://i.pravatar.cc/150?img=11'
 
 export default function ProfileScreen() {
-  const { colors } = useTheme()
+  const { colors, mode, setMode } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
   const { user, logout } = useAuthContext()
   const styles = makeStyles(colors)
 
-  const displayName = user?.fullName ?? 'Mohanapriyan'
+  const displayName = user?.fullName || 'Mohanapriyan'
+  const email = user?.email || 'mohan@finarivu.ai'
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -149,63 +53,83 @@ export default function ProfileScreen() {
     }
   }
 
+  const themeOptions: { label: string; value: ThemeMode; icon: typeof Sun }[] = [
+    { label: 'Light', value: 'light', icon: Sun },
+    { label: 'Dark', value: 'dark', icon: Moon },
+    { label: 'System', value: 'system', icon: Monitor },
+  ]
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
+      {/* Top Bar */}
+      <View style={styles.header}>
+        <Pressable
+          onPress={handleBack}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel="Go Back"
+        >
+          <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
+        </Pressable>
+        <Text style={styles.headerTitle}>Profile & Settings</Text>
+        <Pressable
+          onPress={() => navigation.navigate('EditProfile')}
+          style={styles.iconButton}
+          accessibilityRole="button"
+          accessibilityLabel="Edit Profile"
+        >
+          <Pencil size={20} color={colors.primary} strokeWidth={2} />
+        </Pressable>
+      </View>
+
       <ScrollView
         contentContainerStyle={[
           styles.scrollContent,
-          { paddingBottom: Math.max(insets.bottom, 24) + 96 },
+          { paddingBottom: Math.max(insets.bottom, 24) + 90 },
         ]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <Pressable onPress={handleBack} style={styles.iconButton} accessibilityRole="button">
-            <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
-          </Pressable>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <Pressable style={styles.iconButton} accessibilityRole="button">
-            <Settings size={24} color={colors.textPrimary} strokeWidth={2} />
-          </Pressable>
-        </View>
+        {/* User Hero Card */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroContent}>
+            <View style={styles.avatarWrapper}>
+              <Image source={{ uri: AVATAR_URI }} style={styles.avatar} />
+              <Pressable
+                style={styles.avatarBadge}
+                onPress={() => navigation.navigate('EditProfile')}
+              >
+                <Pencil size={12} color={colors.surface} strokeWidth={2.5} />
+              </Pressable>
+            </View>
 
-        <View style={styles.hero}>
-          <View style={styles.avatarWrapper}>
-            <Image source={{ uri: AVATAR_URI }} style={styles.avatar} />
-            <View style={styles.editBadge}>
-              <Pencil size={14} color="#FFFFFF" strokeWidth={2.5} />
+            <View style={styles.heroTextGroup}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>{displayName}</Text>
+                <View style={styles.proTag}>
+                  <Sparkles size={12} color={colors.primary} strokeWidth={2.5} />
+                  <Text style={styles.proTagText}>Pro CFO</Text>
+                </View>
+              </View>
+
+              <Text style={styles.email}>{email}</Text>
+              <Text style={styles.memberSince}>Salaried Professional · Member since 2026</Text>
             </View>
           </View>
-          <Text style={styles.name}>{displayName}</Text>
-          <View style={styles.badgeRow}>
-            <View style={styles.goldBadge}>
-              <Text style={styles.goldBadgeText}>★ AI Personal CFO Member</Text>
-            </View>
-            <Text style={styles.memberSince}>Member Since: 2026</Text>
-          </View>
         </View>
 
-        <View style={styles.completionCard}>
-          <CompletionRing progress={0.92} value="92%" label="COMPLETE" />
-          <Text style={styles.completionSubtext}>
-            Complete your profile to unlock personalized AI insights.
-          </Text>
-          <Pressable
-            onPress={() => navigation.navigate('EditProfile')}
-            accessibilityRole="button"
-          >
-            <Text style={styles.completeNow}>Complete Now</Text>
-          </Pressable>
+        {/* Quick Stats Grid */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Financial Snapshot</Text>
         </View>
 
-        <View style={styles.statsStack}>
+        <View style={styles.statsRow}>
           <ProfileStatCard
             title="Health Score"
             value="812"
             status="Excellent"
             statusColor={colors.success}
-            borderColor={colors.primary}
             icon={Shield}
-            iconBackgroundColor={colors.primaryBackground}
+            iconBackgroundColor={colors.primarySoft}
             iconColor={colors.primary}
           />
           <ProfileStatCard
@@ -213,97 +137,117 @@ export default function ProfileScreen() {
             value="₹14.2L"
             status="+14% YoY"
             statusColor={colors.success}
-            borderColor={colors.success}
             icon={Wallet}
             iconBackgroundColor={colors.successBackground}
             iconColor={colors.success}
           />
           <ProfileStatCard
-            title="Goals Active"
-            value="3 of 5"
+            title="Active Goals"
+            value="3 / 5"
             status="60% Done"
-            statusColor={colors.accent}
-            borderColor={colors.accent}
+            statusColor={colors.warning}
             icon={Target}
             iconBackgroundColor={colors.accentBackground}
-            iconColor={colors.accent}
+            iconColor={colors.warning}
           />
         </View>
 
-        <View style={styles.aiCard}>
-          <View style={styles.aiWatermark}>
-            <Bot size={140} color={colors.primary} strokeWidth={1} />
-          </View>
-          <View style={styles.aiIconBox}>
-            <Bot size={28} color={colors.primaryDark} strokeWidth={2} />
-          </View>
-          <Text style={styles.aiTitle}>Your Financial Journey</Text>
-          <Text style={styles.aiBody}>
-            You have improved by{' '}
-            <Text style={{ color: colors.primary, fontWeight: Typography.fontWeights.bold }}>
-              12 points
-            </Text>{' '}
-            and unlocked{' '}
-            <Text style={{ color: colors.primary, fontWeight: Typography.fontWeights.bold }}>
-              2 financial milestones
-            </Text>{' '}
-            this quarter.
-          </Text>
-          <Pressable style={styles.aiButton} accessibilityRole="button">
-            <Text style={styles.aiButtonText}>View Milestones</Text>
-          </Pressable>
+        {/* Appearance Mode Segmented Selector */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Appearance</Text>
         </View>
 
-        <View style={styles.accountSection}>
-          <Text style={styles.sectionTitle}>Account Management</Text>
+        <View style={styles.themeContainer}>
+          {themeOptions.map((opt) => {
+            const Icon = opt.icon
+            const isSelected = mode === opt.value
+            return (
+              <Pressable
+                key={opt.value}
+                onPress={() => setMode(opt.value)}
+                style={[
+                  styles.themeTab,
+                  isSelected && styles.themeTabActive,
+                ]}
+                accessibilityRole="button"
+              >
+                <Icon
+                  size={18}
+                  color={isSelected ? colors.primary : colors.textSecondary}
+                  strokeWidth={2}
+                />
+                <Text
+                  style={[
+                    styles.themeTabText,
+                    isSelected && styles.themeTabTextActive,
+                  ]}
+                >
+                  {opt.label}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+
+        {/* Account Options */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Account & Controls</Text>
+        </View>
+
+        <View style={styles.settingsGroup}>
           <SettingsListItem
             icon={User}
-            title="Personal Information"
-            subtitle="Manage your name, age, city and occupation"
+            title="Personal Details"
+            subtitle="Name, age, city & monthly income"
             onPress={() => navigation.navigate('EditProfile')}
           />
-          <SettingsListItem
-            icon={SlidersHorizontal}
-            title="Financial Preferences"
-            subtitle="Update income, budget & goal settings"
-          />
+
           <SettingsListItem
             icon={Link}
             title="Connected Accounts"
-            subtitle="Bank accounts, investments & liabilities"
+            subtitle="Bank accounts, Demat & Liabilities"
+            rightElement={
+              <View style={styles.verifiedBadge}>
+                <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
+                <Text style={styles.verifiedBadgeText}>Linked</Text>
+              </View>
+            }
           />
+
           <SettingsListItem
             icon={Bell}
-            title="Notifications"
-            subtitle="Push, email and reminder preferences"
+            title="Notifications & Alerts"
+            subtitle="Budget thresholds, monthly reports & AI insights"
             onPress={() => navigation.navigate('Notifications')}
           />
         </View>
 
-        <View style={styles.securitySection}>
-          <View style={styles.securityBadges}>
-            <View style={styles.securityItem}>
-              <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
-              <Text style={styles.securityText}>Verified Email</Text>
-            </View>
-            <View style={styles.securityItem}>
-              <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
-              <Text style={styles.securityText}>Verified Mobile</Text>
-            </View>
-            <View style={styles.securityItem}>
-              <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
-              <Text style={styles.securityText}>Profile Secured</Text>
-            </View>
-          </View>
+        {/* Security & Sign Out */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Security & Session</Text>
+        </View>
 
-          <Pressable
+        <View style={styles.settingsGroup}>
+          <SettingsListItem
+            icon={Shield}
+            title="Biometric & Security"
+            subtitle="AES-256 encrypted local data"
+            rightElement={
+              <View style={styles.verifiedBadge}>
+                <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
+                <Text style={styles.verifiedBadgeText}>Active</Text>
+              </View>
+            }
+          />
+
+          <SettingsListItem
+            icon={LogOut}
+            title="Sign Out"
+            subtitle="Log out safely from this device"
+            destructive
+            showChevron={false}
             onPress={() => logout()}
-            style={styles.logoutButton}
-            accessibilityRole="button"
-          >
-            <LogOut size={20} color={colors.danger} strokeWidth={2} />
-            <Text style={styles.logoutText}>Logout Account</Text>
-          </Pressable>
+          />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -316,219 +260,197 @@ function makeStyles(colors: ThemeColors) {
       flex: 1,
       backgroundColor: colors.background,
     },
-    scrollContent: {
-      paddingHorizontal: 20,
-      paddingTop: 8,
-    },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      paddingHorizontal: 20,
       paddingVertical: 12,
-      marginBottom: 8,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.background,
     },
     iconButton: {
-      width: 44,
-      height: 44,
+      width: 40,
+      height: 40,
+      borderRadius: 20,
+      backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: colors.border,
     },
     headerTitle: {
       fontFamily: Typography.fontFamily,
-      fontSize: 20,
+      fontSize: 18,
       fontWeight: Typography.fontWeights.bold,
-      color: colors.primary,
+      color: colors.textPrimary,
+    },
+    scrollContent: {
+      paddingHorizontal: 20,
+      paddingTop: 16,
     },
 
-    hero: {
+    /* Hero Profile Card */
+    heroCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.05,
+      shadowRadius: 12,
+      elevation: 2,
+    },
+    heroContent: {
+      flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: 24,
     },
     avatarWrapper: {
-      width: 84,
-      height: 84,
-      marginBottom: 12,
+      position: 'relative',
+      marginRight: 16,
     },
     avatar: {
-      width: 80,
-      height: 80,
-      borderRadius: 40,
-      backgroundColor: colors.border,
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: colors.primarySoft,
+      borderWidth: 2,
+      borderColor: colors.primary,
     },
-    editBadge: {
+    avatarBadge: {
       position: 'absolute',
       bottom: 0,
       right: 0,
-      width: 28,
-      height: 28,
-      borderRadius: 14,
+      width: 24,
+      height: 24,
+      borderRadius: 12,
       backgroundColor: colors.primary,
       alignItems: 'center',
       justifyContent: 'center',
       borderWidth: 2,
       borderColor: colors.surface,
     },
-    name: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 20,
-      fontWeight: Typography.fontWeights.bold,
-      color: colors.textPrimary,
-      marginBottom: 10,
+    heroTextGroup: {
+      flex: 1,
     },
-    badgeRow: {
+    nameRow: {
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 10,
-      flexWrap: 'wrap',
-      justifyContent: 'center',
+      gap: 8,
+      marginBottom: 4,
     },
-    goldBadge: {
-      backgroundColor: colors.accent,
-      paddingHorizontal: 10,
-      paddingVertical: 5,
-      borderRadius: 20,
-    },
-    goldBadgeText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 11,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.surface,
-    },
-    memberSince: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 12,
-      fontWeight: Typography.fontWeights.medium,
-      color: colors.textSecondary,
-    },
-
-    completionCard: {
-      backgroundColor: colors.surface,
-      borderRadius: 24,
-      padding: 20,
-      alignItems: 'center',
-      marginBottom: 24,
-      ...CARD_SHADOW,
-    },
-    completionSubtext: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 13,
-      fontWeight: Typography.fontWeights.regular,
-      color: colors.textSecondary,
-      textAlign: 'center',
-      marginTop: 14,
-      marginBottom: 6,
-      lineHeight: 20,
-    },
-    completeNow: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 14,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.primary,
-    },
-
-    statsStack: {
-      marginBottom: 24,
-    },
-
-    aiCard: {
-      backgroundColor: colors.primaryBackground,
-      borderRadius: 24,
-      padding: 20,
-      marginBottom: 24,
-      overflow: 'hidden',
-      position: 'relative',
-    },
-    aiWatermark: {
-      position: 'absolute',
-      top: 8,
-      right: -8,
-      opacity: 0.06,
-    },
-    aiIconBox: {
-      width: 48,
-      height: 48,
-      borderRadius: 14,
-      backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
-      marginBottom: 14,
-    },
-    aiTitle: {
+    name: {
       fontFamily: Typography.fontFamily,
       fontSize: 18,
       fontWeight: Typography.fontWeights.bold,
       color: colors.textPrimary,
-      marginBottom: 8,
     },
-    aiBody: {
+    proTag: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+      backgroundColor: colors.primarySoft,
+      paddingHorizontal: 8,
+      paddingVertical: 3,
+      borderRadius: 12,
+    },
+    proTagText: {
       fontFamily: Typography.fontFamily,
-      fontSize: 14,
+      fontSize: 11,
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.primary,
+    },
+    email: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 13,
+      fontWeight: Typography.fontWeights.medium,
+      color: colors.textSecondary,
+      marginBottom: 4,
+    },
+    memberSince: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 11,
       fontWeight: Typography.fontWeights.regular,
       color: colors.textSecondary,
-      lineHeight: 22,
-      marginBottom: 16,
-      paddingRight: 24,
-    },
-    aiButton: {
-      backgroundColor: colors.primary,
-      borderRadius: 16,
-      paddingVertical: 14,
-      alignItems: 'center',
-      alignSelf: 'stretch',
-    },
-    aiButtonText: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 15,
-      fontWeight: Typography.fontWeights.semibold,
-      color: colors.surface,
     },
 
-    accountSection: {
-      marginBottom: 24,
+    /* Section Headers */
+    sectionHeader: {
+      marginBottom: 10,
+      marginTop: 4,
     },
     sectionTitle: {
       fontFamily: Typography.fontFamily,
       fontSize: 14,
       fontWeight: Typography.fontWeights.semibold,
-      color: colors.textPrimary,
-      marginBottom: 12,
+      color: colors.textSecondary,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
     },
 
-    securitySection: {
-      marginBottom: 24,
-    },
-    securityBadges: {
+    /* Stats Grid */
+    statsRow: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
-      justifyContent: 'center',
-      gap: 12,
+      gap: 10,
       marginBottom: 20,
     },
-    securityItem: {
+
+    /* Theme Segmented Switcher */
+    themeContainer: {
+      flexDirection: 'row',
+      backgroundColor: colors.surface,
+      borderRadius: 20,
+      padding: 6,
+      marginBottom: 20,
+      borderWidth: 1,
+      borderColor: colors.border,
+      gap: 6,
+    },
+    themeTab: {
+      flex: 1,
       flexDirection: 'row',
       alignItems: 'center',
-      gap: 4,
+      justifyContent: 'center',
+      gap: 6,
+      paddingVertical: 10,
+      borderRadius: 16,
     },
-    securityText: {
+    themeTabActive: {
+      backgroundColor: colors.primarySoft,
+    },
+    themeTabText: {
       fontFamily: Typography.fontFamily,
-      fontSize: 12,
+      fontSize: 13,
       fontWeight: Typography.fontWeights.medium,
       color: colors.textSecondary,
     },
-    logoutButton: {
+    themeTabTextActive: {
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.primary,
+    },
+
+    /* Settings Group */
+    settingsGroup: {
+      marginBottom: 12,
+    },
+    verifiedBadge: {
       flexDirection: 'row',
       alignItems: 'center',
-      justifyContent: 'center',
-      gap: 8,
-      paddingVertical: 16,
-      borderRadius: 16,
-      backgroundColor: colors.dangerTint,
+      gap: 4,
+      backgroundColor: colors.successBackground,
+      paddingHorizontal: 8,
+      paddingVertical: 4,
+      borderRadius: 12,
     },
-    logoutText: {
+    verifiedBadgeText: {
       fontFamily: Typography.fontFamily,
-      fontSize: 15,
+      fontSize: 11,
       fontWeight: Typography.fontWeights.semibold,
-      color: colors.danger,
+      color: colors.success,
     },
   })
 }

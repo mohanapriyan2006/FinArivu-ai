@@ -282,6 +282,6 @@ const makeStyles = (colors: any) =>
     },
     listContent: {
       paddingVertical: 16,
-      paddingBottom: 100,
+      paddingBottom: 150,
     },
   })

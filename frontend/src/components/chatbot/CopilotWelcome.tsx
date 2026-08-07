@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import {
   Bot,
@@ -7,7 +7,6 @@ import {
   Calendar,
   Compass,
   PieChart,
-  ShieldCheck,
   Target,
   TrendingUp,
 } from 'lucide-react-native'
@@ -19,7 +18,7 @@ interface CopilotWelcomeProps {
   onSelectSuggestion: (prompt: string) => void
 }
 
-const SUGGESTIONS = [
+const SUGGESTIONS1 = [
   {
     id: 'budget',
     label: 'Analyze my budget',
@@ -40,7 +39,10 @@ const SUGGESTIONS = [
     prompt: 'Where am I overspending this month compared to last month?',
     icon: TrendingUp,
     color: '#F59E0B',
-  },
+  } 
+]
+
+const SUGGESTIONS2 = [
   {
     id: 'retirement',
     label: 'Plan retirement',
@@ -69,7 +71,11 @@ export function CopilotWelcome({ onSelectSuggestion }: CopilotWelcomeProps) {
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.scrollContainer}
+      contentContainerStyle={styles.container}
+      showsVerticalScrollIndicator={false}
+    >
       {/* Hero Bot Avatar */}
       <Animated.View entering={FadeInDown.duration(400).delay(100)} style={styles.heroAvatarContainer}>
         <View style={styles.outerGlowRing}>
@@ -87,11 +93,15 @@ export function CopilotWelcome({ onSelectSuggestion }: CopilotWelcomeProps) {
         </Text>
       </Animated.View>
 
-      {/* Action Chips Grid */}
+      {/* Action Chips Horizontal Scroll */}
       <Animated.View entering={FadeInDown.duration(500).delay(300)} style={styles.chipsContainer}>
         <Text style={styles.chipsHeader}>SUGGESTED ACTIONS</Text>
-        <View style={styles.chipsGrid}>
-          {SUGGESTIONS.map((item) => {
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScrollContent}
+        >
+          {SUGGESTIONS1.map((item) => {
             const IconComponent = item.icon
             return (
               <Pressable
@@ -111,18 +121,48 @@ export function CopilotWelcome({ onSelectSuggestion }: CopilotWelcomeProps) {
               </Pressable>
             )
           })}
-        </View>
+        </ScrollView>
+        <View style={{height: 20}}/>
+         <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScrollContent}
+        >
+          {SUGGESTIONS2.map((item) => {
+            const IconComponent = item.icon
+            return (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [
+                  styles.chipButton,
+                  pressed && styles.chipButtonPressed,
+                ]}
+                onPress={() => onSelectSuggestion(item.prompt)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
+                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}1F` }]}>
+                  <IconComponent size={15} color={item.color} strokeWidth={2.2} />
+                </View>
+                <Text style={styles.chipText}>{item.label}</Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
       </Animated.View>
-    </View>
+    </ScrollView>
   )
 }
 
-const makeStyles = (colors: any) =>
-  StyleSheet.create({
+function makeStyles(colors: any) {
+  return StyleSheet.create({
+    scrollContainer: {
+      flex: 1,
+    },
     container: {
       paddingHorizontal: 20,
       paddingTop: 32,
-      paddingBottom: 24,
+      paddingBottom: 150,
       alignItems: 'center',
     },
     heroAvatarContainer: {
@@ -182,10 +222,11 @@ const makeStyles = (colors: any) =>
       marginBottom: 12,
       textTransform: 'uppercase',
     },
-    chipsGrid: {
+    chipsScrollContent: {
       flexDirection: 'row',
-      flexWrap: 'wrap',
+      alignItems: 'center',
       gap: 10,
+      paddingRight: 20,
     },
     chipButton: {
       flexDirection: 'row',
@@ -222,3 +263,4 @@ const makeStyles = (colors: any) =>
       fontSize: 13,
     },
   })
+}
