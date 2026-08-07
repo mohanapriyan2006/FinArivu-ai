@@ -18,11 +18,15 @@ class JSONValidator:
         if cleaned.startswith("```json"):
             cleaned = cleaned[7:]
             if cleaned.endswith("```"):
-                cleaned = cleaned[:-3].strip()
+                cleaned = cleaned[:-3]
         elif cleaned.startswith("```"):
             cleaned = cleaned[3:]
             if cleaned.endswith("```"):
-                cleaned = cleaned[:-3].strip()
+                cleaned = cleaned[:-3]
+
+        # Remove actual whitespace and literal \\n line-separator sequences
+        # that appear after code fences in one-line encoded responses.
+        cleaned = cleaned.strip().removeprefix("\\n").removesuffix("\\n").strip()
 
         try:
             parsed = json.loads(cleaned)

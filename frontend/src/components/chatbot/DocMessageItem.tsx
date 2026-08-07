@@ -23,6 +23,7 @@ export interface ChatMessageItemData {
   agentsUsed?: string[]
   data?: Record<string, any>
   artifacts?: { type: string; title: string; content: Record<string, any> }[]
+  recommendations?: { title: string; description: string; category: string }[]
   followUpQuestions?: { text: string }[] | string[]
   suggestedActions?: { label: string; action: string; route?: string }[]
   disclaimer?: string
@@ -109,6 +110,18 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
               <View key={`artifact-${index}`} style={styles.artifactCard}>
                 <Text style={styles.artifactTitle}>{artifact.title}</Text>
                 <Text style={styles.artifactType}>{artifact.type.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Recommendations */}
+        {item.recommendations && item.recommendations.length > 0 && (
+          <View style={styles.artifactsList}>
+            {item.recommendations.map((rec, index) => (
+              <View key={`rec-${index}`} style={styles.artifactCard}>
+                <Text style={styles.artifactTitle}>{rec.title}</Text>
+                <Text style={styles.artifactType}>{rec.description}</Text>
               </View>
             ))}
           </View>

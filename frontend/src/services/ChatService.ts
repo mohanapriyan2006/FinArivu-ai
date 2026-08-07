@@ -1,4 +1,5 @@
 import { api } from './api'
+import { SSE } from 'react-native-sse'
 
 // ── Legacy Chat (existing endpoint — preserved) ──────────────────────────
 
@@ -122,38 +123,32 @@ export const sendCopilotMessage = async (
 /**
  * Stream a response from the AI Copilot using Server-Sent Events.
  *
- * Returns an EventSource instance. The caller should attach event
- * listeners for 'token', 'agent_start', 'agent_done', 'data',
- * 'error', and 'done' events.
+ * Returns an SSE instance from react-native-sse. Callers should attach
+ * event listeners for 'message' and 'error' events and then `connect()`.
  */
 export const streamCopilotMessage = (
   sessionId: string,
   message: string,
   contextHints: string[] = [],
   token: string
-): EventSource => {
-  // SSE requires GET, but our endpoint is POST.
-  // We use a fetch-based approach and parse the stream manually.
-  // For React Native, use a polyfill like react-native-sse.
+): SSE => {
   const url = `${api.defaults.baseURL}/v1/copilot/chat/stream`
+  const body = JSON.stringify({
+    session_id: sessionId,
+    message,
+    context_hints: contextHints,
+  })
 
-  // Note: This creates a basic EventSource-compatible object.
-  // In production React Native, use react-native-sse or rn-fetch-blob.
-  const eventSource = new EventSource(url, {
-    // @ts-ignore — custom headers via polyfill
+  const sse = new SSE(url, {
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
       'Content-Type': 'application/json',
     },
-    method: 'POST',
-    body: JSON.stringify({
-      session_id: sessionId,
-      message,
-      context_hints: contextHints,
-    }),
-  } as EventSourceInit)
+    body,
+  })
 
-  return eventSource
+  return sse
 }
 
 /**

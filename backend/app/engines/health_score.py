@@ -132,3 +132,29 @@ def calculate_health_score(
         breakdown=breakdown,
         recommendations=recommendations,
     )
+
+
+class FinancialHealthEngine:
+    """FastAPI-facing wrapper around the health score calculation."""
+
+    def calculate(self, profile: dict[str, Any]) -> dict[str, Any]:
+        """Compute a health score snapshot from an aggregated profile."""
+        result = calculate_health_score(
+            monthly_income=Decimal(str(profile.get("monthly_income", 1))),
+            monthly_expenses=Decimal(str(profile.get("monthly_expenses", 0))),
+            emergency_assets=Decimal(str(profile.get("emergency_assets", 0))),
+            total_debt=Decimal(str(profile.get("total_debt", 0))),
+            annual_income=Decimal(str(profile.get("annual_income", 1))),
+            average_goal_progress=Decimal(str(profile.get("average_goal_progress", 0))),
+            average_budget_utilization=Decimal(str(profile.get("average_budget_utilization", 0))),
+        )
+        return {
+            "overall_score": float(result.overall_score),
+            "savings_score": float(result.savings_score),
+            "emergency_score": float(result.emergency_score),
+            "debt_score": float(result.debt_score),
+            "goal_score": float(result.goal_score),
+            "budget_score": float(result.budget_score),
+            "breakdown": result.breakdown,
+            "recommendations": result.recommendations,
+        }

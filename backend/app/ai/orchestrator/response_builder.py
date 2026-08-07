@@ -27,6 +27,7 @@ from app.ai.schemas import (
     SuggestedAction,
 )
 from app.core.logger import logger
+from app.financial.artifacts.artifact_builder import ArtifactBuilder
 
 
 # ── Explanation prompt ────────────────────────────────────────────────────
@@ -212,33 +213,12 @@ class ResponseBuilder:
 
     @staticmethod
     def _build_artifacts(results: list[AgentResult]) -> list[Artifact]:
-        """Map each agent result to a typed artifact for the frontend."""
-        artifact_map: dict[str, str] = {
-            "BudgetAgent": "budget_card",
-            "GoalAgent": "goal_card",
-            "HealthAgent": "health_card",
-            "TaxAgent": "tax_card",
-            "RetirementAgent": "retirement_card",
-            "NetWorthAgent": "networth_card",
-            "EducationAgent": "insight_card",
-            "ReportAgent": "report_card",
-            "InsightAgent": "insight_card",
-            "RecommendationAgent": "recommendation_card",
-        }
-        artifacts: list[Artifact] = []
-        for r in results:
-            if not r.data or r.error:
-                continue
-            artifact_type = artifact_map.get(r.agent_name, "insight_card")
-            title = r.agent_name.replace("Agent", "")
-            artifacts.append(
-                Artifact(
-                    type=artifact_type,
-                    title=title,
-                    content=r.data,
-                )
-            )
-        return artifacts
+        """Map each agent result to typed artifacts for the frontend."""
+        agent_results = [
+            {"agent_name": r.agent_name, "data": r.data, "error": r.error} for r in results
+        ]
+        built = ArtifactBuilder.build_artifact_list(agent_results)
+        return [Artifact(**a.model_dump()) for a in built]
 
     @staticmethod
     def _extract_recommendations(merged_data: dict[str, Any]) -> list[Recommendation]:

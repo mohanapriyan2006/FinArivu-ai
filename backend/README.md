@@ -44,6 +44,10 @@ uvicorn main:app --reload --host 0.0.0.0 --port 8000
 pytest
 ```
 
+```bash
+python -B -m pytest -p no:flask --no-cov tests/financial tests/ai -v
+```
+
 ## API Documentation
 
 The backend exposes an OpenAPI-compatible REST API. Once the server is running:

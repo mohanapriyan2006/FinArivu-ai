@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.builder import ContextBuilder
 from app.ai.guardrails.guardrail import Guardrail
+from app.ai.guardrails.guardrail_service import GuardrailService
 from app.ai.intent.classifier import IntentClassifier
 from app.ai.memory.conversation_memory import ConversationMemory
 from app.ai.agents.insight_agent import InsightAgent
@@ -38,6 +39,7 @@ class AIController:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._guardrail = Guardrail()
+        self._guardrail_service = GuardrailService()
         self._intent = IntentClassifier()
         self._context_builder = ContextBuilder(session)
         self._planner = Planner()
@@ -62,24 +64,24 @@ class AIController:
                 message="I didn't receive a message. How can I help with your finances today?",
             )
 
-        # 1. Guardrail
-        guard_result = self._guardrail.check(message)
+        sanitised_message = self._guardrail_service.mask_pii(message)
+        guard_result = self._guardrail.check(sanitised_message)
         if not guard_result.allowed:
             return await self._blocked_response(
-                user_id, session_id, message, guard_result.reason or "policy_violation",
+                user_id, session_id, sanitised_message, guard_result.reason or "policy_violation",
             )
 
         # 2. Investment advice guard
-        if self._guardrail.is_investment_advice(message):
+        if self._guardrail.is_investment_advice(sanitised_message):
             return await self._blocked_response(
-                user_id, session_id, message, "investment_advice",
+                user_id, session_id, sanitised_message, "investment_advice",
             )
 
         # 3. Persist user message
-        await self._memory.save_message(user_id, session_id, "user", message)
+        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
 
         # 4. Classify intent
-        intent_result = self._intent.classify(message)
+        intent_result = self._intent.classify(sanitised_message)
 
         # 5. Build full financial context (agents never query DB directly)
         financial_context = await self._context_builder.build(user_id, session_id)
@@ -93,13 +95,13 @@ class AIController:
             session_id,
             execution_plan,
             financial_context,
-            message,
+            sanitised_message,
             intent_result.entities,
         )
 
         # 8. Run insight and recommendation agents
         insight_context = {
-            "user_message": message,
+            "user_message": sanitised_message,
             "financial_context": financial_context,
             "agent_results": agent_results,
             "entities": intent_result.entities,
@@ -115,11 +117,14 @@ class AIController:
         planner_output = self._to_planner_output(execution_plan)
 
         build = await self._response_builder.build_full(
-            message,
+            sanitised_message,
             planner_output,
             full_results,
             start,
         )
+
+        # Mask any PII that might have been echoed before persistence or response.
+        safe_response = self._guardrail_service.mask_pii(build.message)
 
         # 10. Persist assistant message with full metadata
         latency = int((time.perf_counter() - start) * 1000)
@@ -127,7 +132,7 @@ class AIController:
             user_id,
             session_id,
             "assistant",
-            build.message,
+            safe_response,
             intent=execution_plan.intent.value,
             provider=build.ai_response.provider_name if build.ai_response else None,
             model=build.ai_response.model if build.ai_response else None,
@@ -143,7 +148,7 @@ class AIController:
         # 11. Return structured response
         return CopilotChatResponse(
             message_id=msg.id,
-            message=build.message,
+            message=safe_response,
             summary=build.summary,
             intent=self._map_intent(execution_plan.intent.value),
             agents_used=build.metadata.agents_used,
@@ -213,11 +218,14 @@ class AIController:
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
 
+        sanitised_message = self._guardrail_service.mask_pii(message)
+
         # 1. Guardrail
-        guard_result = self._guardrail.check(message)
-        if not guard_result.allowed or self._guardrail.is_investment_advice(message):
+        guard_result = self._guardrail.check(sanitised_message)
+        if not guard_result.allowed or self._guardrail.is_investment_advice(sanitised_message):
             reason = guard_result.reason if not guard_result.allowed else "investment_advice"
             chat_response = self._guardrail.build_response(reason)
+            await self._memory.save_message(user_id, session_id, "user", sanitised_message, blocked=True, block_reason=reason)
             yield StreamEvent(
                 event_type=StreamEventType.DATA,
                 data=chat_response.message,
@@ -226,8 +234,8 @@ class AIController:
             return
 
         # 2. Classify, build context, plan, execute
-        await self._memory.save_message(user_id, session_id, "user", message)
-        intent_result = self._intent.classify(message)
+        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
+        intent_result = self._intent.classify(sanitised_message)
         financial_context = await self._context_builder.build(user_id, session_id)
         execution_plan = self._planner.plan(intent_result)
         agent_results = await self._orchestrator.execute(
@@ -235,7 +243,7 @@ class AIController:
             session_id,
             execution_plan,
             financial_context,
-            message,
+            sanitised_message,
             intent_result.entities,
         )
 
@@ -245,7 +253,7 @@ class AIController:
         planner_output = self._to_planner_output(execution_plan)
 
         async for event in self._response_builder.build_stream(
-            message, planner_output, agent_results,
+            sanitised_message, planner_output, agent_results,
         ):
             yield event
 
