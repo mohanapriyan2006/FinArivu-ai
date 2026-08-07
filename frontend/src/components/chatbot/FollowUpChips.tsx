@@ -13,7 +13,7 @@ import { Typography } from '@/theme'
 
 interface FollowUpChipsProps {
   onSelect: (chipText: string) => void
-  suggestions?: string[]
+  suggestions?: { text: string }[] | string[]
 }
 
 const DEFAULT_FOLLOW_UPS = [
@@ -29,7 +29,7 @@ export function FollowUpChips({ onSelect, suggestions }: FollowUpChipsProps) {
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const items = suggestions && suggestions.length > 0
-    ? suggestions.map((s, i) => ({ id: `sug-${i}`, label: s, icon: Sparkles }))
+    ? suggestions.map((s, i) => ({ id: `sug-${i}`, label: typeof s === 'string' ? s : s.text, icon: Sparkles }))
     : DEFAULT_FOLLOW_UPS
 
   return (

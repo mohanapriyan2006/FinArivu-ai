@@ -11,7 +11,7 @@ from tenacity import (
     wait_exponential,
 )
 
-from app.ai.orchestrator.execution_planner import ExecutionPlanner
+from app.ai.planner.execution_planner import ExecutionPlanner
 from app.ai.registry.registry import AgentRegistry
 from app.ai.schemas.orchestration import ExecutionPlan, FinancialContext
 from app.ai.schemas import AgentResult

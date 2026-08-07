@@ -22,7 +22,8 @@ export interface ChatMessageItemData {
   intent?: string
   agentsUsed?: string[]
   data?: Record<string, any>
-  followUpQuestions?: string[]
+  artifacts?: { type: string; title: string; content: Record<string, any> }[]
+  followUpQuestions?: { text: string }[] | string[]
   suggestedActions?: { label: string; action: string; route?: string }[]
   disclaimer?: string
   guardrailTriggered?: boolean
@@ -101,7 +102,19 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
           <RetirementArtifactCard data={agentData.RetirementAgent || agentData} />
         )}
 
-        {/* New structured artifacts */}
+        {/* Render structured artifacts from backend */}
+        {item.artifacts && item.artifacts.length > 0 && (
+          <View style={styles.artifactsList}>
+            {item.artifacts.map((artifact, index) => (
+              <View key={`artifact-${index}`} style={styles.artifactCard}>
+                <Text style={styles.artifactTitle}>{artifact.title}</Text>
+                <Text style={styles.artifactType}>{artifact.type.replace(/_/g, ' ')}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Suggested Actions */}
         {item.suggestedActions && item.suggestedActions.length > 0 && (
           <View style={styles.actionsContainer}>
             <ScrollView
@@ -229,6 +242,31 @@ const makeStyles = (colors: any) =>
     },
     actionsContainer: {
       marginTop: 8,
+    },
+    artifactsList: {
+      marginTop: 8,
+      gap: 8,
+    },
+    artifactCard: {
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 12,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+    },
+    artifactTitle: {
+      ...Typography.titleSmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+      fontSize: 13,
+    },
+    artifactType: {
+      ...Typography.labelSmall,
+      color: colors.textTertiary,
+      fontSize: 11,
+      textTransform: 'capitalize',
+      marginTop: 2,
     },
     actionsScroll: {
       paddingHorizontal: 4,

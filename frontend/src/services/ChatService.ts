@@ -71,7 +71,7 @@ export interface CopilotChatResponse {
   data: CopilotAgentData
   artifacts?: CopilotArtifact[]
   recommendations?: CopilotRecommendation[]
-  followUpQuestions?: string[]
+  followUpQuestions?: { text: string }[] | string[]
   suggestedActions?: CopilotSuggestedAction[]
   metadata?: CopilotMetadata
   disclaimer: string

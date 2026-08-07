@@ -80,6 +80,45 @@ class ArtifactBuilder:
         )
 
     @staticmethod
+    def build_progress_card(
+        title: str,
+        current: float,
+        target: float,
+        label: str = "",
+    ) -> Artifact:
+        percentage = (current / target * 100) if target > 0 else 0
+        return Artifact(
+            type="progress_card",
+            title=title,
+            content={"current": current, "target": target, "percentage": percentage, "label": label},
+        )
+
+    @staticmethod
+    def build_timeline_card(
+        title: str,
+        events: list[dict[str, Any]],
+    ) -> Artifact:
+        return Artifact(
+            type="timeline_card",
+            title=title,
+            content={"events": events},
+        )
+
+    @staticmethod
+    def build_report_card(
+        title: str,
+        report_data: dict[str, Any],
+        *,
+        period: str = "monthly",
+    ) -> Artifact:
+        artifact_type = "weekly_report_card" if period == "weekly" else "monthly_report_card"
+        return Artifact(
+            type=artifact_type,
+            title=title,
+            content=report_data,
+        )
+
+    @staticmethod
     def build_artifact_list(agent_results: list[dict[str, Any]]) -> list[Artifact]:
         """Build a complete artifact list from a list of agent result dicts."""
         artifacts: list[Artifact] = []
