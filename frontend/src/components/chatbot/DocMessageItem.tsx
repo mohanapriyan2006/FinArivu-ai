@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Bot, Sparkles } from 'lucide-react-native'
 
@@ -99,6 +99,30 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
         )}
         {hasRetirementData && (
           <RetirementArtifactCard data={agentData.RetirementAgent || agentData} />
+        )}
+
+        {/* New structured artifacts */}
+        {item.suggestedActions && item.suggestedActions.length > 0 && (
+          <View style={styles.actionsContainer}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.actionsScroll}
+            >
+              {item.suggestedActions.map((action, index) => (
+                <Pressable
+                  key={`action-${index}`}
+                  style={({ pressed }) => [
+                    styles.actionChip,
+                    pressed && styles.actionChipPressed,
+                  ]}
+                  onPress={() => onSelectFollowUp(action.label)}
+                >
+                  <Text style={styles.actionChipText}>{action.label}</Text>
+                </Pressable>
+              ))}
+            </ScrollView>
+          </View>
         )}
 
         {/* Disclaimer if present */}
@@ -202,6 +226,33 @@ const makeStyles = (colors: any) =>
       lineHeight: 18,
       marginBottom: 8,
       fontStyle: 'italic',
+    },
+    actionsContainer: {
+      marginTop: 8,
+    },
+    actionsScroll: {
+      paddingHorizontal: 4,
+      gap: 8,
+    },
+    actionChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.primarySoft,
+      borderWidth: 1,
+      borderColor: 'rgba(91, 78, 250, 0.25)',
+      borderRadius: 16,
+      paddingHorizontal: 12,
+      paddingVertical: 7,
+    },
+    actionChipPressed: {
+      opacity: 0.75,
+      backgroundColor: colors.primary,
+    },
+    actionChipText: {
+      ...Typography.labelSmall,
+      color: colors.primary,
+      fontWeight: '600',
+      fontSize: 12,
     },
     disclaimerText: {
       ...Typography.bodySmall,

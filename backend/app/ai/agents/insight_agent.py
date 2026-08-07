@@ -62,15 +62,25 @@ class InsightAgent(BaseSpecialistAgent):
 
         suggested_actions = [
             {"label": "Review Budget", "action": "view_budget", "route": "/budget"},
-            {"label": "Update Goals", "action": "view_goals", "route": "/goals"},
+            {"label": "Improve Savings", "action": "improve_savings", "route": "/savings"},
+            {"label": "View Cash Flow", "action": "view_cash_flow", "route": "/cashflow"},
         ]
+        if goals:
+            suggested_actions.append({"label": "Update Goals", "action": "view_goals", "route": "/goals"})
+        if liabilities:
+            suggested_actions.append({"label": "Repay Debt Faster", "action": "repay_debt", "route": "/liabilities"})
+        if assets:
+            suggested_actions.append({"label": "View Net Worth", "action": "view_networth", "route": "/networth"})
+
+        # Cap at the requested maximum of 6 actions.
+        suggested_actions = suggested_actions[:6]
 
         return AgentResult(
             agent_name=self.agent_name,
             data={
                 "insights": insights,
-                "follow_up_questions": [{"text": q} for q in follow_ups[:3]],
-                "suggested_actions": suggested_actions[:3],
+                "follow_up_questions": [{"text": q} for q in follow_ups[:5]],
+                "suggested_actions": suggested_actions[:6],
             },
             summary="; ".join(insights) if insights else "No insights available.",
             confidence=1.0,

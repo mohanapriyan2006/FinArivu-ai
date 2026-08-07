@@ -56,9 +56,35 @@ class ArtifactBuilder:
         return Artifact(type="bar_chart", title=title, content={"labels": labels, "datasets": datasets})
 
     @staticmethod
+    def build_line_chart(labels: list[str], datasets: list[dict[str, Any]], title: str = "") -> Artifact:
+        return Artifact(
+            type="line_chart",
+            title=title,
+            content={"labels": labels, "datasets": datasets},
+        )
+
+    @staticmethod
+    def build_donut_chart(labels: list[str], data: list[float], title: str = "") -> Artifact:
+        return Artifact(
+            type="donut_chart",
+            title=title,
+            content={"labels": labels, "data": data},
+        )
+
+    @staticmethod
     def build_comparison_table(headers: list[str], rows: list[list[Any]], title: str = "") -> Artifact:
         return Artifact(
             type="comparison_table",
             title=title,
             content={"headers": headers, "rows": rows},
         )
+
+    @staticmethod
+    def build_artifact_list(agent_results: list[dict[str, Any]]) -> list[Artifact]:
+        """Build a complete artifact list from a list of agent result dicts."""
+        artifacts: list[Artifact] = []
+        for r in agent_results:
+            if not r.get("data") or r.get("error"):
+                continue
+            artifacts.append(ArtifactBuilder.from_agent_data(r.get("agent_name", ""), r["data"]))
+        return artifacts

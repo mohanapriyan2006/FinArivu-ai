@@ -105,6 +105,7 @@ export default function CopilotScreen({ navigation }: any) {
         intent: response.intent,
         agentsUsed: response.agentsUsed,
         data: response.data,
+        artifacts: response.artifacts,
         followUpQuestions: response.followUpQuestions,
         suggestedActions: response.suggestedActions,
         disclaimer: response.disclaimer,
