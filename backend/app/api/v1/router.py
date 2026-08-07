@@ -17,6 +17,7 @@ from app.api.v1 import (
     reports,
     users,
 )
+from app.ai.router import router as copilot_router
 from app.utils.response import success_response
 
 api_router = APIRouter(prefix="/v1")
@@ -34,6 +35,7 @@ api_router.include_router(liabilities.router)
 api_router.include_router(financial.router)
 api_router.include_router(reports.router)
 api_router.include_router(chat.router)
+api_router.include_router(copilot_router)
 
 
 @api_router.get("/health", tags=["Health"], summary="Service health check")

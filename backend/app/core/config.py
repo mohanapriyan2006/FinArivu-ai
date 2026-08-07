@@ -52,6 +52,12 @@ class Settings(BaseSettings):
     # Cache (in-memory until Redis is added)
     cache_ttl_seconds: int = Field(default=600, alias="CACHE_TTL_SECONDS")
 
+    # AI Copilot
+    ai_copilot_provider: str = Field(default="gemini", alias="AI_COPILOT_PROVIDER")
+    ai_copilot_temperature: float = Field(default=0.3, alias="AI_COPILOT_TEMPERATURE")
+    ai_copilot_max_tokens: int = Field(default=2048, alias="AI_COPILOT_MAX_TOKENS")
+    ai_copilot_timeout: int = Field(default=30, alias="AI_COPILOT_TIMEOUT")
+
     @property
     def is_development(self) -> bool:
         return self.environment in ("development", "test")

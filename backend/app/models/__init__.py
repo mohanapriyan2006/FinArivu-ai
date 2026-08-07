@@ -12,6 +12,8 @@ from app.models.net_worth_history import NetWorthHistory
 from app.models.financial_health_scores import FinancialHealthScore
 from app.models.weekly_reports import WeeklyReport
 from app.models.ai_conversations import AIConversation
+from app.models.ai_feedback import AIFeedback
+from app.models.ai_messages import AIMessage
 from app.models.audit_logs import AuditLog
 from app.models.user_consents import UserConsent
 from app.models.notification_preferences import NotificationPreference
@@ -31,6 +33,8 @@ __all__ = [
     "FinancialHealthScore",
     "WeeklyReport",
     "AIConversation",
+    "AIFeedback",
+    "AIMessage",
     "AuditLog",
     "UserConsent",
     "NotificationPreference",
