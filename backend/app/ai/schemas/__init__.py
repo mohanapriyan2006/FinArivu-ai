@@ -2,6 +2,23 @@
 
 from __future__ import annotations
 
+from app.ai.schemas.copilot import (
+    AgentResult,
+    Artifact,
+    ChatMetadata,
+    CopilotChatRequest,
+    CopilotChatResponse,
+    CopilotFeedbackRequest,
+    CopilotHealthResponse,
+    CopilotIntent,
+    FollowUpQuestion,
+    PlannerOutput,
+    Recommendation,
+    ResponseStyle,
+    StreamEvent,
+    StreamEventType,
+    SuggestedAction,
+)
 from app.ai.schemas.orchestration import (
     AgentRequest,
     AgentResponse,
@@ -18,12 +35,26 @@ from app.ai.schemas.orchestration import (
 __all__ = [
     "AgentRequest",
     "AgentResponse",
+    "AgentResult",
     "Artifact",
+    "ChatMetadata",
     "ChatResponse",
     "ConversationSummary",
+    "CopilotChatRequest",
+    "CopilotChatResponse",
+    "CopilotFeedbackRequest",
+    "CopilotHealthResponse",
+    "CopilotIntent",
     "ExecutionPlan",
     "ExecutionStep",
     "FinancialContext",
+    "FollowUpQuestion",
     "IntentEnum",
     "IntentResult",
+    "PlannerOutput",
+    "Recommendation",
+    "ResponseStyle",
+    "StreamEvent",
+    "StreamEventType",
+    "SuggestedAction",
 ]

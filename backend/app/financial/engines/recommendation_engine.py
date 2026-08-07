@@ -15,7 +15,7 @@ class RecommendationEngine:
         recommendations: list[Recommendation] = []
 
         budget = engine_outputs.get("BudgetAgent", {})
-        if budget.get("overspending_categories"):
+        if budget and budget.get("overspending_categories"):
             for cat in budget["overspending_categories"][:3]:
                 recommendations.append(
                     Recommendation(
@@ -27,7 +27,7 @@ class RecommendationEngine:
                 )
 
         health = engine_outputs.get("HealthAgent", {})
-        if health.get("overall_score", 0) < 70:
+        if health and health.get("overall_score", 0) < 70:
             recommendations.append(
                 Recommendation(
                     title="Build emergency fund",
@@ -38,19 +38,20 @@ class RecommendationEngine:
             )
 
         goal = engine_outputs.get("GoalAgent", {})
-        for g in goal.get("goals", []):
-            if isinstance(g, dict) and g.get("progress", 0) < 50:
-                recommendations.append(
-                    Recommendation(
-                        title=f"Catch up on {g.get('name', 'goal')}",
-                        description="Your goal is behind track. Consider increasing monthly contributions.",
-                        category="goals",
-                        priority="medium",
+        if goal:
+            for g in goal.get("goals", []):
+                if isinstance(g, dict) and g.get("progress", 0) < 50:
+                    recommendations.append(
+                        Recommendation(
+                            title=f"Catch up on {g.get('name', 'goal')}",
+                            description="Your goal is behind track. Consider increasing monthly contributions.",
+                            category="goals",
+                            priority="medium",
+                        )
                     )
-                )
 
         tax = engine_outputs.get("TaxAgent", {})
-        if tax.get("savings_vs_other_regime", 0) > 0:
+        if tax and tax.get("savings_vs_other_regime", 0) > 0:
             recommendations.append(
                 Recommendation(
                     title="Review tax regime",
@@ -61,7 +62,7 @@ class RecommendationEngine:
             )
 
         cash_flow = engine_outputs.get("CashFlowAgent", {})
-        if cash_flow.get("savings_rate", 0) < 0.2:
+        if cash_flow and cash_flow.get("savings_rate", 0) < 0.2:
             recommendations.append(
                 Recommendation(
                     title="Increase savings rate",
