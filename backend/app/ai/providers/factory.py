@@ -8,19 +8,16 @@ Usage::
 
 from __future__ import annotations
 
-from functools import lru_cache
-from typing import Any
-
+import openai
 from tenacity import (
     AsyncRetrying,
-    retry_if_exception_type,
+    retry_if_exception,
     stop_after_attempt,
     wait_exponential,
 )
 
 from app.ai.providers.base import AIProviderResponse, BaseAIProvider
-from app.core.ai_providers import PROVIDERS, configured_providers
-from app.core.config import settings
+from app.core.ai_providers import FALLBACK_ORDER, configured_providers
 from app.core.logger import logger
 
 
@@ -47,9 +44,8 @@ def _register_providers() -> None:
 class ResilientProvider(BaseAIProvider):
     """Wraps a primary provider with retry + fallback chain.
 
-    On transient failures the wrapper retries the primary provider up to 2
-    times with exponential back-off.  If the primary is exhausted it falls
-    through to the next configured provider in priority order.
+    Retries transient failures on each provider before falling through to the
+    next configured provider in the priority order groq -> gemini -> openrouter.
     """
 
     def __init__(
@@ -68,6 +64,22 @@ class ResilientProvider(BaseAIProvider):
     def model_name(self) -> str:
         return self._primary.model_name
 
+    @staticmethod
+    def _is_retryable(exc: Exception) -> bool:
+        """Return True for transient issues we should retry or fall back on."""
+        status = getattr(exc, "status_code", None)
+        if isinstance(status, int) and (status == 429 or status >= 500):
+            return True
+        for cls in (
+            getattr(openai, "APIConnectionError", None),
+            getattr(openai, "APITimeoutError", None),
+        ):
+            if cls and isinstance(exc, cls):
+                return True
+        if isinstance(exc, (ConnectionError, TimeoutError)):
+            return True
+        return False
+
     async def chat(
         self,
         messages: list[dict[str, str]],
@@ -84,7 +96,7 @@ class ResilientProvider(BaseAIProvider):
                 async for attempt in AsyncRetrying(
                     stop=stop_after_attempt(2),
                     wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-                    retry=retry_if_exception_type(Exception),
+                    retry=retry_if_exception(self._is_retryable),
                     reraise=True,
                 ):
                     with attempt:
@@ -96,8 +108,9 @@ class ResilientProvider(BaseAIProvider):
                         )
             except Exception as exc:
                 logger.warning(
-                    "Provider %s failed, trying fallback: %s",
+                    "Provider %s (model=%s) failed, trying fallback: %s",
                     provider.name,
+                    provider.model_name,
                     exc,
                 )
                 last_exc = exc
@@ -127,8 +140,9 @@ class ResilientProvider(BaseAIProvider):
                 return  # stream completed successfully
             except Exception as exc:
                 logger.warning(
-                    "Stream from %s failed, trying fallback: %s",
+                    "Stream from %s (model=%s) failed, trying fallback: %s",
                     provider.name,
+                    provider.model_name,
                     exc,
                 )
                 last_exc = exc
@@ -138,7 +152,14 @@ class ResilientProvider(BaseAIProvider):
         )
 
     async def health(self) -> bool:
-        return await self._primary.health()
+        """Return True if any configured provider is healthy."""
+        for provider in [self._primary, *self._fallbacks]:
+            try:
+                if await provider.health():
+                    return True
+            except Exception:
+                logger.warning("Health check failed for %s", provider.name)
+        return False
 
 
 # ── Public factory ────────────────────────────────────────────────────────
@@ -146,18 +167,14 @@ class ResilientProvider(BaseAIProvider):
 def get_ai_provider() -> ResilientProvider:
     """Return a resilient AI provider with fallback chain.
 
-    Reads ``AI_COPILOT_PROVIDER`` from settings to determine the preferred
-    provider.  Remaining configured providers become fallbacks.
+    Uses the explicit priority order groq -> gemini -> openrouter, skipping any
+    provider that is not configured or cannot be instantiated.
     """
     _register_providers()
 
-    preferred_name: str = getattr(settings, "ai_copilot_provider", "gemini")
     available = configured_providers()
-
     if not available:
         raise RuntimeError("No AI providers are configured with API keys")
-
-    available_names = [p.name for p in available]
 
     # Build concrete instances for each configured provider.
     instances: dict[str, BaseAIProvider] = {}
@@ -173,18 +190,10 @@ def get_ai_provider() -> ResilientProvider:
     if not instances:
         raise RuntimeError("No AI providers could be instantiated")
 
-    # Pick primary; the rest become fallbacks in config order.
-    if preferred_name in instances:
-        primary = instances.pop(preferred_name)
-    else:
-        first_name = next(iter(instances))
-        logger.info(
-            "Preferred provider %s not available; using %s",
-            preferred_name,
-            first_name,
-        )
-        primary = instances.pop(first_name)
-
-    fallbacks = list(instances.values())
+    # Primary is the first configured provider in priority order;
+    # the rest become fallbacks in the same order.
+    ordered = [instances[name] for name in FALLBACK_ORDER if name in instances]
+    primary = ordered[0]
+    fallbacks = ordered[1:]
 
     return ResilientProvider(primary, fallbacks)

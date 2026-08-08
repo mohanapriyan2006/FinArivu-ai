@@ -33,21 +33,21 @@ class ProviderConfig:
 GROQ = ProviderConfig(
     name="groq",
     base_url="https://api.groq.com/openai/v1",
-    default_model="llama-3.3-70b-versatile",
+    default_model="llama-3.1-8b-instant",
     api_key_attr="groq_api_key",
 )
 
 GEMINI = ProviderConfig(
     name="gemini",
     base_url="https://generativelanguage.googleapis.com/v1beta/openai/",
-    default_model="gemini-2.5-flash",
+    default_model="gemini-3.5-flash",
     api_key_attr="gemini_api_key",
 )
 
 OPENROUTER = ProviderConfig(
     name="openrouter",
     base_url="https://openrouter.ai/api/v1",
-    default_model="tencent/hy3:free",
+    default_model="meta-llama/llama-3.1-8b-instant",
     api_key_attr="openrouter_api_key",
 )
 

@@ -5,7 +5,6 @@ from typing import Any
 
 from app.ai.providers.base import AIProviderResponse, BaseAIProvider
 from app.ai.providers.factory import get_ai_provider
-from app.core.config import settings
 from app.core.logger import logger
 
 
@@ -17,7 +16,7 @@ class TaskType(Enum):
 
 
 class ProviderRouter:
-    """Selects the best provider for a task and provides auto-fallback."""
+    """Routes chat/stream calls through the resilient provider fallback chain."""
 
     def __init__(self, provider: BaseAIProvider | None = None) -> None:
         self._provider = provider
@@ -48,20 +47,16 @@ class ProviderRouter:
         max_tokens: int = 2048,
         response_format: dict[str, str] | None = None,
     ) -> AIProviderResponse:
-        """Generate a response using the best provider for the task."""
-        task = self._select_task_type(messages)
-
+        """Generate a response using the resilient provider fallback chain."""
         provider = self._provider or get_ai_provider()
-        preferred = self._preferred_provider(task)
 
         logger.info(
-            "Provider router selected task=%s, preferred=%s",
-            task.value,
-            preferred,
+            "Provider router using primary=%s fallback_count=%s",
+            provider.name,
+            len(provider._fallbacks),
         )
 
-        # If preferred is different from the factory default, attempt once;
-        # the ResilientProvider inside get_ai_provider already handles fallbacks.
+        # ResilientProvider already handles retries and fallbacks.
         return await provider.generate(
             messages,
             temperature=temperature,
@@ -89,12 +84,3 @@ class ProviderRouter:
         provider = self._provider or get_ai_provider()
         return await provider.health()
 
-    def _preferred_provider(self, task: TaskType) -> str:
-        """Map task to provider name from config."""
-        mapping: dict[TaskType, str] = {
-            TaskType.FAST: getattr(settings, "ai_provider_fast", "groq"),
-            TaskType.REASONING: getattr(settings, "ai_provider_reasoning", "gemini"),
-            TaskType.LONG_CONTEXT: getattr(settings, "ai_provider_long_context", "openrouter"),
-            TaskType.DEFAULT: getattr(settings, "ai_copilot_provider", "gemini"),
-        }
-        return mapping[task]
