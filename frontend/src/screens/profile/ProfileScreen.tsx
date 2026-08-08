@@ -11,19 +11,25 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
+import type { LucideIcon } from 'lucide-react-native'
 import {
+  Banknote,
   Bell,
   CheckCircle2,
   ChevronLeft,
+  Landmark,
   Link,
   LogOut,
   Monitor,
   Moon,
   Pencil,
+  PiggyBank,
+  Receipt,
   Shield,
   Sparkles,
   Sun,
   Target,
+  TrendingUp,
   User,
   Wallet,
 } from 'lucide-react-native'
@@ -32,8 +38,41 @@ import { ProfileStatCard } from './ProfileStatCard'
 import { SettingsListItem } from './SettingsListItem'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useTheme, type ThemeMode } from '@/contexts/ThemeContext'
+import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
+import { ProfileProgressBar } from '@/components/financialProfile/ProfileProgressBar'
+import { ProfileSectionCard } from '@/components/financialProfile/ProfileSectionCard'
+import { PROFILE_COMPLETION_THRESHOLD, PROFILE_SECTIONS } from '@/utils/profileCompletion'
+import type { OnboardingStepId, ProfileSectionId } from '@/types/financialProfile'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
+
+const SECTION_ICONS: Record<ProfileSectionId, LucideIcon> = {
+  aboutYou: User,
+  income: Banknote,
+  expenses: Receipt,
+  savings: PiggyBank,
+  investments: TrendingUp,
+  loans: Landmark,
+  goals: Target,
+  fixedDeposits: PiggyBank,
+  creditCards: Wallet,
+  insurance: Shield,
+  taxDetails: Receipt,
+}
+
+const SECTION_TO_STEP: Record<ProfileSectionId, OnboardingStepId> = {
+  aboutYou: 'aboutYou',
+  income: 'income',
+  expenses: 'expenses',
+  savings: 'savings',
+  investments: 'investments',
+  loans: 'loans',
+  goals: 'goals',
+  fixedDeposits: 'fixedDeposits',
+  creditCards: 'creditCards',
+  insurance: 'insurance',
+  taxDetails: 'taxDetails',
+}
 
 const AVATAR_URI = 'https://i.pravatar.cc/150?img=11'
 
@@ -42,6 +81,7 @@ export default function ProfileScreen() {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
   const { user, logout } = useAuthContext()
+  const { completion, resumeStep } = useFinancialProfile()
   const styles = makeStyles(colors)
 
   const displayName = user?.fullName || 'Mohanapriyan'
@@ -117,6 +157,58 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        {/* Financial Profile */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Financial Profile</Text>
+        </View>
+
+        <View style={styles.settingsGroup}>
+          <View style={styles.profileCard}>
+            <View style={styles.profileCardHeader}>
+              <View>
+                <Text style={styles.profileCardPercent}>{completion.percentage}% Complete</Text>
+                <Text style={styles.profileCardSub}>
+                  {completion.percentage >= PROFILE_COMPLETION_THRESHOLD
+                    ? 'Your Personal CFO has enough to work with'
+                    : 'Add a few more details for better insights'}
+                </Text>
+              </View>
+              <Pressable
+                onPress={() =>
+                  navigation.navigate('FinancialProfileSetup', {
+                    startStep: completion.lastIncompleteSection ?? resumeStep,
+                  })
+                }
+                style={styles.continueButton}
+                accessibilityRole="button"
+                accessibilityLabel="Continue setup"
+              >
+                <Text style={styles.continueText}>Continue Setup</Text>
+              </Pressable>
+            </View>
+            <View style={styles.progressBarContainer}>
+              <ProfileProgressBar percentage={completion.percentage} />
+            </View>
+          </View>
+
+          {PROFILE_SECTIONS.filter((s) => !s.isOptional).map((section) => {
+            const status = completion.bySection[section.id]
+            return (
+              <ProfileSectionCard
+                key={section.id}
+                icon={SECTION_ICONS[section.id]}
+                title={section.title}
+                description={status.complete ? 'Completed' : 'Not added yet'}
+                complete={status.complete}
+                onPress={() =>
+                  navigation.navigate('FinancialProfileSetup', {
+                    startStep: SECTION_TO_STEP[section.id],
+                  })
+                }
+              />
+            )
+          })}
+        </View>
 
         {/* Appearance Mode Segmented Selector */}
         <View style={styles.sectionHeader}>
@@ -417,6 +509,48 @@ function makeStyles(colors: ThemeColors) {
       fontSize: 11,
       fontWeight: Typography.fontWeights.semibold,
       color: colors.success,
+    },
+    profileCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 24,
+      padding: 20,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    profileCardHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 16,
+    },
+    profileCardPercent: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 28,
+      fontWeight: Typography.fontWeights.extraBold,
+      color: colors.primary,
+    },
+    profileCardSub: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 12,
+      fontWeight: Typography.fontWeights.regular,
+      color: colors.textSecondary,
+      marginTop: 4,
+    },
+    continueButton: {
+      backgroundColor: colors.primary,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 14,
+    },
+    continueText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 13,
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.surface,
+    },
+    progressBarContainer: {
+      width: '100%',
     },
   })
 }

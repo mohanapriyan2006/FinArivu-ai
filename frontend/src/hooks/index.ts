@@ -1,1 +1,1 @@
-// Custom hooks exports
+export { useFinancialProfile } from './useFinancialProfile'

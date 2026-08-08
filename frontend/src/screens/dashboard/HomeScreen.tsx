@@ -25,8 +25,14 @@ import {
   Banknote,
   RefreshCw,
 } from 'lucide-react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
+import { CompletionCard } from '@/components/financialProfile/CompletionCard'
+import { PROFILE_COMPLETION_THRESHOLD } from '@/utils/profileCompletion'
+import type { RootStackParamList } from '@/navigation/AppNavigator'
 import { Typography } from '@/theme'
 
 interface WaveBackgroundProps {
@@ -219,6 +225,8 @@ const CARDS_DATA: CardData[] = [
 export default function HomeScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
+  const { completion, dismissed, dismissPrompt, resumeStep } = useFinancialProfile()
 
   const heroValue = useMemo(
     () => ({
@@ -348,6 +356,20 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {completion.percentage < PROFILE_COMPLETION_THRESHOLD && !dismissed ? (
+            <View style={styles.completionCardContainer}>
+              <CompletionCard
+                percentage={completion.percentage}
+                onContinue={() =>
+                  navigation.navigate('FinancialProfileSetup', {
+                    startStep: completion.lastIncompleteSection ?? resumeStep,
+                  })
+                }
+                onDismiss={dismissPrompt}
+              />
+            </View>
+          ) : null}
+
           {/* Cards Section */}
           <View style={styles.cardsSection}>
             {CARDS_DATA.map((card) => renderCardItem(card))}
@@ -420,6 +442,10 @@ const styles = StyleSheet.create({
   // Cards Section Styling
   cardsSection: {
     marginTop: 12, // Strict spacing scale
+  },
+  completionCardContainer: {
+    marginHorizontal: -4,
+    marginTop: 8,
   },
   glassContainer: {
     borderRadius: 24, // Strict spacing scale

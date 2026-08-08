@@ -3,6 +3,7 @@ export type RootStackParamList = {
   Onboarding: undefined
   Auth: undefined
   Main: undefined
+  FinancialProfileSetup: { startStep?: string } | undefined
   CreateGoal: undefined
   Notifications: undefined
   EditProfile: undefined

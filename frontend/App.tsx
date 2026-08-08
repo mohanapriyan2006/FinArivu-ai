@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler'
 
 import { ThemeProvider } from '@/contexts/ThemeContext'
 import { AuthProvider } from '@/contexts/AuthContext'
+import { FinancialProfileProvider } from '@/contexts/FinancialProfileContext'
 import AppNavigator from '@/navigation/AppNavigator'
 
 const queryClient = new QueryClient({
@@ -21,16 +22,18 @@ export default function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <SafeAreaProvider>
-          <GestureHandlerRootView style={{ flex: 1 }}>
-            <QueryClientProvider client={queryClient}>
-              <NavigationContainer>
-                <AppNavigator />
-                <StatusBar style="auto" />
-              </NavigationContainer>
-            </QueryClientProvider>
-          </GestureHandlerRootView>
-        </SafeAreaProvider>
+        <FinancialProfileProvider>
+          <SafeAreaProvider>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+              <QueryClientProvider client={queryClient}>
+                <NavigationContainer>
+                  <AppNavigator />
+                  <StatusBar style="auto" />
+                </NavigationContainer>
+              </QueryClientProvider>
+            </GestureHandlerRootView>
+          </SafeAreaProvider>
+        </FinancialProfileProvider>
       </ThemeProvider>
     </AuthProvider>
   )

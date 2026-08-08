@@ -4,3 +4,5 @@ export interface ApiResponse<T> {
   data: T | null
   errorCode: string | null
 }
+
+export * from './financialProfile'
