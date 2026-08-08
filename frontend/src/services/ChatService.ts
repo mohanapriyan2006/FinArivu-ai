@@ -177,6 +177,14 @@ export const submitCopilotFeedback = async (
   })
 }
 
+export interface CopilotSession {
+  sessionId: string
+  title: string
+  createdAt: string | null
+  updatedAt: string | null
+  messageCount: number
+}
+
 /**
  * Retrieve paginated copilot conversation history.
  */
@@ -189,6 +197,23 @@ export const getCopilotHistory = async (
     params: { session_id: sessionId, skip, limit },
   })
   return response.data?.data as CopilotHistoryMessage[]
+}
+
+/**
+ * Retrieve the user's saved copilot chat sessions.
+ */
+export const getCopilotSessions = async (limit = 50): Promise<CopilotSession[]> => {
+  const response = await api.get('/v1/copilot/sessions', {
+    params: { limit },
+  })
+  const raw = (response.data?.data || []) as any[]
+  return raw.map((s) => ({
+    sessionId: s.session_id,
+    title: s.title,
+    createdAt: s.created_at,
+    updatedAt: s.updated_at,
+    messageCount: s.message_count,
+  }))
 }
 
 /**

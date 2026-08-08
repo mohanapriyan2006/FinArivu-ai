@@ -1,0 +1,1768 @@
+You are a Senior React Native Engineer specializing in financial applications and highly polished mobile UX.
+
+You are working on the existing FinArivu AI React Native Expo application.
+
+Your task is to implement a clean, user-friendly Financial Profile onboarding and progressive profile completion system.
+
+IMPORTANT:
+
+THIS TASK IS FRONTEND ONLY.
+
+Do NOT modify the FastAPI backend.
+
+Do NOT modify PostgreSQL.
+
+Do NOT create backend APIs.
+
+Do NOT create database models.
+
+Do NOT introduce Redis, Docker, Firebase, Redux, Zustand, or other infrastructure.
+
+Use the existing React Native + Expo + TypeScript architecture.
+
+Use normal React Native StyleSheet.create() styling.
+
+Do NOT use Tailwind CSS.
+
+Do NOT use NativeWind.
+
+Do NOT use web CSS.
+
+Reuse the existing theme system, navigation, services, hooks, contexts, components, and authentication implementation wherever possible.
+
+============================================================
+1. PRODUCT CONTEXT
+============================================================
+
+Product:
+
+FinArivu AI
+
+Positioning:
+
+AI Personal CFO for Indian Salaried Professionals.
+
+The application helps users with:
+
+- Financial Health
+- Budget
+- Expenses
+- Income
+- Savings
+- Investments
+- Goals
+- Loans
+- Retirement
+- Tax
+- Net Worth
+- Financial Reports
+- AI Financial Copilot
+
+The existing UI uses a premium financial-tech visual language.
+
+Maintain the existing FinArivu design system.
+
+Do not redesign the entire application.
+
+Only add the Financial Profile onboarding and completion flow.
+
+============================================================
+2. PRIMARY UX GOAL
+============================================================
+
+The user should NOT feel like they are filling out a long financial form.
+
+The experience should feel like:
+
+"Set up your Personal CFO"
+
+rather than:
+
+"Complete a financial questionnaire."
+
+Use:
+
+- Minimal required fields
+- One focused section per screen
+- Optional advanced fields
+- Clear progress
+- Skip where appropriate
+- Friendly explanations
+- Progressive completion
+- No sensitive credentials
+- No unnecessary questions
+
+============================================================
+3. SECURITY / PRIVACY UX
+============================================================
+
+NEVER ask the user for:
+
+- Bank account number
+- Bank password
+- UPI PIN
+- ATM PIN
+- Credit card number
+- Credit card CVV
+- OTP
+- Internet banking password
+- API keys
+- Login credentials
+
+Only collect financial information required for financial analysis.
+
+Examples:
+
+- Income
+- Expenses
+- Savings
+- Investment value
+- Loan balance
+- EMI
+- Goal amount
+- FD value
+- Insurance coverage
+
+The UI should include a short privacy explanation during onboarding.
+
+Example:
+
+"FinArivu only needs financial information to understand your financial situation. Never share passwords, PINs, OTPs or account credentials."
+
+Do not create a large legal/privacy page inside onboarding.
+
+============================================================
+4. NEW USER FLOW
+============================================================
+
+After successful registration/login:
+
+Check whether the user's financial profile has been initialized.
+
+For a new user:
+
+Login
+
+↓
+
+Financial Profile Setup
+
+↓
+
+Profile completion
+
+↓
+
+Dashboard
+
+Do NOT immediately send the user directly to the Dashboard.
+
+The first-time setup should collect the minimum information needed to make FinArivu useful.
+
+============================================================
+5. RETURNING USER FLOW
+============================================================
+
+For existing users:
+
+Login
+
+↓
+
+Calculate profile completion
+
+↓
+
+If completion >= threshold:
+
+Go directly to Dashboard.
+
+If completion < threshold:
+
+Go to Dashboard normally.
+
+Show a subtle profile completion prompt.
+
+DO NOT force the user into onboarding every time.
+
+============================================================
+6. PROFILE COMPLETION THRESHOLD
+============================================================
+
+Implement a configurable frontend constant:
+
+PROFILE_COMPLETION_THRESHOLD = 70
+
+Do NOT hardcode 70 throughout the application.
+
+Create:
+
+profileCompletion.ts
+
+or equivalent configuration.
+
+Behavior:
+
+0–39%
+
+Show stronger completion prompt.
+
+40–69%
+
+Show normal completion reminder.
+
+70–100%
+
+Do not interrupt the user.
+
+If profile is below 70%, show a subtle card/banner on the Dashboard:
+
+"Complete your financial profile"
+
+"Your Personal CFO can give better insights with a few more details."
+
+[Continue Setup]
+
+Do not use modal automatically every login.
+
+Prefer a non-blocking dashboard card.
+
+============================================================
+7. REMINDER FREQUENCY
+============================================================
+
+Do NOT annoy users.
+
+If the user dismisses the completion prompt:
+
+Do not show it repeatedly during the same session.
+
+Store dismissal state using the application's existing local persistence mechanism.
+
+If the existing project already uses a storage solution, reuse it.
+
+Do NOT introduce a new state-management library.
+
+Suggested behavior:
+
+First login with incomplete profile:
+
+Show dashboard completion card.
+
+User dismisses:
+
+Hide for current session.
+
+User opens Profile later:
+
+Show completion percentage.
+
+User can manually continue setup.
+
+============================================================
+8. PROFILE COMPLETION CALCULATION
+============================================================
+
+Create a frontend-only profile completion utility.
+
+Do NOT simply count screens.
+
+Completion should be based on actual required data fields.
+
+Define sections:
+
+1. About You
+2. Income
+3. Expenses
+4. Savings
+5. Investments
+6. Loans
+7. Goals
+8. Optional Details
+
+Recommended weighting:
+
+About You       10%
+Income           15%
+Expenses         20%
+Savings          15%
+Investments     15%
+Loans            10%
+Goals            15%
+
+Total             100%
+
+Optional Details should NOT prevent the user from reaching 100%.
+
+Alternatively, allow the optional section to improve profile quality but not block core completion.
+
+Implement the weighting in ONE configuration file.
+
+Example conceptual structure:
+
+PROFILE_SECTIONS = [
+  {
+    id: "income",
+    weight: 15,
+    requiredFields: [...]
+  }
+]
+
+Do not duplicate completion logic across screens.
+
+============================================================
+9. CORE PROFILE SECTIONS
+============================================================
+
+Implement the following screens.
+
+------------------------------------------------------------
+STEP 1 — ABOUT YOU
+------------------------------------------------------------
+
+Title:
+
+"Let's get to know you"
+
+Subtitle:
+
+"A few basics help your Personal CFO understand your planning horizon."
+
+Minimal fields:
+
+- Age
+- Employment type
+- City
+
+Optional:
+
+- Dependents
+- Number of children
+
+Keep the screen short.
+
+Use:
+
+- Large heading
+- Short explanation
+- Clean input controls
+- Continue button
+- Skip where appropriate
+
+------------------------------------------------------------
+STEP 2 — INCOME
+------------------------------------------------------------
+
+Title:
+
+"What's your monthly income?"
+
+Primary field:
+
+Monthly take-home income
+
+Example:
+
+₹75,000
+
+Allow:
+
+Monthly / Annual toggle.
+
+Optional advanced section:
+
+"+ Add additional income"
+
+Fields:
+
+- Bonus
+- Freelance
+- Rental
+- Business
+- Other
+
+Do not show advanced fields by default.
+
+============================================================
+STEP 10.3 — EXPENSES
+============================================================
+
+Title:
+
+"Where does your money usually go?"
+
+Primary field:
+
+Estimated monthly expenses
+
+Example:
+
+₹42,000
+
+Helper:
+
+"An estimate is perfectly fine."
+
+Advanced section:
+
+"+ Break down expenses"
+
+Categories:
+
+- Housing / Rent
+- Food
+- Transport
+- Utilities
+- Shopping
+- Travel
+- Entertainment
+- Healthcare
+- Education
+- Other
+
+Do not force category completion.
+
+If user enters only total expense:
+
+That is enough for the core profile.
+
+============================================================
+11. SAVINGS
+============================================================
+
+Title:
+
+"How much do you currently have saved?"
+
+Primary:
+
+Total savings
+
+Example:
+
+₹2,50,000
+
+Optional breakdown:
+
+- Emergency Fund
+- General Savings
+- Goal Savings
+
+Do not ask for bank details.
+
+============================================================
+12. INVESTMENTS
+============================================================
+
+Title:
+
+"Do you have investments?"
+
+Options:
+
+Yes
+
+No
+
+If Yes:
+
+Required:
+
+Approximate total investment value
+
+Optional breakdown:
+
+- Mutual Funds
+- Stocks
+- PPF
+- NPS
+- Gold
+- Other
+
+Do not ask for:
+
+- Demat account number
+- Broker password
+- Account credentials
+- OTP
+
+Only financial values.
+
+============================================================
+13. LOANS & EMIs
+============================================================
+
+Title:
+
+"Do you currently have any loans or EMIs?"
+
+Options:
+
+Yes
+
+No
+
+If Yes:
+
+Minimal:
+
+- Loan type
+- Outstanding amount
+- Monthly EMI
+
+Loan types:
+
+- Home Loan
+- Personal Loan
+- Car Loan
+- Education Loan
+- Consumer Loan
+- Other
+
+Advanced:
+
+- Interest rate
+- Remaining tenure
+
+Allow:
+
+"+ Add another loan"
+
+Do not ask for:
+
+- Loan account number
+- Bank login
+- Password
+- OTP
+
+============================================================
+14. GOALS
+============================================================
+
+Title:
+
+"What are you planning for?"
+
+Show selectable goal cards:
+
+- Home
+- Vehicle
+- Education
+- Travel
+- Emergency Fund
+- Retirement
+- Marriage
+- Wealth
+- Other
+
+Allow multiple goals.
+
+For each selected goal:
+
+Minimal:
+
+- Goal name/type
+- Target amount
+- Target year
+
+Optional:
+
+- Current saved amount
+- Monthly contribution
+
+Do not force users to create a goal.
+
+They can skip this step.
+
+============================================================
+15. OPTIONAL DETAILS
+============================================================
+
+Do NOT make this a mandatory step.
+
+Title:
+
+"Add more details if you'd like"
+
+Cards:
+
+Fixed Deposits
+
+Insurance
+
+Tax Details
+
+Credit Cards
+
+Expense Breakdown
+
+Investment Breakdown
+
+Loan Details
+
+Each card should have:
+
+Icon
+
+Title
+
+Short description
+
+Completion status
+
+Chevron
+
+Example:
+
+Fixed Deposits
+
+"Add FD value and maturity details."
+
+[Optional]
+
+The user can:
+
+Skip
+
+Finish Setup
+
+============================================================
+16. FIXED DEPOSIT SCREEN
+============================================================
+
+Minimal:
+
+- Total FD value
+
+Optional:
+
+- Interest rate
+- Maturity year
+- Purpose
+
+Do not ask:
+
+- FD account number
+- Bank credentials
+- OTP
+
+Allow multiple FDs only through:
+
+"+ Add another FD"
+
+Do not display multiple forms initially.
+
+============================================================
+17. CREDIT CARD SCREEN
+============================================================
+
+Minimal:
+
+- Current outstanding amount
+- Typical monthly payment
+
+Optional:
+
+- Credit limit
+- Monthly spending
+
+Do NOT ask:
+
+- Card number
+- CVV
+- PIN
+- OTP
+- Password
+
+============================================================
+18. INSURANCE SCREEN
+============================================================
+
+Minimal:
+
+Insurance type:
+
+- Health
+- Life
+
+Optional:
+
+- Coverage
+- Annual premium
+
+Do not ask:
+
+- Policy number
+- Login credentials
+- OTP
+
+============================================================
+19. TAX DETAILS SCREEN
+============================================================
+
+Keep this minimal.
+
+Fields:
+
+- Annual income
+- Current tax regime
+
+Options:
+
+- Old
+- New
+- Not sure
+
+Optional:
+
+- 80C
+- 80D
+- Home loan interest
+- NPS
+- Other deductions
+
+Do not create a full tax-return form.
+
+============================================================
+20. STEPPER UI
+============================================================
+
+Create a reusable:
+
+FinancialProfileStepper
+
+The stepper should display:
+
+Back
+
+Progress
+
+Step number
+
+Current section
+
+Content
+
+Continue
+
+Skip
+
+Example:
+
+--------------------------------
+
+←
+
+Financial Profile
+
+3 of 7
+
+████████████░░░░░
+
+MONTHLY EXPENSES
+
+Where does your money usually go?
+
+₹ 42,000
+
++ Break down expenses
+
+[ Continue ]
+
+Skip for now
+
+--------------------------------
+
+Do not use a complicated vertical wizard.
+
+Use a clean mobile-first horizontal progress indicator.
+
+============================================================
+21. STEP NAVIGATION
+============================================================
+
+Support:
+
+Next
+
+Back
+
+Skip
+
+Exit
+
+Resume
+
+If the user exits halfway:
+
+Save progress locally.
+
+When they return:
+
+Resume from the last incomplete section.
+
+Do NOT restart onboarding.
+
+============================================================
+22. PROFILE SETUP SUMMARY
+============================================================
+
+At the end show:
+
+"Your Personal CFO is ready"
+
+Profile completion:
+
+72%
+
+Example:
+
+██████████████░░░░
+
+"You've given FinArivu enough information to start."
+
+Show:
+
+✓ Income
+✓ Expenses
+✓ Savings
+✓ Investments
+✓ Goals
+
+Optional incomplete items:
+
+○ Fixed Deposits
+○ Insurance
+○ Tax Details
+
+Primary:
+
+"Go to Dashboard"
+
+Secondary:
+
+"Complete More Details"
+
+Do not force 100%.
+
+============================================================
+23. DASHBOARD COMPLETION CARD
+============================================================
+
+For returning users below threshold:
+
+Show a compact card.
+
+Example:
+
+--------------------------------
+
+Complete your financial profile
+
+72% complete
+
+██████████████░░░
+
+Add a few more details to improve
+your Personal CFO insights.
+
+[Continue Setup]
+
+--------------------------------
+
+Do not show this card if:
+
+completion >= 70%.
+
+Do not show it repeatedly after dismissal during the same session.
+
+============================================================
+24. PROFILE SCREEN
+============================================================
+
+Update ProfileScreen.
+
+Add:
+
+Financial Profile
+
+72% Complete
+
+[Continue Setup]
+
+Then show sections:
+
+✓ Income
+✓ Expenses
+✓ Savings
+✓ Investments
+
+○ Loans
+○ Goals
+○ Tax
+○ Insurance
+○ Fixed Deposits
+
+Each row should navigate directly to the relevant screen.
+
+============================================================
+25. FRONTEND DATA MODEL
+============================================================
+
+Create strongly typed frontend interfaces.
+
+Example:
+
+FinancialProfile
+
+ProfileSection
+
+IncomeProfile
+
+ExpenseProfile
+
+SavingsProfile
+
+InvestmentProfile
+
+LoanProfile
+
+GoalProfile
+
+FDProfile
+
+CreditCardProfile
+
+InsuranceProfile
+
+TaxProfile
+
+ProfileCompletion
+
+Do not use any.
+
+Use TypeScript strict mode.
+
+============================================================
+26. LOCAL STATE / PERSISTENCE
+============================================================
+
+This implementation is FRONTEND ONLY.
+
+Therefore create a clean abstraction:
+
+FinancialProfileStore
+
+It should support:
+
+getProfile()
+
+saveProfile()
+
+updateSection()
+
+getCompletion()
+
+getLastIncompleteSection()
+
+clearProfile()
+
+Use the project's existing persistence mechanism if available.
+
+If no persistence mechanism exists:
+
+Implement a lightweight local adapter.
+
+Do NOT introduce a large state-management library.
+
+Structure the code so that the storage layer can later be replaced by FastAPI services.
+
+============================================================
+27. FUTURE BACKEND COMPATIBILITY
+============================================================
+
+IMPORTANT:
+
+The UI must NOT be tightly coupled to local storage.
+
+Create:
+
+FinancialProfileService
+
+with methods such as:
+
+getProfile()
+
+saveProfile()
+
+updateProfileSection()
+
+getCompletion()
+
+Later these methods can call:
+
+FastAPI
+
+without changing the screens.
+
+For now, use a frontend/local implementation.
+
+============================================================
+28. VALIDATION
+============================================================
+
+Validate inputs.
+
+Examples:
+
+Income:
+
+must be > 0 if entered.
+
+Expenses:
+
+must be >= 0.
+
+Savings:
+
+must be >= 0.
+
+Investment:
+
+must be >= 0.
+
+Loan EMI:
+
+must be >= 0.
+
+Target amount:
+
+must be > 0.
+
+Do not allow invalid values.
+
+Show concise inline errors.
+
+Do not use alert() for normal validation.
+
+============================================================
+29. MONEY INPUT
+============================================================
+
+All money inputs use:
+
+₹
+
+Indian number formatting.
+
+Examples:
+
+₹75,000
+
+₹2,50,000
+
+₹12,50,000
+
+Do not store formatted strings as the actual numeric value.
+
+Store numeric values.
+
+Format only for display.
+
+============================================================
+30. UX PRINCIPLES
+============================================================
+
+Follow these rules strictly:
+
+ONE SCREEN
+
+ONE PURPOSE
+
+MINIMAL FIELDS
+
+OPTIONAL ADVANCED DETAILS
+
+CLEAR PROGRESS
+
+SHORT EXPLANATIONS
+
+EASY SKIP
+
+EASY BACK
+
+NO INFORMATION OVERLOAD
+
+NO SENSITIVE CREDENTIALS
+
+NO LONG FORMS
+
+NO DARK PATTERNS
+
+============================================================
+31. ADVANCED FIELD UX
+============================================================
+
+Do NOT display advanced fields by default.
+
+Use:
+
+"+ Add details"
+
+or:
+
+"Add advanced details"
+
+When tapped:
+
+Animate/expand the section.
+
+Use a subtle animation.
+
+The screen should remain clean when collapsed.
+
+============================================================
+32. ACCESSIBILITY
+============================================================
+
+All interactive controls must include:
+
+accessibilityRole
+
+accessibilityLabel
+
+accessibilityHint where useful
+
+Minimum touch target:
+
+44x44
+
+Ensure:
+
+- readable text
+- sufficient contrast
+- keyboard-safe layouts
+- screen reader-friendly labels
+
+============================================================
+33. THEME
+============================================================
+
+Reuse the existing FinArivu ThemeContext.
+
+Use:
+
+useTheme()
+
+and theme colors.
+
+Do NOT hardcode colors inside screens.
+
+Do not introduce a new theme system.
+
+Maintain:
+
+Light mode
+
+Dark mode
+
+System mode
+
+============================================================
+34. COMPONENTS
+============================================================
+
+Create reusable components where appropriate:
+
+FinancialProfileHeader
+
+ProfileProgressBar
+
+MoneyInput
+
+OptionSelector
+
+YesNoSelector
+
+ExpandableAdvancedSection
+
+FinancialCategoryGrid
+
+LoanCard
+
+GoalCard
+
+ProfileSectionCard
+
+CompletionCard
+
+StepperFooter
+
+Do not create unnecessary abstractions.
+
+Components should remain presentation-oriented.
+
+============================================================
+35. NAVIGATION
+============================================================
+
+Add navigation routes for:
+
+FinancialProfileSetup
+
+AboutYou
+
+Income
+
+Expenses
+
+Savings
+
+Investments
+
+Loans
+
+Goals
+
+OptionalDetails
+
+FixedDeposits
+
+CreditCards
+
+Insurance
+
+TaxDetails
+
+ProfileCompletion
+
+Use the existing navigation architecture.
+
+Do not replace the current navigation system.
+
+============================================================
+36. AUTHENTICATION INTEGRATION
+============================================================
+
+After login:
+
+Determine:
+
+new user
+
+or
+
+existing user.
+
+For new user:
+
+Navigate to:
+
+FinancialProfileSetup.
+
+For existing user:
+
+Calculate completion.
+
+If:
+
+completion >= threshold
+
+→ Dashboard.
+
+If:
+
+completion < threshold
+
+→ Dashboard with completion card.
+
+Do not force the setup screen every login.
+
+============================================================
+37. NEW USER DETECTION
+============================================================
+
+Do not rely only on navigation state.
+
+Use a persistent profile initialization flag.
+
+Example:
+
+financialProfileInitialized
+
+For new users:
+
+false
+
+After initial setup:
+
+true
+
+Returning users:
+
+true
+
+The implementation should also handle partially completed profiles.
+
+============================================================
+38. PARTIAL COMPLETION
+============================================================
+
+Example:
+
+User completes:
+
+Income
+
+Expenses
+
+Savings
+
+then exits.
+
+Next login:
+
+Do not restart.
+
+Profile:
+
+43% complete
+
+Last incomplete section:
+
+Investments
+
+The user can tap:
+
+"Continue Setup"
+
+and resume from Investments.
+
+============================================================
+39. COMPLETION LOGIC
+============================================================
+
+Completion must be calculated dynamically.
+
+Example:
+
+Income complete:
+
+15%
+
+Expenses complete:
+
+20%
+
+Savings complete:
+
+15%
+
+Investments complete:
+
+15%
+
+etc.
+
+If a section is skipped:
+
+It remains incomplete.
+
+But the user can still use the application.
+
+Do not block Dashboard access after initial setup.
+
+============================================================
+40. DATA COMPLETENESS VS USER ACCESS
+============================================================
+
+This distinction is important.
+
+Profile completion affects:
+
+QUALITY OF INSIGHTS
+
+not:
+
+ACCESS TO THE APPLICATION.
+
+Never lock the application because profile completion is below 70%.
+
+The user can always:
+
+- Dashboard
+- AI Copilot
+- Budget
+- Goals
+- Profile
+
+available according to existing navigation.
+
+============================================================
+41. AI COPILOT COMPATIBILITY
+============================================================
+
+The frontend should expose profile completeness to the Copilot context later.
+
+Example:
+
+profileCompletion = 65
+
+missingSections:
+
+[
+  "loans",
+  "goals"
+]
+
+Do not implement backend AI changes in this task.
+
+Just make the frontend data model ready.
+
+============================================================
+42. EMPTY / MISSING DATA STATES
+============================================================
+
+When a section is not completed:
+
+Use friendly empty states.
+
+Example:
+
+Investments
+
+"Not added yet"
+
+[Add investments]
+
+Do not display:
+
+₹0
+
+unless the user explicitly entered zero.
+
+Missing data ≠ zero.
+
+============================================================
+43. DESIGN DIRECTION
+============================================================
+
+Use the existing FinArivu visual language:
+
+- clean
+- premium
+- spacious
+- minimal
+- trustworthy
+- financial-tech
+- soft cards
+- rounded corners
+- subtle borders
+- clear hierarchy
+
+Avoid:
+
+- excessive gradients
+- excessive icons
+- excessive illustrations
+- crowded cards
+- unnecessary animations
+- gamification overload
+
+============================================================
+44. IMPLEMENTATION PROCESS
+============================================================
+
+Before writing code:
+
+1. Inspect existing navigation.
+2. Inspect AuthContext.
+3. Inspect ThemeContext.
+4. Inspect ProfileScreen.
+5. Inspect existing services.
+6. Inspect existing storage.
+7. Inspect existing reusable inputs/buttons/cards.
+8. Inspect current screen naming conventions.
+9. Identify reusable components.
+10. Do not duplicate existing components.
+
+Then implement.
+
+============================================================
+45. FILE ORGANIZATION
+============================================================
+
+Prefer:
+
+src/features/financial-profile/
+
+components/
+
+FinancialProfileHeader.tsx
+
+ProfileProgressBar.tsx
+
+MoneyInput.tsx
+
+ExpandableAdvancedSection.tsx
+
+ProfileSectionCard.tsx
+
+screens/
+
+FinancialProfileSetupScreen.tsx
+
+AboutYouScreen.tsx
+
+IncomeScreen.tsx
+
+ExpensesScreen.tsx
+
+SavingsScreen.tsx
+
+InvestmentsScreen.tsx
+
+LoansScreen.tsx
+
+GoalsScreen.tsx
+
+OptionalDetailsScreen.tsx
+
+FixedDepositsScreen.tsx
+
+CreditCardsScreen.tsx
+
+InsuranceScreen.tsx
+
+TaxDetailsScreen.tsx
+
+ProfileCompletionScreen.tsx
+
+services/
+
+FinancialProfileService.ts
+
+hooks/
+
+useFinancialProfile.ts
+
+utils/
+
+profileCompletion.ts
+
+types/
+
+financialProfile.ts
+
+Adjust this structure if the existing project uses a different established feature structure.
+
+Do not create duplicate architectures.
+
+============================================================
+46. TESTING
+============================================================
+
+Add frontend tests for:
+
+- profile completion calculation
+- required field validation
+- optional fields
+- step navigation
+- skip
+- resume
+- new user flow
+- returning user flow
+- threshold behavior
+- dismissal behavior
+- completion card
+- local persistence
+- missing data states
+
+At minimum verify:
+
+New user
+
+→ setup
+
+Existing user >= 70%
+
+→ dashboard
+
+Existing user < 70%
+
+→ dashboard + completion card
+
+Partial setup
+
+→ resume correctly
+
+============================================================
+47. TYPESCRIPT
+============================================================
+
+Run:
+
+npx tsc --noEmit
+
+There must be zero TypeScript errors.
+
+Use:
+
+strict mode
+
+No any.
+
+No unsafe casts.
+
+No ignored errors.
+
+============================================================
+48. FINAL ACCEPTANCE CRITERIA
+============================================================
+
+The implementation is complete only when:
+
+✓ New users are taken to Financial Profile Setup after registration/login.
+
+✓ Setup uses a clean stepper UI.
+
+✓ Each screen has minimal fields.
+
+✓ Advanced fields are hidden until requested.
+
+✓ Users can skip optional sections.
+
+✓ Users can go back.
+
+✓ Users can exit and resume later.
+
+✓ Progress is visible.
+
+✓ Completion percentage is calculated dynamically.
+
+✓ 70% is configurable.
+
+✓ Users below threshold are reminded but NOT blocked.
+
+✓ Users above threshold are not unnecessarily prompted.
+
+✓ Dismissed reminders do not repeatedly appear during the same session.
+
+✓ ProfileScreen displays completion status.
+
+✓ Missing sections can be opened directly.
+
+✓ No sensitive credentials are requested.
+
+✓ No account numbers are requested.
+
+✓ No passwords are requested.
+
+✓ No OTPs are requested.
+
+✓ No PINs are requested.
+
+✓ No CVV is requested.
+
+✓ Money values use INR formatting.
+
+✓ Missing data is not represented as fake zero values.
+
+✓ Existing theme is preserved.
+
+✓ Existing navigation is preserved.
+
+✓ Existing authentication is preserved.
+
+✓ Existing screens are not broken.
+
+✓ No backend changes are made.
+
+✓ No unnecessary dependencies are added.
+
+✓ TypeScript compilation passes.
+
+✓ Existing frontend tests continue to pass.
+
+============================================================
+49. FINAL UX PRINCIPLE
+============================================================
+
+The final experience should feel like:
+
+"FinArivu is helping me set up my Personal CFO."
+
+NOT:
+
+"I am filling out a financial application form."
+
+Keep every screen focused.
+
+Ask the minimum.
+
+Allow advanced details later.
+
+Do not force 100% completion.
+
+Use progressive completion.
+
+Make the user's first successful experience fast.
+
+============================================================
+50. FINAL TASK
+============================================================
+
+Inspect the existing React Native project first.
+
+Then implement the complete Financial Profile onboarding and progressive completion system.
+
+Do not only create static screens.
+
+Implement:
+
+navigation
+
+state
+
+validation
+
+progress calculation
+
+completion threshold
+
+persistence abstraction
+
+resume capability
+
+new-user detection
+
+returning-user behavior
+
+dashboard completion card
+
+profile completion management
+
+advanced field expansion
+
+and all required UI interactions.
+
+Everything must work from the frontend.
+
+Do not create fake backend calls.
+
+Do not modify backend code.
+
+After implementation:
+
+1. Run TypeScript checks.
+2. Run frontend tests.
+3. Fix all errors.
+4. Verify navigation.
+5. Verify new-user flow.
+6. Verify returning-user flow.
+7. Verify partial-completion resume.
+8. Verify threshold behavior.
+9. Verify dark/light theme.
+10. Verify no sensitive fields exist.
+
+Deliver a clean, polished, user-friendly Financial Profile experience integrated into the existing FinArivu AI application.

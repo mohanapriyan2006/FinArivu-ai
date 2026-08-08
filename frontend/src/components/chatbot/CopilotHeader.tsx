@@ -1,16 +1,17 @@
 import React, { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { ArrowLeft, Bot, Sparkles } from 'lucide-react-native'
+import { ArrowLeft, Bot, MoreVertical, Sparkles } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 
 interface CopilotHeaderProps {
   onBack?: () => void
+  onMenu?: () => void
   isOnline?: boolean
 }
 
-export function CopilotHeader({ onBack, isOnline = true }: CopilotHeaderProps) {
+export function CopilotHeader({ onBack, onMenu, isOnline = true }: CopilotHeaderProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
@@ -49,6 +50,18 @@ export function CopilotHeader({ onBack, isOnline = true }: CopilotHeaderProps) {
           <Text style={styles.subtitleText}>Personal CFO</Text>
         </View>
       </View>
+
+      {onMenu && (
+        <Pressable
+          onPress={onMenu}
+          style={styles.menuButton}
+          accessibilityRole="button"
+          accessibilityLabel="Open chat menu"
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <MoreVertical size={22} color={colors.textPrimary} strokeWidth={2} />
+        </Pressable>
+      )}
     </View>
   )
 }
@@ -72,6 +85,9 @@ const makeStyles = (colors: any) =>
     },
     backButton: {
       paddingRight: 4,
+    },
+    menuButton: {
+      paddingLeft: 4,
     },
     avatarContainer: {
       width: 38,

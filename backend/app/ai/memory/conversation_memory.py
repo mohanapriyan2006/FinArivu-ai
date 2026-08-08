@@ -114,3 +114,56 @@ class ConversationMemory:
         )
         result = await self._session.execute(query)
         return list(result.scalars().all())
+
+    async def get_sessions(
+        self,
+        user_id: uuid.UUID,
+        *,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return distinct sessions for the user with a preview title and time."""
+        query = (
+            select(AIMessage)
+            .where(
+                AIMessage.user_id == user_id,
+                AIMessage.role.in_(("user", "assistant")),
+            )
+            .order_by(AIMessage.created_at.asc())
+            .limit(2000)
+        )
+        result = await self._session.execute(query)
+        rows = list(result.scalars().all())
+
+        sessions: dict[str, dict[str, Any]] = {}
+        for row in rows:
+            sid = row.session_id
+            if sid not in sessions:
+                sessions[sid] = {
+                    "session_id": sid,
+                    "title": None,
+                    "created_at": row.created_at,
+                    "updated_at": row.created_at,
+                    "message_count": 0,
+                }
+            if row.role == "user" and sessions[sid]["title"] is None:
+                sessions[sid]["title"] = (
+                    row.content[:60] + ("..." if len(row.content) > 60 else "")
+                )
+            sessions[sid]["message_count"] += 1
+            if row.created_at and row.created_at > sessions[sid]["updated_at"]:
+                sessions[sid]["updated_at"] = row.created_at
+
+        return sorted(
+            [
+                {
+                    "session_id": sid,
+                    "title": data["title"] or "New chat",
+                    "created_at": data["created_at"].isoformat() if data["created_at"] else None,
+                    "updated_at": data["updated_at"].isoformat() if data["updated_at"] else None,
+                    "message_count": data["message_count"],
+                }
+                for sid, data in sessions.items()
+            ],
+            key=lambda s: s["updated_at"] or "",
+            reverse=True,
+        )[:limit]

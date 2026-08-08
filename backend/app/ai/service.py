@@ -262,6 +262,15 @@ class CopilotService:
             for m in messages
         ]
 
+    async def get_sessions(
+        self,
+        user_id: uuid.UUID,
+        *,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return the user's saved chat sessions."""
+        return await self._memory.get_sessions(user_id, limit=limit)
+
     async def check_health(self) -> CopilotHealthResponse:
         """Check AI provider health."""
         provider = get_ai_provider()

@@ -71,6 +71,15 @@ class CopilotController:
         """Return paginated conversation history."""
         return await self._service.get_history(user_id, session_id, skip=skip, limit=limit)
 
+    async def get_sessions(
+        self,
+        user_id: uuid.UUID,
+        *,
+        limit: int = 50,
+    ) -> list[dict[str, Any]]:
+        """Return the user's saved chat sessions."""
+        return await self._service.get_sessions(user_id, limit=limit)
+
     async def check_health(self) -> CopilotHealthResponse:
         """Check AI provider health."""
         return await self._service.check_health()

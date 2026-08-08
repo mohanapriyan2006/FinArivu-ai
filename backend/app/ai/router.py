@@ -150,6 +150,27 @@ async def copilot_history(
     )
 
 
+@router.get(
+    "/sessions",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Get saved copilot chat sessions",
+)
+async def copilot_sessions(
+    limit: int = Query(50, ge=1, le=100),
+    controller: CopilotController = Depends(_get_copilot_controller),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Return the user's saved chat sessions with auto-generated titles."""
+    sessions = await controller.get_sessions(
+        uuid.UUID(user_id), limit=limit,
+    )
+    return success_response(
+        data=sessions,
+        message="Sessions retrieved",
+    )
+
+
 # ── Health ────────────────────────────────────────────────────────────────
 
 @router.get(

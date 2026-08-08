@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   getCopilotHistory,
+  getCopilotSessions,
   sendCopilotMessage,
   streamCopilotMessage,
   type CopilotChatResponse,
   type CopilotHistoryMessage,
+  type CopilotSession,
 } from '@/services/ChatService'
 import type { ChatMessageItemData } from '@/components/chatbot/DocMessageItem'
 
@@ -29,10 +31,15 @@ export interface UseCopilotReturn {
   error: string | null
   isOnline: boolean
   sessionId: string
+  sessions: CopilotSession[]
+  clearMessages: () => void
+  newChat: () => void
   sendMessage: (text: string, contextHints?: string[]) => Promise<void>
   sendStream: (text: string, contextHints?: string[]) => void
   retry: () => Promise<void>
   loadHistory: (skip?: number, limit?: number) => Promise<void>
+  loadSessions: () => Promise<void>
+  loadSession: (sessionId: string) => Promise<void>
   setOnline: (online: boolean) => void
 }
 
@@ -43,8 +50,9 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
   const [thinkingStep, setThinkingStep] = useState(THINKING_STEPS[0])
   const [error, setError] = useState<string | null>(null)
   const [isOnline, setIsOnline] = useState(true)
-  const [sessionId] = useState(() => `session_${Date.now()}`)
+  const [sessionId, setSessionId] = useState(() => `session_${Date.now()}`)
   const [lastFailedText, setLastFailedText] = useState<string | null>(null)
+  const [sessions, setSessions] = useState<CopilotSession[]>([])
 
   const stepTimerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -197,8 +205,57 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     [sessionId]
   )
 
+  const loadSessions = useCallback(async () => {
+    try {
+      const list = await getCopilotSessions()
+      setSessions(list)
+    } catch (err) {
+      console.warn('Failed to load copilot sessions:', err)
+    }
+  }, [])
+
+  const loadSession = useCallback(
+    async (targetSessionId: string) => {
+      setError(null)
+      setLastFailedText(null)
+      setIsLoading(true)
+      setSessionId(targetSessionId)
+      try {
+        const history = await getCopilotHistory(targetSessionId, 0, 200)
+        const mapped: ChatMessageItemData[] = history.map((h: CopilotHistoryMessage) => ({
+          id: h.id,
+          role: h.role as 'user' | 'assistant',
+          content: h.content,
+          intent: h.intent || undefined,
+          createdAt: h.createdAt || new Date().toISOString(),
+        }))
+        setMessages(mapped)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to load chat.'
+        console.warn('Failed to load copilot session:', err)
+        setError(message)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    []
+  )
+
   const setOnline = useCallback((online: boolean) => {
     setIsOnline(online)
+  }, [])
+
+  const clearMessages = useCallback(() => {
+    setMessages([])
+    setError(null)
+    setLastFailedText(null)
+  }, [])
+
+  const newChat = useCallback(() => {
+    setMessages([])
+    setError(null)
+    setLastFailedText(null)
+    setSessionId(`session_${Date.now()}`)
   }, [])
 
   return {
@@ -209,10 +266,15 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     error,
     isOnline,
     sessionId,
+    sessions,
+    clearMessages,
+    newChat,
     sendMessage,
     sendStream,
     retry,
     loadHistory,
+    loadSessions,
+    loadSession,
     setOnline,
   }
 }

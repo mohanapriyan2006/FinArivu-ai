@@ -1,16 +1,22 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  Alert,
   FlatList,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
   RefreshControl,
   StyleSheet,
+  Text,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { Clock, History, MoreVertical, Plus, Trash2, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { Typography } from '@/theme'
 import { useCopilot } from '@/hooks/useCopilot'
 import { CopilotHeader } from '@/components/chatbot/CopilotHeader'
 import { CopilotWelcome } from '@/components/chatbot/CopilotWelcome'
@@ -34,10 +40,18 @@ export default function CopilotScreen({ navigation }: any) {
     isOnline,
     sendMessage,
     loadHistory,
+    clearMessages,
+    newChat,
+    sessionId,
+    sessions,
+    loadSessions,
+    loadSession,
   } = useCopilot()
 
   const [inputText, setInputText] = useState('')
   const [refreshing, setRefreshing] = useState(false)
+  const [menuVisible, setMenuVisible] = useState(false)
+  const [historyVisible, setHistoryVisible] = useState(false)
 
   const flatListRef = useRef<FlatList>(null)
 
@@ -58,6 +72,55 @@ export default function CopilotScreen({ navigation }: any) {
       scrollToBottom()
     },
     [inputText, sendMessage, scrollToBottom]
+  )
+
+  useEffect(() => {
+    loadSessions()
+  }, [loadSessions])
+
+  useEffect(() => {
+    if (historyVisible) {
+      loadSessions()
+    }
+  }, [historyVisible, loadSessions])
+
+  const closeMenu = useCallback(() => setMenuVisible(false), [])
+
+  const handleClearChat = useCallback(() => {
+    setMenuVisible(false)
+    Alert.alert(
+      'Clear chat',
+      'This will remove the current conversation from the screen. It will still be saved on the server.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear',
+          style: 'destructive',
+          onPress: () => {
+            clearMessages()
+          },
+        },
+      ]
+    )
+  }, [clearMessages])
+
+  const handleNewChat = useCallback(() => {
+    setMenuVisible(false)
+    newChat()
+  }, [newChat])
+
+  const handleOpenHistory = useCallback(() => {
+    setMenuVisible(false)
+    setHistoryVisible(true)
+  }, [])
+
+  const handleOpenSession = useCallback(
+    async (targetSessionId: string) => {
+      setHistoryVisible(false)
+      await loadSession(targetSessionId)
+      scrollToBottom()
+    },
+    [loadSession, scrollToBottom]
   )
 
   const handleRefresh = useCallback(async () => {
@@ -98,8 +161,85 @@ export default function CopilotScreen({ navigation }: any) {
       <View style={styles.container}>
         <CopilotHeader
           onBack={navigation?.canGoBack() ? () => navigation.goBack() : undefined}
+          onMenu={() => setMenuVisible(true)}
           isOnline={isOnline}
         />
+
+        <Modal
+          visible={menuVisible}
+          transparent
+          animationType="fade"
+          onRequestClose={closeMenu}
+        >
+          <Pressable style={styles.menuOverlay} onPress={closeMenu}>
+            <View style={styles.menuCard}>
+              <Pressable style={styles.menuItem} onPress={handleNewChat}>
+                <Plus size={18} color={colors.textPrimary} strokeWidth={2} />
+                <Text style={styles.menuItemText}>New chat</Text>
+              </Pressable>
+              <Pressable style={styles.menuItem} onPress={handleClearChat}>
+                <Trash2 size={18} color={colors.danger} strokeWidth={2} />
+                <Text style={[styles.menuItemText, { color: colors.danger }]}>Clear chat</Text>
+              </Pressable>
+              <Pressable style={styles.menuItem} onPress={handleOpenHistory}>
+                <History size={18} color={colors.textPrimary} strokeWidth={2} />
+                <Text style={styles.menuItemText}>History</Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Modal>
+
+        <Modal
+          visible={historyVisible}
+          animationType="slide"
+          onRequestClose={() => setHistoryVisible(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Chat history</Text>
+              <Pressable
+                onPress={() => setHistoryVisible(false)}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close history"
+              >
+                <X size={22} color={colors.textPrimary} strokeWidth={2} />
+              </Pressable>
+            </View>
+            {sessions.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No chats yet. Start a new chat.</Text>
+              </View>
+            ) : (
+              <FlatList
+                data={sessions}
+                keyExtractor={(item) => item.sessionId}
+                contentContainerStyle={styles.listContent}
+                renderItem={({ item }) => (
+                  <Pressable
+                    style={styles.previewItem}
+                    onPress={() => handleOpenSession(item.sessionId)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Open chat: ${item.title}`}
+                  >
+                    <View style={styles.previewIcon}>
+                      <History size={18} color={colors.primary} strokeWidth={2} />
+                    </View>
+                    <View style={styles.previewInfo}>
+                      <Text style={styles.previewTitle}>{item.title}</Text>
+                      <View style={styles.previewTimeRow}>
+                        <Clock size={12} color={colors.textSecondary} strokeWidth={2} />
+                        <Text style={styles.previewTime}>
+                          {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
+                        </Text>
+                      </View>
+                    </View>
+                  </Pressable>
+                )}
+              />
+            )}
+          </SafeAreaView>
+        </Modal>
 
         <KeyboardAvoidingView
           style={styles.keyboardView}
@@ -162,5 +302,107 @@ const makeStyles = (colors: any) =>
     listContent: {
       paddingVertical: 16,
       paddingBottom: 150,
+    },
+    menuOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.35)',
+      justifyContent: 'flex-start',
+      paddingTop: 70,
+      paddingRight: 12,
+      alignItems: 'flex-end',
+    },
+    menuCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      paddingVertical: 8,
+      paddingHorizontal: 4,
+      minWidth: 180,
+      shadowColor: colors.textPrimary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.1,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    menuItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 14,
+      paddingVertical: 12,
+      gap: 10,
+    },
+    menuItemText: {
+      ...Typography.bodySmall,
+      color: colors.textPrimary,
+      fontWeight: '600',
+    },
+    modalContainer: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    modalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+      backgroundColor: colors.surface,
+    },
+    modalTitle: {
+      ...Typography.headlineMedium,
+      color: colors.textHero,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    closeButton: {
+      padding: 4,
+    },
+    emptyContainer: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+    },
+    emptyText: {
+      ...Typography.bodySmall,
+      color: colors.textSecondary,
+      textAlign: 'center',
+    },
+    previewItem: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 20,
+      paddingVertical: 16,
+      gap: 12,
+      borderBottomWidth: 1,
+      borderBottomColor: colors.border,
+    },
+    previewIcon: {
+      width: 36,
+      height: 36,
+      borderRadius: 18,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    previewInfo: {
+      flex: 1,
+    },
+    previewTitle: {
+      ...Typography.bodySmall,
+      color: colors.textHero,
+      fontWeight: '600',
+    },
+    previewTimeRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginTop: 4,
+      gap: 4,
+    },
+    previewTime: {
+      ...Typography.labelSmall,
+      color: colors.textSecondary,
+      fontSize: 11,
     },
   })
