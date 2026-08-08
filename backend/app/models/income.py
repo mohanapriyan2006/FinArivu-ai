@@ -40,6 +40,15 @@ class Income(Base):
         default=False,
         nullable=False,
     )
+    is_primary: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+        nullable=False,
+    )
+    frequency: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="incomes")
 

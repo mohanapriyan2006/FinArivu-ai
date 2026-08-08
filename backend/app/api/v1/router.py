@@ -10,6 +10,7 @@ from app.api.v1 import (
     chat,
     expenses,
     financial,
+    financial_profile,
     goals,
     income,
     liabilities,
@@ -32,6 +33,7 @@ api_router.include_router(budgets.router)
 api_router.include_router(goals.router)
 api_router.include_router(assets.router)
 api_router.include_router(liabilities.router)
+api_router.include_router(financial_profile.router)
 api_router.include_router(financial.router)
 api_router.include_router(reports.router)
 api_router.include_router(chat.router)

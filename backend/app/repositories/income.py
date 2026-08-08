@@ -45,6 +45,20 @@ class IncomeRepository(BaseRepository[Income]):
         query = query.offset(skip).limit(limit)
         return (await self._session.execute(query)).scalars().all()
 
+    async def get_primary_by_user(self, user_id: uuid.UUID) -> Income | None:
+        """Return the user's primary income record if one exists."""
+        query = (
+            select(Income)
+            .where(
+                Income.user_id == user_id,
+                Income.is_primary.is_(True),
+                Income.deleted_at.is_(None),
+            )
+            .order_by(Income.created_at.desc())
+            .limit(1)
+        )
+        return (await self._session.execute(query)).scalar_one_or_none()
+
     async def sum_for_period(
         self,
         user_id: uuid.UUID,

@@ -59,6 +59,19 @@ class Liability(Base):
         nullable=True,
     )
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    credit_limit: Mapped[float] = mapped_column(
+        Numeric(15, 2),
+        nullable=True,
+    )
+    monthly_spend: Mapped[float] = mapped_column(
+        Numeric(15, 2),
+        nullable=True,
+    )
+    source: Mapped[str] = mapped_column(
+        String(50),
+        default="manual",
+        nullable=False,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="liabilities")
 
@@ -73,6 +86,18 @@ class Liability(Base):
         CheckConstraint(
             "remaining_tenure_months IS NULL OR remaining_tenure_months >= 0",
             name="chk_liability_tenure_non_negative",
+        ),
+        CheckConstraint(
+            "credit_limit IS NULL OR credit_limit >= 0",
+            name="chk_liability_credit_limit_non_negative",
+        ),
+        CheckConstraint(
+            "monthly_spend IS NULL OR monthly_spend >= 0",
+            name="chk_liability_monthly_spend_non_negative",
+        ),
+        CheckConstraint(
+            "source IN ('manual', 'imported', 'api', 'calculated', 'estimate')",
+            name="chk_liability_source",
         ),
         Index("ix_liabilities_user_type", "user_id", "liability_type"),
     )

@@ -98,6 +98,73 @@ async def _migrate_expense_categories(conn: AsyncConnection) -> None:
         logger.info("Added expense_categories.display_order")
 
 
+async def _ensure_columns(
+    conn: AsyncConnection,
+    table: str,
+    columns: dict[str, str],
+) -> None:
+    """Idempotently add missing columns to a table."""
+    column_list = ", ".join(f"'{name}'" for name in columns)
+    result = await conn.execute(
+        text(
+            f"""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = '{table}'
+              AND column_name IN ({column_list})
+            """
+        )
+    )
+    existing = {row[0] for row in result.all()}
+
+    for name, spec in columns.items():
+        if name not in existing:
+            await conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {spec};"))
+            logger.info("Added %s.%s", table, name)
+
+
+async def _migrate_financial_profile(conn: AsyncConnection) -> None:
+    """Idempotently add financial profile columns and ensure new tables exist."""
+    await _ensure_columns(
+        conn,
+        "profiles",
+        {
+            "employment_type": "VARCHAR(100)",
+            "dependents": "INTEGER",
+            "children_count": "INTEGER",
+            "profile_initialized": "BOOLEAN NOT NULL DEFAULT false",
+            "completed_at": "TIMESTAMP WITH TIME ZONE",
+        },
+    )
+    await _ensure_columns(
+        conn,
+        "income",
+        {
+            "is_primary": "BOOLEAN NOT NULL DEFAULT false",
+            "frequency": "VARCHAR(50)",
+        },
+    )
+    await _ensure_columns(
+        conn,
+        "assets",
+        {
+            "savings_bucket": "VARCHAR(50)",
+            "interest_rate": "NUMERIC(5, 2)",
+            "maturity_date": "DATE",
+            "source": "VARCHAR(50) NOT NULL DEFAULT 'manual'",
+        },
+    )
+    await _ensure_columns(
+        conn,
+        "liabilities",
+        {
+            "credit_limit": "NUMERIC(15, 2)",
+            "monthly_spend": "NUMERIC(15, 2)",
+            "source": "VARCHAR(50) NOT NULL DEFAULT 'manual'",
+        },
+    )
+
+
 async def apply_migrations(engine: AsyncEngine) -> None:
     """Apply startup migrations inside a single transaction."""
     logger.info("Applying database migrations")
@@ -105,4 +172,5 @@ async def apply_migrations(engine: AsyncEngine) -> None:
         await _ensure_schema(conn)
         await _migrate_users(conn)
         await _migrate_expense_categories(conn)
+        await _migrate_financial_profile(conn)
     logger.info("Database migrations complete")

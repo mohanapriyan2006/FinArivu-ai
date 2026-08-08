@@ -10,6 +10,9 @@ from app.models.assets import Asset
 from app.models.liabilities import Liability
 from app.models.net_worth_history import NetWorthHistory
 from app.models.financial_health_scores import FinancialHealthScore
+from app.models.expense_estimates import MonthlyExpenseEstimate
+from app.models.tax_profiles import TaxProfile
+from app.models.insurance import Insurance
 from app.models.weekly_reports import WeeklyReport
 from app.models.ai_conversations import AIConversation
 from app.models.ai_feedback import AIFeedback
@@ -31,6 +34,9 @@ __all__ = [
     "Liability",
     "NetWorthHistory",
     "FinancialHealthScore",
+    "MonthlyExpenseEstimate",
+    "TaxProfile",
+    "Insurance",
     "WeeklyReport",
     "AIConversation",
     "AIFeedback",

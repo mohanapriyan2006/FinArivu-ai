@@ -49,12 +49,37 @@ class Asset(Base):
         default=False,
         nullable=False,
     )
+    savings_bucket: Mapped[str | None] = mapped_column(
+        String(50),
+        nullable=True,
+    )
+    interest_rate: Mapped[float] = mapped_column(
+        Numeric(5, 2),
+        nullable=True,
+    )
+    maturity_date: Mapped[date | None] = mapped_column(
+        Date,
+        nullable=True,
+    )
+    source: Mapped[str] = mapped_column(
+        String(50),
+        default="manual",
+        nullable=False,
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="assets")
 
     __table_args__ = (
         CheckConstraint(f"asset_type IN {ASSET_TYPES}", name="chk_asset_type"),
         CheckConstraint("value >= 0", name="chk_asset_value_non_negative"),
+        CheckConstraint(
+            "savings_bucket IS NULL OR savings_bucket IN ('emergency', 'general', 'goal')",
+            name="chk_asset_savings_bucket",
+        ),
+        CheckConstraint(
+            "source IN ('manual', 'imported', 'api', 'calculated', 'estimate')",
+            name="chk_asset_source",
+        ),
         Index("ix_assets_user_type", "user_id", "asset_type"),
         Index("ix_assets_as_of_date", "as_of_date"),
     )

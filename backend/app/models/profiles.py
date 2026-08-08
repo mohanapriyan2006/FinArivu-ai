@@ -2,9 +2,9 @@ from __future__ import annotations
 
 import uuid
 
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Date, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -34,6 +34,15 @@ class Profile(Base):
     risk_profile: Mapped[str | None] = mapped_column(String(50), nullable=True)
     investment_experience: Mapped[str | None] = mapped_column(String(50), nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
+    employment_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    dependents: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    children_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    profile_initialized: Mapped[bool] = mapped_column(
+        Boolean, default=False, nullable=False
+    )
+    completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 

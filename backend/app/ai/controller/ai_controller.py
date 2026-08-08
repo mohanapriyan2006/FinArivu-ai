@@ -7,6 +7,7 @@ from typing import Any, AsyncIterator
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.builder import ContextBuilder
+from app.ai.context.context_requirements import get_required_domains
 from app.ai.guardrails.guardrail import Guardrail
 from app.ai.guardrails.guardrail_service import GuardrailService
 from app.ai.intent.classifier import IntentClassifier
@@ -79,11 +80,15 @@ class AIController:
         # 4. Classify intent
         intent_result = self._intent.classify(sanitised_message)
 
-        # 5. Build full financial context (agents never query DB directly)
-        financial_context = await self._context_builder.build(user_id, session_id)
-
-        # 6. Create execution plan
+        # 5. Create execution plan
         execution_plan = self._planner.plan(intent_result)
+
+        # 6. Build only the financial context required by the planned agents
+        agent_names = [step.agent_name for step in execution_plan.steps]
+        required_domains = get_required_domains(agent_names)
+        financial_context = await self._context_builder.build(
+            user_id, session_id, required_domains
+        )
 
         # 7. Execute agents
         agent_results = await self._orchestrator.execute(
@@ -218,11 +223,15 @@ class AIController:
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
 
-        # 2. Classify, build context, plan, execute
+        # 2. Classify, plan, build required context, execute
         await self._memory.save_message(user_id, session_id, "user", sanitised_message)
         intent_result = self._intent.classify(sanitised_message)
-        financial_context = await self._context_builder.build(user_id, session_id)
         execution_plan = self._planner.plan(intent_result)
+        agent_names = [step.agent_name for step in execution_plan.steps]
+        required_domains = get_required_domains(agent_names)
+        financial_context = await self._context_builder.build(
+            user_id, session_id, required_domains
+        )
         agent_results = await self._orchestrator.execute(
             user_id,
             session_id,

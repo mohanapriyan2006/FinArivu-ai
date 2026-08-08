@@ -20,6 +20,10 @@ class AssetBase(BaseSchema):
     as_of_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)
     is_emergency_fund: bool = False
+    savings_bucket: str | None = Field(default=None, max_length=50)
+    interest_rate: Decimal | None = Field(default=None, ge=0)
+    maturity_date: date | None = None
+    source: str = Field(default="manual", max_length=50)
 
 
 class AssetCreate(AssetBase):
@@ -38,6 +42,10 @@ class AssetUpdate(BaseSchema):
     as_of_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)
     is_emergency_fund: bool | None = None
+    savings_bucket: str | None = Field(default=None, max_length=50)
+    interest_rate: Decimal | None = Field(default=None, ge=0)
+    maturity_date: date | None = None
+    source: str | None = Field(default=None, max_length=50)
 
 
 class AssetResponse(AuditedSchema, AssetBase):

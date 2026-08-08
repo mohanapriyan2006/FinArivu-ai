@@ -40,3 +40,32 @@ class AssetRepository(BaseRepository[Asset]):
             Asset.deleted_at.is_(None),
         )
         return list((await self._session.execute(query)).scalars().all())
+
+    async def list_by_savings_bucket(
+        self, user_id: uuid.UUID, bucket: str
+    ) -> list[Asset]:
+        """Return cash assets for a specific savings bucket."""
+        query = select(Asset).where(
+            Asset.user_id == user_id,
+            Asset.asset_type == "Cash",
+            Asset.savings_bucket == bucket,
+            Asset.deleted_at.is_(None),
+        )
+        return list((await self._session.execute(query)).scalars().all())
+
+    async def soft_delete_by_user_and_type(
+        self, user_id: uuid.UUID, asset_type: str
+    ) -> None:
+        """Soft-delete all assets of a type for a user (used before full replace)."""
+        query = (
+            select(Asset)
+            .where(
+                Asset.user_id == user_id,
+                Asset.asset_type == asset_type,
+                Asset.deleted_at.is_(None),
+            )
+        )
+        results = (await self._session.execute(query)).scalars().all()
+        for asset in results:
+            asset.soft_delete()
+        await self._session.flush()

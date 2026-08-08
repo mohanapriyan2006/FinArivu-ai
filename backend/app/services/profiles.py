@@ -39,12 +39,14 @@ class ProfileService(BaseService[Profile]):
         """Create a profile with duplicate check."""
         if await self._repo.get_by_user_id(data.user_id):
             raise ConflictError("Profile already exists for this user")
-        profile = Profile(**data.model_dump(exclude_unset=True))
+        profile = Profile(**data.model_dump(exclude_unset=True, by_alias=False))
         return await self._repo.create(profile)
 
     async def update_by_user(self, user_id: uuid.UUID, data: ProfileUpdate) -> Profile:
         """Update or create a profile for a user."""
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(
+            exclude_unset=True, exclude_none=True, by_alias=False
+        )
         existing = await self._repo.get_by_user_id(user_id)
         if existing is None:
             return await self.get_or_create_by_user(user_id, update_dict)

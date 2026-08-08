@@ -30,17 +30,29 @@ class IntentEnum(str, Enum):
 class FinancialContext(BaseModel):
     """Aggregated user financial context passed to every agent."""
 
+    version: str = "1.0"
     profile: dict[str, Any] = Field(default_factory=dict)
-    income: list[dict[str, Any]] = Field(default_factory=list)
-    expenses: list[dict[str, Any]] = Field(default_factory=list)
+    income: dict[str, Any] = Field(default_factory=dict)
+    expenses: dict[str, Any] = Field(default_factory=dict)
     budgets: list[dict[str, Any]] = Field(default_factory=list)
+    savings: dict[str, Any] = Field(default_factory=dict)
+    investments: dict[str, Any] = Field(default_factory=dict)
+    fixed_deposits: list[dict[str, Any]] = Field(default_factory=list)
+    loans: list[dict[str, Any]] = Field(default_factory=list)
+    credit_cards: list[dict[str, Any]] = Field(default_factory=list)
     goals: list[dict[str, Any]] = Field(default_factory=list)
+    insurance: list[dict[str, Any]] = Field(default_factory=list)
+    tax_profile: dict[str, Any] = Field(default_factory=dict)
     assets: list[dict[str, Any]] = Field(default_factory=list)
     liabilities: list[dict[str, Any]] = Field(default_factory=list)
+    net_worth: dict[str, Any] = Field(default_factory=dict)
+    cash_flow: dict[str, Any] = Field(default_factory=dict)
     health_score: dict[str, Any] = Field(default_factory=dict)
     tax_regime: str | None = None
     conversation_summary: str = ""
     preferences: dict[str, Any] = Field(default_factory=dict)
+    data_available: list[str] = Field(default_factory=list)
+    data_missing: list[str] = Field(default_factory=list)
 
 
 class IntentResult(BaseModel):

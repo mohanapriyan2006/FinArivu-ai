@@ -23,6 +23,9 @@ class ProfileBase(BaseSchema):
     risk_profile: str | None = Field(default=None, max_length=50)
     investment_experience: str | None = Field(default=None, max_length=50)
     bio: str | None = Field(default=None, max_length=1000)
+    employment_type: str | None = Field(default=None, max_length=100)
+    dependents: int | None = Field(default=None, ge=0)
+    children_count: int | None = Field(default=None, ge=0)
 
     @field_validator("age", mode="before")
     @classmethod

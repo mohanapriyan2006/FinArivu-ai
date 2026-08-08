@@ -31,3 +31,20 @@ class LiabilityRepository(BaseRepository[Liability]):
             query = query.where(Liability.liability_type == liability_type)
         query = query.order_by(Liability.created_at.desc()).offset(skip).limit(limit)
         return list((await self._session.execute(query)).scalars().all())
+
+    async def soft_delete_by_user_and_type(
+        self, user_id: uuid.UUID, liability_type: str
+    ) -> None:
+        """Soft-delete all liabilities of a type for a user (used before full replace)."""
+        query = (
+            select(Liability)
+            .where(
+                Liability.user_id == user_id,
+                Liability.liability_type == liability_type,
+                Liability.deleted_at.is_(None),
+            )
+        )
+        results = (await self._session.execute(query)).scalars().all()
+        for liability in results:
+            liability.soft_delete()
+        await self._session.flush()

@@ -23,6 +23,9 @@ class LiabilityBase(BaseSchema):
     start_date: date | None = None
     end_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)
+    credit_limit: Decimal | None = Field(default=None, ge=0)
+    monthly_spend: Decimal | None = Field(default=None, ge=0)
+    source: str = Field(default="manual", max_length=50)
 
 
 class LiabilityCreate(LiabilityBase):
@@ -44,6 +47,9 @@ class LiabilityUpdate(BaseSchema):
     start_date: date | None = None
     end_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)
+    credit_limit: Decimal | None = Field(default=None, ge=0)
+    monthly_spend: Decimal | None = Field(default=None, ge=0)
+    source: str | None = Field(default=None, max_length=50)
 
 
 class LiabilityResponse(AuditedSchema, LiabilityBase):

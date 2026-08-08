@@ -18,6 +18,8 @@ class IncomeBase(BaseSchema):
     income_date: date
     description: str | None = Field(default=None, max_length=1000)
     is_recurring: bool = False
+    is_primary: bool = False
+    frequency: str | None = Field(default=None, max_length=50)
 
     @field_validator("source")
     @classmethod
@@ -44,6 +46,8 @@ class IncomeUpdate(BaseSchema):
     income_date: date | None = None
     description: str | None = Field(default=None, max_length=1000)
     is_recurring: bool | None = None
+    is_primary: bool | None = None
+    frequency: str | None = Field(default=None, max_length=50)
 
 
 class IncomeResponse(AuditedSchema, IncomeBase):
