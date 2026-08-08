@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react'
+import { type ReactNode, useEffect } from 'react'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -24,14 +24,16 @@ export function AIGlow({
 }: AIGlowProps) {
   const opacity = useSharedValue(minOpacity)
 
-  opacity.value = withRepeat(
-    withSequence(
-      withTiming(maxOpacity, { duration: duration / 2 }),
-      withTiming(minOpacity, { duration: duration / 2 })
-    ),
-    -1,
-    true
-  )
+  useEffect(() => {
+    opacity.value = withRepeat(
+      withSequence(
+        withTiming(maxOpacity, { duration: duration / 2 }),
+        withTiming(minOpacity, { duration: duration / 2 })
+      ),
+      -1,
+      true
+    )
+  }, [duration, maxOpacity, minOpacity, opacity])
 
   const animatedStyle = useAnimatedStyle(() => ({
     opacity: opacity.value,

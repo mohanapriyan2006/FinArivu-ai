@@ -11,17 +11,26 @@ function getKey(userId: string): string {
 
 export const FinancialProfileStore = {
   async getProfile(userId: string): Promise<FinancialProfile | null> {
-    const json = await AsyncStorage.getItem(getKey(userId))
-    if (!json) return null
     try {
-      return JSON.parse(json) as FinancialProfile
-    } catch {
+      const json = await AsyncStorage.getItem(getKey(userId))
+      if (!json) return null
+      try {
+        return JSON.parse(json) as FinancialProfile
+      } catch {
+        return null
+      }
+    } catch (error) {
+      console.warn('[FinancialProfileStore] getProfile failed:', error)
       return null
     }
   },
 
   async saveProfile(userId: string, profile: FinancialProfile): Promise<void> {
-    await AsyncStorage.setItem(getKey(userId), JSON.stringify(profile))
+    try {
+      await AsyncStorage.setItem(getKey(userId), JSON.stringify(profile))
+    } catch (error) {
+      console.warn('[FinancialProfileStore] saveProfile failed:', error)
+    }
   },
 
   async updateSection(
@@ -54,6 +63,10 @@ export const FinancialProfileStore = {
   },
 
   async clearProfile(userId: string): Promise<void> {
-    await AsyncStorage.removeItem(getKey(userId))
+    try {
+      await AsyncStorage.removeItem(getKey(userId))
+    } catch (error) {
+      console.warn('[FinancialProfileStore] clearProfile failed:', error)
+    }
   },
 }

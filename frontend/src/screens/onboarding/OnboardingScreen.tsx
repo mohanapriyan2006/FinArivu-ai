@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Zap, ChevronRight } from 'lucide-react-native'
@@ -296,10 +296,12 @@ function PaginationDot({
 }) {
   const width = useSharedValue(active ? 24 : 8)
 
-  width.value = withSpring(active ? 24 : 8, {
-    damping: 20,
-    stiffness: 200,
-  })
+  useEffect(() => {
+    width.value = withSpring(active ? 24 : 8, {
+      damping: 20,
+      stiffness: 200,
+    })
+  }, [active, width])
 
   const animatedStyle = useAnimatedStyle(() => ({
     width: width.value,

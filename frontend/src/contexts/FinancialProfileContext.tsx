@@ -41,6 +41,9 @@ export function FinancialProfileProvider({ children }: { children: React.ReactNo
     try {
       const stored = await FinancialProfileService.getProfile(userId)
       setProfile(stored ?? defaultProfile)
+    } catch (error) {
+      console.warn('[FinancialProfileProvider] load failed:', error)
+      setProfile(defaultProfile)
     } finally {
       setLoading(false)
     }

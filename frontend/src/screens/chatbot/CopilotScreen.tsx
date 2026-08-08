@@ -16,6 +16,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { Clock, History, MoreVertical, Plus, Trash2, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { Typography } from '@/theme'
 import { useCopilot } from '@/hooks/useCopilot'
 import { CopilotHeader } from '@/components/chatbot/CopilotHeader'
@@ -31,6 +32,7 @@ import { ThinkingAnimation } from '@/components/chatbot/ThinkingAnimation'
 export default function CopilotScreen({ navigation }: any) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
+  const { getToken } = useAuthContext()
 
   const {
     messages,
@@ -75,14 +77,18 @@ export default function CopilotScreen({ navigation }: any) {
   )
 
   useEffect(() => {
-    loadSessions()
-  }, [loadSessions])
+    getToken().then((token) => {
+      if (token) loadSessions()
+    })
+  }, [getToken, loadSessions])
 
   useEffect(() => {
     if (historyVisible) {
-      loadSessions()
+      getToken().then((token) => {
+        if (token) loadSessions()
+      })
     }
-  }, [historyVisible, loadSessions])
+  }, [historyVisible, getToken, loadSessions])
 
   const closeMenu = useCallback(() => setMenuVisible(false), [])
 

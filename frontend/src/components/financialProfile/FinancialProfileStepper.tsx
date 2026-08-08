@@ -90,7 +90,7 @@ export function FinancialProfileStepper({
         scrollContent: {
           paddingHorizontal: 20,
           paddingTop: 8,
-          paddingBottom: Math.max(insets.bottom, 24) + 140,
+          paddingBottom: 24,
         },
         progressRow: {
           flexDirection: 'row',
@@ -136,10 +136,6 @@ export function FinancialProfileStepper({
           marginBottom: 32,
         },
         footer: {
-          position: 'absolute',
-          left: 0,
-          right: 0,
-          bottom: 0,
           paddingHorizontal: 20,
           paddingTop: 12,
           paddingBottom: Math.max(insets.bottom, 20) + 12,
