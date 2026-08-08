@@ -17,6 +17,7 @@ import { CopilotWelcome } from '@/components/chatbot/CopilotWelcome'
 import {
   DocMessageItem,
   type ChatMessageItemData,
+  type SuggestedAction,
 } from '@/components/chatbot/DocMessageItem'
 import { CopilotInput } from '@/components/chatbot/CopilotInput'
 import { ThinkingAnimation } from '@/components/chatbot/ThinkingAnimation'
@@ -65,14 +66,31 @@ export default function CopilotScreen({ navigation }: any) {
     setRefreshing(false)
   }, [loadHistory])
 
+  const handleAction = useCallback(
+    (action: SuggestedAction) => {
+      if (action.type === 'CHAT_FOLLOWUP') {
+        handleSendMessage((action.payload?.question as string) || action.label)
+      } else if (action.type === 'NAVIGATE') {
+        const screen = action.payload?.screen as string | undefined
+        const params = (action.payload?.params as Record<string, any>) || undefined
+        if (screen) {
+          navigation.navigate(screen as never, params as never)
+        }
+      }
+      // API_ACTION not yet implemented
+    },
+    [handleSendMessage, navigation]
+  )
+
   const renderItem = useCallback(
     ({ item }: { item: ChatMessageItemData }) => (
       <DocMessageItem
         item={item}
         onSelectFollowUp={(chipText) => handleSendMessage(chipText)}
+        onSelectAction={handleAction}
       />
     ),
-    [handleSendMessage]
+    [handleAction, handleSendMessage]
   )
 
   return (

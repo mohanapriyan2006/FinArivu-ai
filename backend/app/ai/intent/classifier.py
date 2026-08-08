@@ -16,8 +16,12 @@ class IntentClassifier:
 
     INTENT_KEYWORDS: dict[IntentEnum, list[str]] = {
         IntentEnum.BUDGET: [
-            "budget", "spend", "spending", "expense", "expenses", "utilisation",
-            "utilization", "overspend", "savings rate", "monthly spend",
+            "budget", "monthly budget", "spending limit", "budgeted",
+            "allocation", "spend limit",
+        ],
+        IntentEnum.EXPENSE: [
+            "expense", "expenses", "spend", "spending", "spent on", "how much did",
+            "utilisation", "utilization", "overspend", "savings rate", "monthly spend",
         ],
         IntentEnum.GOAL: [
             "goal", "goals", "house", "car", "vacation", "target", "saving for",
@@ -39,8 +43,23 @@ class IntentClassifier:
             "net worth", "assets", "liabilities", "wealth", "portfolio",
         ],
         IntentEnum.EDUCATION: [
-            "explain", "what is", "how does", "sip", "ppf", "elss", "nps",
-            "mutual fund", "inflation", "compound", "fd", "learn", "teach me",
+            "explain", "what is", "how does", "inflation", "compound", "fd", "rd",
+            "learn", "teach me", "meaning of",
+        ],
+        IntentEnum.INVESTMENT_EDUCATION: [
+            "mutual fund", "sip", "ppf", "elss", "nps", "stock", "equity", "debt fund",
+            "index fund", "etf", "rebalance",
+        ],
+        IntentEnum.UNSUPPORTED_INVESTMENT_ADVICE: [
+            "which fund", "which stock", "should i buy", "should i sell",
+            "best mutual fund", "recommend a stock", "top stocks", "top funds",
+        ],
+        IntentEnum.CASH_FLOW: [
+            "cash flow", "inflow", "outflow", "cashflow", "money in", "money out",
+        ],
+        IntentEnum.SCENARIO: [
+            "what if", "scenario", "how much do i need", "how much should i save",
+            "can i afford", "impact of saving", "if i save",
         ],
         IntentEnum.REPORT: [
             "report", "weekly report", "monthly report", "summary", "overview",

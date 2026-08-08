@@ -11,8 +11,6 @@ from app.ai.guardrails.guardrail import Guardrail
 from app.ai.guardrails.guardrail_service import GuardrailService
 from app.ai.intent.classifier import IntentClassifier
 from app.ai.memory.conversation_memory import ConversationMemory
-from app.ai.agents.insight_agent import InsightAgent
-from app.ai.agents.recommendation_agent import RecommendationAgent
 from app.ai.orchestrator.orchestrator import Orchestrator
 from app.ai.orchestrator.response_builder import ResponseBuilder
 from app.ai.planner.planner import Planner
@@ -44,8 +42,6 @@ class AIController:
         self._context_builder = ContextBuilder(session)
         self._planner = Planner()
         self._orchestrator = Orchestrator(session)
-        self._insight_agent = InsightAgent(session)
-        self._recommendation_agent = RecommendationAgent(session)
         self._memory = ConversationMemory(session)
         self._response_builder: ResponseBuilder | None = None
 
@@ -99,19 +95,7 @@ class AIController:
             intent_result.entities,
         )
 
-        # 8. Run insight and recommendation agents
-        insight_context = {
-            "user_message": sanitised_message,
-            "financial_context": financial_context,
-            "agent_results": agent_results,
-            "entities": intent_result.entities,
-            "session_id": session_id,
-        }
-        insight_result = await self._insight_agent.safe_execute(user_id, insight_context)
-        recommendation_result = await self._recommendation_agent.safe_execute(user_id, insight_context)
-        full_results = agent_results + [insight_result, recommendation_result]
-
-        # 9. Build final explanation with artifacts, recommendations, metadata
+        # 8. Build final explanation with artifacts, recommendations, metadata
         provider = get_ai_provider()
         self._response_builder = ResponseBuilder(provider)
         planner_output = self._to_planner_output(execution_plan)
@@ -119,7 +103,7 @@ class AIController:
         build = await self._response_builder.build_full(
             sanitised_message,
             planner_output,
-            full_results,
+            agent_results,
             start,
         )
 
@@ -140,7 +124,7 @@ class AIController:
             tokens_output=build.ai_response.tokens_output if build.ai_response else 0,
             latency_ms=latency,
             agent_chain={
-                "agents": [r.agent_name for r in full_results if not r.error],
+                "agents": [r.agent_name for r in agent_results if not r.error],
                 "intent": execution_plan.intent.value,
             },
         )
@@ -149,6 +133,7 @@ class AIController:
         return CopilotChatResponse(
             message_id=msg.id,
             message=safe_response,
+            response_type=build.response_type,
             summary=build.summary,
             intent=self._map_intent(execution_plan.intent.value),
             agents_used=build.metadata.agents_used,
@@ -315,16 +300,21 @@ class AIController:
         """Map new intent values onto the existing CopilotIntent schema."""
         mapping: dict[str, str] = {
             "budget": "budget_analysis",
+            "expense": "budget_analysis",
             "goal": "goal_tracking",
             "retirement": "retirement_planning",
             "tax": "tax_planning",
             "health": "health_score",
             "networth": "net_worth",
             "education": "education",
+            "investment_education": "education",
             "report": "report_summary",
             "greeting": "general",
             "general": "general",
             "mixed": "general",
+            "cash_flow": "general",
+            "scenario": "general",
+            "unsupported_investment_advice": "general",
         }
         try:
             return CopilotIntent(mapping.get(value, value))

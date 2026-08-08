@@ -1,5 +1,5 @@
 import { api } from './api'
-import { SSE } from 'react-native-sse'
+import SSE from 'react-native-sse'
 
 // ── Legacy Chat (existing endpoint — preserved) ──────────────────────────
 
@@ -50,12 +50,22 @@ export interface CopilotRecommendation {
 }
 
 export interface CopilotSuggestedAction {
+  id: string
   label: string
-  action: string
+  type: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
+  payload?: Record<string, unknown>
+  enabled?: boolean
   route?: string
 }
 
+export interface CopilotFollowUpQuestion {
+  label: string
+  type?: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
+  payload?: Record<string, unknown>
+}
+
 export interface CopilotMetadata {
+  responseType?: string
   intent: string
   agentsUsed: string[]
   provider?: string
@@ -66,13 +76,14 @@ export interface CopilotMetadata {
 export interface CopilotChatResponse {
   messageId: string | null
   message: string
+  responseType?: string
   summary?: string
   intent: string
   agentsUsed: string[]
   data: CopilotAgentData
   artifacts?: CopilotArtifact[]
   recommendations?: CopilotRecommendation[]
-  followUpQuestions?: { text: string }[] | string[]
+  followUpQuestions?: CopilotFollowUpQuestion[] | string[]
   suggestedActions?: CopilotSuggestedAction[]
   metadata?: CopilotMetadata
   disclaimer: string

@@ -14,18 +14,40 @@ import {
 } from './ArtifactCards'
 import { FollowUpChips } from './FollowUpChips'
 
+export interface ChatArtifact {
+  type: string
+  title: string
+  content: Record<string, any>
+}
+
+export interface ChatFollowUp {
+  label: string
+  type?: string
+  payload?: Record<string, any>
+}
+
+export interface SuggestedAction {
+  id: string
+  label: string
+  type: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
+  payload?: Record<string, any>
+  enabled?: boolean
+  route?: string
+}
+
 export interface ChatMessageItemData {
   id: string
   role: 'user' | 'assistant'
   content: string
   summary?: string
+  responseType?: string
   intent?: string
   agentsUsed?: string[]
   data?: Record<string, any>
-  artifacts?: { type: string; title: string; content: Record<string, any> }[]
+  artifacts?: ChatArtifact[]
   recommendations?: { title: string; description: string; category: string }[]
-  followUpQuestions?: { text: string }[] | string[]
-  suggestedActions?: { label: string; action: string; route?: string }[]
+  followUpQuestions?: ChatFollowUp[] | string[]
+  suggestedActions?: SuggestedAction[]
   disclaimer?: string
   guardrailTriggered?: boolean
   createdAt?: string
@@ -34,9 +56,10 @@ export interface ChatMessageItemData {
 interface DocMessageItemProps {
   item: ChatMessageItemData
   onSelectFollowUp: (chipText: string) => void
+  onSelectAction?: (action: SuggestedAction) => void
 }
 
-export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) {
+export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMessageItemProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
@@ -53,14 +76,39 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
 
   // ── AI MESSAGE (Claude Document Style — Avatar → Text → Cards → Chips) ──
   const intent = item.intent || ''
-  const agentData = item.data || {}
+  const responseType = item.responseType || ''
 
-  // Detect which artifact cards to render
-  const hasHealthData = intent === 'health_score' || agentData.HealthAgent
-  const hasBudgetData = intent === 'budget_analysis' || agentData.BudgetAgent
-  const hasGoalData = intent === 'goal_tracking' || agentData.GoalAgent
-  const hasTaxData = intent === 'tax_planning' || agentData.TaxAgent
-  const hasRetirementData = intent === 'retirement_planning' || agentData.RetirementAgent
+  const handleActionPress = (action: SuggestedAction) => {
+    if (onSelectAction) {
+      onSelectAction(action)
+    } else if (onSelectFollowUp) {
+      onSelectFollowUp((action.payload?.question as string) || action.label)
+    }
+  }
+
+  const renderArtifact = (artifact: ChatArtifact, index: number) => {
+    const content = artifact.content || {}
+    switch (artifact.type) {
+      case 'health_card':
+        return <HealthArtifactCard key={`art-${index}`} data={content as any} />
+      case 'budget_card':
+      case 'expense_card':
+        return <BudgetArtifactCard key={`art-${index}`} data={content as any} />
+      case 'goal_card':
+        return <GoalArtifactCard key={`art-${index}`} data={content as any} />
+      case 'tax_card':
+        return <TaxArtifactCard key={`art-${index}`} data={content as any} />
+      case 'retirement_card':
+        return <RetirementArtifactCard key={`art-${index}`} data={content as any} />
+      default:
+        return (
+          <View key={`art-${index}`} style={styles.artifactCard}>
+            <Text style={styles.artifactTitle}>{artifact.title}</Text>
+            <Text style={styles.artifactType}>{artifact.type.replace(/_/g, ' ')}</Text>
+          </View>
+        )
+    }
+  }
 
   return (
     <Animated.View entering={FadeInDown.duration(400)} style={styles.aiDocContainer}>
@@ -86,45 +134,9 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
           <Text style={styles.summaryText}>{item.summary}</Text>
         ) : null}
 
-        {/* Render Artifact Cards */}
-        {hasHealthData && (
-          <HealthArtifactCard data={agentData.HealthAgent || agentData} />
-        )}
-        {hasBudgetData && (
-          <BudgetArtifactCard data={agentData.BudgetAgent || agentData} />
-        )}
-        {hasGoalData && (
-          <GoalArtifactCard data={agentData.GoalAgent || agentData} />
-        )}
-        {hasTaxData && (
-          <TaxArtifactCard data={agentData.TaxAgent || agentData} />
-        )}
-        {hasRetirementData && (
-          <RetirementArtifactCard data={agentData.RetirementAgent || agentData} />
-        )}
-
-        {/* Render structured artifacts from backend */}
+        {/* Render artifacts from backend only */}
         {item.artifacts && item.artifacts.length > 0 && (
-          <View style={styles.artifactsList}>
-            {item.artifacts.map((artifact, index) => (
-              <View key={`artifact-${index}`} style={styles.artifactCard}>
-                <Text style={styles.artifactTitle}>{artifact.title}</Text>
-                <Text style={styles.artifactType}>{artifact.type.replace(/_/g, ' ')}</Text>
-              </View>
-            ))}
-          </View>
-        )}
-
-        {/* Recommendations */}
-        {item.recommendations && item.recommendations.length > 0 && (
-          <View style={styles.artifactsList}>
-            {item.recommendations.map((rec, index) => (
-              <View key={`rec-${index}`} style={styles.artifactCard}>
-                <Text style={styles.artifactTitle}>{rec.title}</Text>
-                <Text style={styles.artifactType}>{rec.description}</Text>
-              </View>
-            ))}
-          </View>
+          <View style={styles.artifactsList}>{item.artifacts.map(renderArtifact)}</View>
         )}
 
         {/* Suggested Actions */}
@@ -137,12 +149,12 @@ export function DocMessageItem({ item, onSelectFollowUp }: DocMessageItemProps) 
             >
               {item.suggestedActions.map((action, index) => (
                 <Pressable
-                  key={`action-${index}`}
+                  key={`action-${action.id || index}`}
                   style={({ pressed }) => [
                     styles.actionChip,
                     pressed && styles.actionChipPressed,
                   ]}
-                  onPress={() => onSelectFollowUp(action.label)}
+                  onPress={() => handleActionPress(action)}
                 >
                   <Text style={styles.actionChipText}>{action.label}</Text>
                 </Pressable>

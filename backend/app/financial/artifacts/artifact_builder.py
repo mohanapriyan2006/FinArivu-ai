@@ -15,7 +15,7 @@ class ArtifactBuilder:
         return Artifact(type=type_name, title=title, content=content)
 
     @staticmethod
-    def from_agent_data(agent_name: str, data: dict[str, Any]) -> Artifact:
+    def from_agent_data(agent_name: str, data: dict[str, Any]) -> Artifact | None:
         """Map an agent result to the correct artifact type."""
         mapping: dict[str, str] = {
             "BudgetAgent": "budget_card",
@@ -26,10 +26,10 @@ class ArtifactBuilder:
             "NetWorthAgent": "networth_card",
             "CashFlowAgent": "cashflow_card",
             "ReportAgent": "report_card",
-            "InsightAgent": "insight_card",
-            "RecommendationAgent": "recommendation_card",
         }
-        artifact_type = mapping.get(agent_name, "insight_card")
+        artifact_type = mapping.get(agent_name)
+        if artifact_type is None:
+            return None
         title = agent_name.replace("Agent", "")
         return Artifact(type=artifact_type, title=title, content=data)
 
@@ -119,11 +119,19 @@ class ArtifactBuilder:
         )
 
     @staticmethod
-    def build_artifact_list(agent_results: list[dict[str, Any]]) -> list[Artifact]:
+    def build_artifact_list(
+        agent_results: list[dict[str, Any]],
+        allowed_types: list[str] | None = None,
+    ) -> list[Artifact]:
         """Build a complete artifact list from a list of agent result dicts."""
         artifacts: list[Artifact] = []
         for r in agent_results:
             if not r.get("data") or r.get("error"):
                 continue
-            artifacts.append(ArtifactBuilder.from_agent_data(r.get("agent_name", ""), r["data"]))
+            artifact = ArtifactBuilder.from_agent_data(r.get("agent_name", ""), r["data"])
+            if artifact is None:
+                continue
+            if allowed_types is not None and artifact.type not in allowed_types:
+                continue
+            artifacts.append(artifact)
         return artifacts

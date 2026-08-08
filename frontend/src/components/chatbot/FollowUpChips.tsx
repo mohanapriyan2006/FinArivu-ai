@@ -1,36 +1,34 @@
 import React, { useMemo } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import {
-  BarChart3,
-  FileSpreadsheet,
-  HelpCircle,
-  Sparkles,
-  TrendingUp,
-} from 'lucide-react-native'
+import { Sparkles } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 
-interface FollowUpChipsProps {
-  onSelect: (chipText: string) => void
-  suggestions?: { text: string }[] | string[]
+interface FollowUpQuestion {
+  label: string
+  type?: string
+  payload?: Record<string, any>
 }
 
-const DEFAULT_FOLLOW_UPS = [
-  { id: 'explain', label: 'Explain more', icon: HelpCircle },
-  { id: 'graph', label: 'Show graph', icon: BarChart3 },
-  { id: 'report', label: 'Weekly report', icon: Sparkles },
-  { id: 'pdf', label: 'Export PDF', icon: FileSpreadsheet },
-  { id: 'budget', label: 'Improve budget', icon: TrendingUp },
-]
+interface FollowUpChipsProps {
+  onSelect: (chipText: string) => void
+  suggestions?: string[] | FollowUpQuestion[]
+}
 
 export function FollowUpChips({ onSelect, suggestions }: FollowUpChipsProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const items = suggestions && suggestions.length > 0
-    ? suggestions.map((s, i) => ({ id: `sug-${i}`, label: typeof s === 'string' ? s : s.text, icon: Sparkles }))
-    : DEFAULT_FOLLOW_UPS
+    ? suggestions.map((s, i) => ({
+        id: `sug-${i}`,
+        label: typeof s === 'string' ? s : (s.label || ''),
+        icon: Sparkles,
+      }))
+    : []
+
+  if (items.length === 0) return null
 
   return (
     <View style={styles.container}>

@@ -37,6 +37,16 @@ class CopilotIntent(StrEnum):
     GENERAL = "general"
 
 
+class ResponseType(StrEnum):
+    """High-level response shape for the frontend."""
+
+    SIMPLE_ANSWER = "simple_answer"
+    FINANCIAL_ANALYSIS = "financial_analysis"
+    ACTIONABLE_ANALYSIS = "actionable_analysis"
+    EDUCATIONAL = "educational"
+    CLARIFICATION = "clarification"
+
+
 class ResponseStyle(StrEnum):
     """Desired tone for the AI explanation layer."""
 
@@ -142,15 +152,20 @@ class Artifact(BaseSchema):
 class SuggestedAction(BaseSchema):
     """Suggested next action for the user."""
 
+    id: str
     label: str
-    action: str
+    type: str = "CHAT_FOLLOWUP"
+    payload: dict[str, Any] = Field(default_factory=dict)
+    enabled: bool = True
     route: str | None = None
 
 
 class FollowUpQuestion(BaseSchema):
-    """Follow-up question the user can ask next."""
+    """Follow-up question or prompt the user can select."""
 
-    text: str
+    label: str
+    type: str = "CHAT_FOLLOWUP"
+    payload: dict[str, Any] = Field(default_factory=dict)
 
 
 class Recommendation(BaseSchema):
@@ -176,6 +191,7 @@ class CopilotChatResponse(BaseSchema):
 
     message_id: UUID | None = None
     message: str
+    response_type: ResponseType = ResponseType.SIMPLE_ANSWER
     summary: str = ""
     intent: CopilotIntent = CopilotIntent.GENERAL
     agents_used: list[str] = Field(default_factory=list)

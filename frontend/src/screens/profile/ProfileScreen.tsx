@@ -117,40 +117,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Quick Stats Grid */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Financial Snapshot</Text>
-        </View>
-
-        <View style={styles.statsRow}>
-          <ProfileStatCard
-            title="Health Score"
-            value="812"
-            status="Excellent"
-            statusColor={colors.success}
-            icon={Shield}
-            iconBackgroundColor={colors.primarySoft}
-            iconColor={colors.primary}
-          />
-          <ProfileStatCard
-            title="Net Worth"
-            value="₹14.2L"
-            status="+14% YoY"
-            statusColor={colors.success}
-            icon={Wallet}
-            iconBackgroundColor={colors.successBackground}
-            iconColor={colors.success}
-          />
-          <ProfileStatCard
-            title="Active Goals"
-            value="3 / 5"
-            status="60% Done"
-            statusColor={colors.warning}
-            icon={Target}
-            iconBackgroundColor={colors.accentBackground}
-            iconColor={colors.warning}
-          />
-        </View>
 
         {/* Appearance Mode Segmented Selector */}
         <View style={styles.sectionHeader}>
@@ -209,7 +175,7 @@ export default function ProfileScreen() {
             rightElement={
               <View style={styles.verifiedBadge}>
                 <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
-                <Text style={styles.verifiedBadgeText}>Linked</Text>
+                <Text style={styles.verifiedBadgeText}>Soon</Text>
               </View>
             }
           />
@@ -235,7 +201,7 @@ export default function ProfileScreen() {
             rightElement={
               <View style={styles.verifiedBadge}>
                 <CheckCircle2 size={14} color={colors.success} strokeWidth={2.5} />
-                <Text style={styles.verifiedBadgeText}>Active</Text>
+                <Text style={styles.verifiedBadgeText}>Soon</Text>
               </View>
             }
           />

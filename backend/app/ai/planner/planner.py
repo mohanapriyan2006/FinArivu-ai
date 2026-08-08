@@ -8,20 +8,26 @@ class Planner:
 
     INTENT_AGENTS: dict[IntentEnum, list[str]] = {
         IntentEnum.BUDGET: ["BudgetAgent"],
+        IntentEnum.EXPENSE: ["BudgetAgent"],
         IntentEnum.GOAL: ["GoalAgent"],
-        IntentEnum.RETIREMENT: ["RetirementAgent", "NetWorthAgent", "GoalAgent"],
+        IntentEnum.RETIREMENT: ["RetirementAgent", "NetWorthAgent"],
         IntentEnum.TAX: ["TaxAgent"],
         IntentEnum.HEALTH: ["HealthAgent"],
-        IntentEnum.NETWORTH: ["NetWorthAgent", "HealthAgent"],
+        IntentEnum.NETWORTH: ["NetWorthAgent"],
         IntentEnum.EDUCATION: ["EducationAgent"],
+        IntentEnum.INVESTMENT_EDUCATION: ["EducationAgent"],
+        IntentEnum.UNSUPPORTED_INVESTMENT_ADVICE: ["EducationAgent"],
+        IntentEnum.CASH_FLOW: ["BudgetAgent"],
+        IntentEnum.SCENARIO: ["BudgetAgent", "GoalAgent"],
         IntentEnum.REPORT: ["ReportAgent"],
         IntentEnum.GREETING: ["EducationAgent"],
         IntentEnum.GENERAL: ["EducationAgent"],
-        IntentEnum.MIXED: ["BudgetAgent", "GoalAgent", "HealthAgent"],
+        IntentEnum.MIXED: ["BudgetAgent", "GoalAgent"],
     }
 
     STYLE_MAP: dict[IntentEnum, str] = {
         IntentEnum.EDUCATION: "educational",
+        IntentEnum.INVESTMENT_EDUCATION: "educational",
         IntentEnum.GREETING: "friendly",
         IntentEnum.REPORT: "detailed",
         IntentEnum.GENERAL: "educational",
@@ -33,12 +39,6 @@ class Planner:
             intent_result.intent,
             ["EducationAgent"],
         )
-
-        # When the classifier requests specific modules, ensure they are included.
-        for module in intent_result.requested_modules:
-            candidate = f"{module.title().replace('_', '')}Agent"
-            if candidate not in agent_names:
-                agent_names.append(candidate)
 
         steps = [
             ExecutionStep(agent_name=name, timeout_seconds=30)

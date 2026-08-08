@@ -35,6 +35,4 @@ def test_save_to_db_noop():
     pm.record("gemini", "gemini-2.5-flash", latency_ms=200)
     # save_to_db is a no-op, should not raise
     import asyncio
-    asyncio.get_event_loop().run_until_complete(
-        pm.save_to_db(uuid.uuid4(), "session-1")
-    )
+    asyncio.run(pm.save_to_db(uuid.uuid4(), "session-1"))

@@ -74,6 +74,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     role: 'assistant',
     content: response.message,
     summary: response.summary,
+    responseType: response.responseType,
     intent: response.intent,
     agentsUsed: response.agentsUsed,
     data: response.data,
@@ -166,7 +167,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         setIsStreaming(false)
       })
 
-      sse.connect()
+      ;(sse as any).connect()
     },
     [appendMessage, isLoading, isStreaming, sessionId, token]
   )

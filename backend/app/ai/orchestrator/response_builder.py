@@ -10,6 +10,8 @@ import json
 import time
 from typing import Any, AsyncIterator
 
+from app.ai.orchestrator.action_decision_engine import ActionDecisionEngine
+from app.ai.orchestrator.response_decision_engine import ResponseDecision, ResponseDecisionEngine
 from app.ai.prompts.system_prompt import COPILOT_SYSTEM_PROMPT
 from app.ai.providers.base import AIProviderResponse, BaseAIProvider
 from app.ai.schemas import (
@@ -22,6 +24,7 @@ from app.ai.schemas import (
     PlannerOutput,
     Recommendation,
     ResponseStyle,
+    ResponseType,
     StreamEvent,
     StreamEventType,
     SuggestedAction,
@@ -35,12 +38,14 @@ from app.financial.artifacts.artifact_builder import ArtifactBuilder
 _EXPLANATION_TEMPLATE: str = """\
 The user asked: "{user_message}"
 
+{contextual_note}
+
 The following data was computed by FinArivu's financial engines:
 
 {agent_data}
 
 Using ONLY the data above, write a clear, {style} response for the user.
-Do NOT invent numbers.  Do NOT add a disclaimer — the system handles that.
+Do NOT invent numbers. Do NOT add a disclaimer — the system handles that.
 Keep the response under 300 words.
 """
 
@@ -61,6 +66,7 @@ class BuildResult:
     follow_up_questions: list[FollowUpQuestion]
     suggested_actions: list[SuggestedAction]
     metadata: ChatMetadata
+    response_type: ResponseType = ResponseType.SIMPLE_ANSWER
 
 
 class ResponseBuilder:
@@ -68,12 +74,15 @@ class ResponseBuilder:
 
     def __init__(self, provider: BaseAIProvider) -> None:
         self._provider = provider
+        self._decision_engine = ResponseDecisionEngine()
+        self._action_engine = ActionDecisionEngine()
 
     async def build(
         self,
         user_message: str,
         plan: PlannerOutput,
         results: list[AgentResult],
+        decision: ResponseDecision | None = None,
     ) -> tuple[str, dict[str, Any], AIProviderResponse | None]:
         """Build the final response text and merged data dict.
 
@@ -82,12 +91,17 @@ class ResponseBuilder:
         merged_data = self._merge_data(results)
         agent_summaries = self._format_summaries(results)
 
-        # For education-only intents the LLM generates the full response.
-        # For engine-backed intents the LLM explains the engine output.
+        if decision is None:
+            decision = self._decision_engine.decide(plan.intent.value, results, user_message)
+
+        style = plan.response_style.value if hasattr(plan.response_style, "value") else str(plan.response_style)
+        contextual_note = self._contextual_note(decision)
+
         prompt = _EXPLANATION_TEMPLATE.format(
             user_message=user_message,
+            contextual_note=contextual_note,
             agent_data=agent_summaries,
-            style=plan.response_style.value,
+            style=style,
         )
 
         messages = [
@@ -108,6 +122,11 @@ class ResponseBuilder:
             fallback_text = "\n".join(
                 r.summary for r in results if r.summary
             ) or "I processed your request but couldn't generate a detailed explanation."
+            if decision.missing_data:
+                fallback_text = (
+                    f"I don't have enough data to answer that yet. "
+                    f"Could you share your {', '.join(decision.missing_fields)}?"
+                )
             return fallback_text, merged_data, None
 
     async def build_stream(
@@ -119,6 +138,10 @@ class ResponseBuilder:
         """Stream the explanation token-by-token as SSE events."""
         merged_data = self._merge_data(results)
         agent_summaries = self._format_summaries(results)
+
+        decision = self._decision_engine.decide(plan.intent.value, results, user_message)
+        style = plan.response_style.value if hasattr(plan.response_style, "value") else str(plan.response_style)
+        contextual_note = self._contextual_note(decision)
 
         # Emit agent completion events.
         for r in results:
@@ -137,8 +160,9 @@ class ResponseBuilder:
         # Stream explanation tokens.
         prompt = _EXPLANATION_TEMPLATE.format(
             user_message=user_message,
+            contextual_note=contextual_note,
             agent_data=agent_summaries,
-            style=plan.response_style.value,
+            style=style,
         )
         messages = [
             {"role": "system", "content": COPILOT_SYSTEM_PROMPT},
@@ -172,15 +196,15 @@ class ResponseBuilder:
         start_time: float,
     ) -> BuildResult:
         """Build the full enriched response with artifacts and metadata."""
+        decision = self._decision_engine.decide(plan.intent.value, results, user_message)
+        actions, follow_ups = self._action_engine.build(plan.intent.value, results)
+
         message, merged_data, ai_response = await self.build(
-            user_message, plan, results,
+            user_message, plan, results, decision,
         )
 
         summary = self._build_summary(message)
-        artifacts = self._build_artifacts(results)
-        recommendations = self._extract_recommendations(merged_data)
-        follow_ups = self._extract_follow_ups(merged_data)
-        actions = self._extract_suggested_actions(merged_data)
+        artifacts = self._build_artifacts(results, decision)
 
         elapsed = int((time.perf_counter() - start_time) * 1000)
         metadata = ChatMetadata(
@@ -197,11 +221,31 @@ class ResponseBuilder:
             merged_data=merged_data,
             ai_response=ai_response,
             artifacts=artifacts,
-            recommendations=recommendations,
-            follow_up_questions=follow_ups,
-            suggested_actions=actions,
+            recommendations=[],
+            follow_up_questions=follow_ups if decision.show_follow_up else [],
+            suggested_actions=actions if decision.show_actions else [],
             metadata=metadata,
+            response_type=decision.response_type,
         )
+
+    @staticmethod
+    def _contextual_note(decision: ResponseDecision) -> str:
+        """Return a short note for the LLM prompt based on the response decision."""
+        if decision.missing_data:
+            return (
+                f"Note: We are missing the user's {', '.join(decision.missing_fields)}. "
+                f"Ask them to provide this information. Do not invent values."
+            )
+        if decision.response_type == ResponseType.EDUCATIONAL:
+            return (
+                "Note: This is an educational question. Answer in plain Indian English "
+                "without inventing numbers or giving personalised investment advice."
+            )
+        if decision.response_type == ResponseType.SIMPLE_ANSWER:
+            return "Note: Keep the answer short and friendly."
+        if decision.response_type == ResponseType.CLARIFICATION:
+            return "Note: We don't have the required data. Ask the user for it. Do not invent."
+        return ""
 
     @staticmethod
     def _build_summary(message: str, max_length: int = 160) -> str:
@@ -212,12 +256,16 @@ class ResponseBuilder:
         return first
 
     @staticmethod
-    def _build_artifacts(results: list[AgentResult]) -> list[Artifact]:
-        """Map each agent result to typed artifacts for the frontend."""
+    def _build_artifacts(results: list[AgentResult], decision: ResponseDecision) -> list[Artifact]:
+        """Map relevant agent results to one typed artifact for the frontend."""
+        if not decision.show_artifact or not decision.artifact_type:
+            return []
         agent_results = [
             {"agent_name": r.agent_name, "data": r.data, "error": r.error} for r in results
         ]
-        built = ArtifactBuilder.build_artifact_list(agent_results)
+        built = ArtifactBuilder.build_artifact_list(
+            agent_results, allowed_types=[decision.artifact_type]
+        )
         return [Artifact(**a.model_dump()) for a in built]
 
     @staticmethod

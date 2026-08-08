@@ -36,7 +36,7 @@ export function HealthArtifactCard({ data }: { data: HealthArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const score = data.overallScore || 82
+  const score = data.overallScore ?? 0
   const statusText = data.status || (score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : 'Needs Work')
   const statusColor = score >= 80 ? colors.success : score >= 60 ? colors.warning : colors.danger
 
@@ -65,30 +65,30 @@ export function HealthArtifactCard({ data }: { data: HealthArtifactData }) {
         <View style={styles.barItem}>
           <View style={styles.barHeader}>
             <Text style={styles.barLabel}>Savings Rate</Text>
-            <Text style={styles.barScore}>{data.savingsScore ?? 25}/30</Text>
+            <Text style={styles.barScore}>{data.savingsScore ?? 0}/30</Text>
           </View>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${((data.savingsScore ?? 25) / 30) * 100}%`, backgroundColor: colors.primary }]} />
+            <View style={[styles.barFill, { width: `${((data.savingsScore ?? 0) / 30) * 100}%`, backgroundColor: colors.primary }]} />
           </View>
         </View>
 
         <View style={styles.barItem}>
           <View style={styles.barHeader}>
             <Text style={styles.barLabel}>Emergency Fund</Text>
-            <Text style={styles.barScore}>{data.emergencyScore ?? 15}/20</Text>
+            <Text style={styles.barScore}>{data.emergencyScore ?? 0}/20</Text>
           </View>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${((data.emergencyScore ?? 15) / 20) * 100}%`, backgroundColor: colors.secondary }]} />
+            <View style={[styles.barFill, { width: `${((data.emergencyScore ?? 0) / 20) * 100}%`, backgroundColor: colors.secondary }]} />
           </View>
         </View>
 
         <View style={styles.barItem}>
           <View style={styles.barHeader}>
             <Text style={styles.barLabel}>Debt Ratio</Text>
-            <Text style={styles.barScore}>{data.debtScore ?? 20}/20</Text>
+            <Text style={styles.barScore}>{data.debtScore ?? 0}/20</Text>
           </View>
           <View style={styles.barTrack}>
-            <View style={[styles.barFill, { width: `${((data.debtScore ?? 20) / 20) * 100}%`, backgroundColor: colors.success }]} />
+            <View style={[styles.barFill, { width: `${((data.debtScore ?? 0) / 20) * 100}%`, backgroundColor: colors.success }]} />
           </View>
         </View>
       </View>
@@ -116,9 +116,11 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const category = data.overspendCategory || 'Food & Dining'
-  const spent = data.overspendAmount || 6500
-  const pct = data.overspendPercentage || 18
+  const category = data.overspendCategory ?? '—'
+  const spent = data.overspendAmount ?? 0
+  const pct = data.overspendPercentage ?? 0
+  const statusText = pct > 0 ? 'Over Budget' : 'On Track'
+  const statusColor = pct > 0 ? colors.danger : colors.success
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
@@ -127,8 +129,8 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
           <PieChart size={16} color={colors.danger} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>Budget Highlight</Text>
-        <View style={[styles.statusBadge, { backgroundColor: 'rgba(244, 63, 94, 0.1A)' }]}>
-          <Text style={[styles.statusText, { color: colors.danger }]}>Over Budget</Text>
+        <View style={[styles.statusBadge, { backgroundColor: `${statusColor}1A` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
         </View>
       </View>
 
@@ -145,7 +147,9 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
       </View>
 
       <Text style={styles.noteText}>
-        Exceeded planned limit by ₹{(spent * 0.15).toLocaleString('en-IN')}. Consider reviewing recurring dining orders.
+        {pct > 0
+          ? `Overspent by ₹${spent.toLocaleString('en-IN')} (${pct}%) in ${category}`
+          : `No overspending in ${category}`}
       </Text>
 
       <Pressable style={styles.actionBtn} accessibilityRole="button">
@@ -172,9 +176,20 @@ export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const name = data.goalName || 'House Deposit'
-  const pct = data.progressPercentage || 42
-  const monthly = data.monthlyRequired || 12500
+  const name = data.goalName ?? '—'
+  const pct = data.progressPercentage ?? 0
+  const monthly = data.monthlyRequired ?? 0
+  const rawStatus = data.status ?? '—'
+  const statusColor =
+    rawStatus === 'behind' || rawStatus === 'at_risk'
+      ? colors.danger
+      : rawStatus === 'on_track'
+      ? colors.success
+      : colors.warning
+  const statusText =
+    typeof rawStatus === 'string' && rawStatus !== '—'
+      ? rawStatus.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      : '—'
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
@@ -183,18 +198,18 @@ export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
           <Home size={16} color={colors.success} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>{name}</Text>
-        <View style={[styles.statusBadge, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
-          <Text style={[styles.statusText, { color: colors.success }]}>On Track</Text>
+        <View style={[styles.statusBadge, { backgroundColor: `${statusColor}15` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>{statusText}</Text>
         </View>
       </View>
 
       <View style={styles.goalProgressSection}>
         <View style={styles.progressHeaderRow}>
-          <Text style={styles.progressPctText}>{pct}%</Text>
+          <Text style={[styles.progressPctText, { color: statusColor }]}>{pct}%</Text>
           <Text style={styles.progressLabel}>Completed</Text>
         </View>
         <View style={styles.barTrack}>
-          <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: colors.success }]} />
+          <View style={[styles.barFill, { width: `${pct}%`, backgroundColor: statusColor }]} />
         </View>
       </View>
 
@@ -228,9 +243,9 @@ export function TaxArtifactCard({ data }: { data: TaxArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const oldTax = data.oldRegimeTax || 52000
-  const newTax = data.newRegimeTax || 43000
-  const savings = data.savings || Math.abs(oldTax - newTax) || 9000
+  const oldTax = data.oldRegimeTax ?? 0
+  const newTax = data.newRegimeTax ?? 0
+  const savings = data.savings ?? Math.abs(oldTax - newTax)
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
@@ -291,9 +306,9 @@ export function RetirementArtifactCard({ data }: { data: RetirementArtifactData 
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const corpus = data.corpusRequired || 43200000
-  const years = data.yearsRemaining || 25
-  const futureExp = data.futureMonthlyExpense || 180000
+  const corpus = data.corpusRequired ?? 0
+  const years = data.yearsRemaining ?? 0
+  const futureExp = data.futureMonthlyExpense ?? 0
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>

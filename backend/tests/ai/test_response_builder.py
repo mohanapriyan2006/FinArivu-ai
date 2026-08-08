@@ -100,10 +100,12 @@ async def test_build_full_returns_structured_result(builder: ResponseBuilder, pl
     assert build.message == "Here is your summary."
     assert build.artifacts
     assert any(a.type == "budget_card" for a in build.artifacts)
-    assert len(build.recommendations) == 1
-    assert build.recommendations[0].title == "Reduce dining"
-    assert len(build.follow_up_questions) == 1
+    assert build.response_type == "financial_analysis"
+    assert build.recommendations == []
+    assert build.follow_up_questions == []
     assert len(build.suggested_actions) == 1
+    assert build.suggested_actions[0].id == "view_budget"
+    assert build.suggested_actions[0].type == "NAVIGATE"
     assert build.metadata.agents_used == ["BudgetAgent", "InsightAgent", "RecommendationAgent"]
     assert build.metadata.provider == "fake"
     assert build.ai_response is not None
