@@ -63,9 +63,9 @@ export function AttentionSection({
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
         NEEDS ATTENTION
       </Text>
-      {items.map((item) => (
+      {items.map((item, index) => (
         <InsightCard
-          key={item.id}
+          key={`attention-${item.id}-${index}`}
           icon={iconForCategory(item.category)}
           title={item.title}
           explanation={item.explanation}

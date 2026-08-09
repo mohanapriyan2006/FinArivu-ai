@@ -29,7 +29,7 @@ export function PositiveInsights({ items, testID }: PositiveInsightsProps) {
       >
         {items.map((item, index) => (
           <View
-            key={item.id}
+            key={`positive-${item.id}-${index}`}
             style={[
               styles.row,
               index < items.length - 1 && {
