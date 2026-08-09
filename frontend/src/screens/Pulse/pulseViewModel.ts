@@ -2,9 +2,11 @@ import type {
   BudgetAnalysis,
   BudgetAnalysisItem,
 } from '@/services/BudgetService'
+import type { Asset } from '@/services/AssetService'
 import type { DashboardSummary } from '@/services/DashboardService'
 import type { Expense } from '@/services/ExpenseService'
 import type { FinancialProfile } from '@/types/financialProfile'
+import type { Liability } from '@/services/LiabilityService'
 import { formatInr, formatInrNumber } from '@/utils/formatInr'
 import { PROFILE_COMPLETION_THRESHOLD } from '@/utils/profileCompletion'
 import type {
@@ -47,6 +49,8 @@ export interface PulseViewModelInput {
     targetYear: number
   }>
   expenses: Expense[]
+  assets: Asset[]
+  liabilities: Liability[]
 }
 
 const ICONS = {
@@ -145,8 +149,43 @@ function recentActivityLabel(iso: string): string {
   return isToday(iso) ? 'Today' : formatDateLabel(iso)
 }
 
+const SAVINGS_TYPES = ['Bank', 'Cash', 'Savings Account', 'Current Account', 'Emergency Fund']
+const INVESTMENT_TYPES = ['Mutual Fund', 'Stock', 'PPF', 'NPS', 'Gold', 'Crypto', 'ETF', 'Bond', 'FD', 'Fixed Deposit']
+
+function isSavingsAsset(a: Asset): boolean {
+  return a.isEmergencyFund || SAVINGS_TYPES.some((t) => t.toLowerCase() === a.assetType.toLowerCase())
+}
+
+function isInvestmentAsset(a: Asset): boolean {
+  return !isSavingsAsset(a)
+}
+
+function isLoanLiability(l: Liability): boolean {
+  return !isCreditCardLiability(l)
+}
+
+function isCreditCardLiability(l: Liability): boolean {
+  return l.liabilityType.toLowerCase() === 'credit card'
+}
+
+function formatAssetType(type: string): string {
+  const map: Record<string, string> = {
+    'mutual fund': 'MF',
+    stock: 'Stocks',
+    ppf: 'PPF',
+    nps: 'NPS',
+    gold: 'Gold',
+    crypto: 'Crypto',
+    etf: 'ETF',
+    bond: 'Bonds',
+    fd: 'FD',
+    'fixed deposit': 'FD',
+  }
+  return map[type.toLowerCase()] || type
+}
+
 export function buildPulseState(input: PulseViewModelInput): PulseState {
-  const { profile, completionPercentage, completionLastStep, dashboard, budget, goals, expenses } =
+  const { profile, completionPercentage, completionLastStep, dashboard, budget, goals, expenses, assets, liabilities } =
     input
 
   const finances: PulseFinanceItem[] = []
@@ -217,16 +256,19 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
   // Savings
   {
     const colors = colorForType('savings')
-    const total = profile.savings?.totalSavings
-    const emergency = profile.savings?.emergencyFund
+    const savingsAssets = assets.filter(isSavingsAsset)
+    const total = savingsAssets.reduce((sum, a) => sum + a.value, 0)
+    const emergency = savingsAssets
+      .filter((a) => a.isEmergencyFund)
+      .reduce((sum, a) => sum + a.value, 0)
     let subtitle = 'Add your savings'
     let value: string | undefined
     let status: PulseFinanceStatus = 'empty'
     let progress: number | undefined
-    if (typeof total === 'number' && total >= 0) {
+    if (savingsAssets.length > 0 && total >= 0) {
       value = formatInr(total)
       status = 'normal'
-      if (typeof emergency === 'number' && emergency > 0) {
+      if (emergency > 0) {
         subtitle = `Emergency fund ${formatInr(emergency)}`
         progress = Math.min(1, total > 0 ? emergency / total : 0)
       } else {
@@ -245,6 +287,7 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
       iconColor: colors.color,
       iconBackground: colors.background,
       routeStep: 'savings',
+      addRoute: 'SavingsTracker',
       emptyAction: 'Add savings',
     })
   }
@@ -252,25 +295,27 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
   // Investments
   {
     const colors = colorForType('investment')
-    const inv = profile.investments
+    const investmentAssets = assets.filter(isInvestmentAsset)
     let subtitle = 'Add your investments'
     let value: string | undefined
     let status: PulseFinanceStatus = 'empty'
-    if (inv?.hasInvestments === true) {
-      const total = inv.totalInvestmentValue ?? 0
+    if (investmentAssets.length > 0) {
+      const total = investmentAssets.reduce((sum, a) => sum + a.value, 0)
       value = formatInr(total)
       status = 'normal'
-      const b = inv.breakdown
-      if (b) {
-        const parts: string[] = []
-        if (b.mutualFunds) parts.push('MF')
-        if (b.stocks) parts.push('Stocks')
-        if (b.ppf) parts.push('PPF')
-        subtitle = parts.slice(0, 3).join(' · ')
+      const breakdown: Record<string, number> = {}
+      for (const a of investmentAssets) {
+        breakdown[a.assetType] = (breakdown[a.assetType] ?? 0) + a.value
       }
-    } else if (inv?.hasInvestments === false) {
+      const parts = Object.entries(breakdown)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 3)
+        .map(([type]) => formatAssetType(type))
+      if (parts.length > 0) {
+        subtitle = parts.join(' · ')
+      }
+    } else if (profile.investments?.hasInvestments === false) {
       subtitle = 'No investments added'
-      status = 'empty'
     }
     finances.push({
       id: 'investments',
@@ -283,6 +328,7 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
       iconColor: colors.color,
       iconBackground: colors.background,
       routeStep: 'investments',
+      addRoute: 'InvestmentTracker',
       emptyAction: 'Add investment',
     })
   }
@@ -320,17 +366,17 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
   // Loans
   {
     const colors = colorForType('loan')
-    const lp = profile.loans
+    const loanLiabilities = liabilities.filter(isLoanLiability)
     let subtitle = 'No loans added'
     let value: string | undefined
     let status: PulseFinanceStatus = 'empty'
-    if (lp?.hasLoans === true && Array.isArray(lp.loans) && lp.loans.length > 0) {
-      const totalEmi = lp.loans.reduce((sum, l) => sum + (l.monthlyEmi ?? 0), 0)
-      const outstanding = lp.loans.reduce((sum, l) => sum + (l.outstandingAmount ?? 0), 0)
-      value = `${lp.loans.length} active`
+    if (loanLiabilities.length > 0) {
+      const totalEmi = loanLiabilities.reduce((sum, l) => sum + (l.emi ?? 0), 0)
+      const outstanding = loanLiabilities.reduce((sum, l) => sum + l.amount, 0)
+      value = `${loanLiabilities.length} active`
       subtitle = `EMI ${formatInr(totalEmi)} · Outstanding ${formatInr(outstanding)}`
       status = 'normal'
-    } else if (lp?.hasLoans === false) {
+    } else if (profile.loans?.hasLoans === false) {
       subtitle = 'No loans added'
     }
     finances.push({
@@ -344,28 +390,38 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
       iconColor: colors.color,
       iconBackground: colors.background,
       routeStep: 'loans',
+      addRoute: 'LoanTracker',
       emptyAction: 'Add loan',
     })
   }
 
-  // Credit Cards (only if configured)
-  if (profile.creditCards) {
+  // Credit Cards
+  {
     const colors = colorForType('credit_card')
-    const outstanding = profile.creditCards.totalOutstanding ?? 0
-    const monthly = profile.creditCards.monthlySpending ?? profile.creditCards.typicalMonthlyPayment ?? 0
-    const subtitle =
-      monthly > 0 ? `Monthly spend ${formatInr(monthly)}` : 'View your cards'
+    const cardLiabilities = liabilities.filter(isCreditCardLiability)
+    let subtitle = 'Add your cards'
+    let value: string | undefined
+    let status: PulseFinanceStatus = 'empty'
+    if (cardLiabilities.length > 0) {
+      const outstanding = cardLiabilities.reduce((sum, c) => sum + c.amount, 0)
+      const limit = cardLiabilities.reduce((sum, c) => sum + (c.creditLimit ?? 0), 0)
+      const monthly = cardLiabilities.reduce((sum, c) => sum + (c.monthlySpend ?? 0), 0)
+      value = `Outstanding ${formatInr(outstanding)}`
+      subtitle = monthly > 0 ? `Monthly spend ${formatInr(monthly)}` : `${cardLiabilities.length} cards · Limit ${formatInr(limit)}`
+      status = outstanding > limit * 0.5 && limit > 0 ? 'warning' : 'normal'
+    }
     finances.push({
       id: 'credit_cards',
       type: 'credit_card',
       title: 'Credit Cards',
       subtitle,
-      value: outstanding > 0 ? `Outstanding ${formatInr(outstanding)}` : undefined,
-      status: outstanding > monthly && monthly > 0 ? 'warning' : 'normal',
+      value,
+      status,
       icon: ICONS.credit_card,
       iconColor: colors.color,
       iconBackground: colors.background,
       routeStep: 'creditCards',
+      addRoute: 'CreditCardTracker',
       emptyAction: 'Add card',
     })
   }
@@ -461,7 +517,9 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
   const isNewUser =
     !profile.initialized &&
     finances.every((f) => f.status === 'empty') &&
-    expenses.length === 0
+    expenses.length === 0 &&
+    assets.length === 0 &&
+    liabilities.length === 0
 
   return {
     isNewUser,
@@ -485,12 +543,12 @@ export const QUICK_ACTIONS: PulseQuickAction[] = [
 export const MORE_ACTIONS: PulseQuickAction[] = [
   { id: 'more-expense', label: 'Expense', icon: Receipt, route: 'QuickAddExpense' },
   { id: 'more-goal', label: 'Goal', icon: Target, route: 'CreateGoal' },
-  { id: 'more-investment', label: 'Investment', icon: TrendingUp, route: 'AddInvestment' },
-  { id: 'more-loan', label: 'Loan', icon: Banknote, route: 'FinancialProfileSetup', params: { startStep: 'loans' } },
-  { id: 'more-savings', label: 'Savings', icon: Wallet, route: 'FinancialProfileSetup', params: { startStep: 'savings' } },
-  { id: 'more-fd', label: 'Fixed Deposit', icon: Landmark, route: 'FinancialProfileSetup', params: { startStep: 'fixedDeposits' } },
+  { id: 'more-investment', label: 'Investment', icon: TrendingUp, route: '__add_investment__' },
+  { id: 'more-loan', label: 'Loan', icon: Banknote, route: '__add_loan__' },
+  { id: 'more-savings', label: 'Savings', icon: Wallet, route: '__add_savings__' },
+  { id: 'more-fd', label: 'Fixed Deposit', icon: Landmark, route: '__add_fd__' },
   { id: 'more-insurance', label: 'Insurance', icon: Shield, route: 'FinancialProfileSetup', params: { startStep: 'insurance' } },
-  { id: 'more-credit-card', label: 'Credit Card', icon: CreditCard, route: 'FinancialProfileSetup', params: { startStep: 'creditCards' } },
+  { id: 'more-credit-card', label: 'Credit Card', icon: CreditCard, route: '__add_credit_card__' },
 ]
 
 export { AlertTriangle }

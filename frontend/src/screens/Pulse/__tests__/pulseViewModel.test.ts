@@ -149,14 +149,30 @@ describe('pulseViewModel', () => {
       budget: null,
       goals: [],
       expenses: [],
+      assets: [],
+      liabilities: [],
     })
     expect(state.isNewUser).toBe(true)
-    expect(state.finances).toHaveLength(6)
+    expect(state.finances).toHaveLength(7)
     expect(state.attention).toHaveLength(0)
     expect(state.recentActivity).toHaveLength(0)
   })
 
   it('builds populated state with all core finance rows', () => {
+    const assets = [
+      { id: 'a1', userId: 'u1', assetType: 'Emergency Fund', name: 'Emergency', value: 150000, currency: 'INR', isEmergencyFund: true, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'a2', userId: 'u1', assetType: 'Bank', name: 'Savings', value: 100000, currency: 'INR', isEmergencyFund: false, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'a3', userId: 'u1', assetType: 'Mutual Fund', name: 'MF', value: 467500, currency: 'INR', isEmergencyFund: false, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'a4', userId: 'u1', assetType: 'Stock', name: 'Stocks', value: 212500, currency: 'INR', isEmergencyFund: false, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'a5', userId: 'u1', assetType: 'PPF', name: 'PPF', value: 102000, currency: 'INR', isEmergencyFund: false, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'a6', userId: 'u1', assetType: 'Other', name: 'Other', value: 68000, currency: 'INR', isEmergencyFund: false, source: 'manual', createdAt: '', updatedAt: '' },
+    ]
+
+    const liabilities = [
+      { id: 'l1', userId: 'u1', liabilityType: 'Home Loan', name: 'Home', amount: 1840000, currency: 'INR', emi: 22000, source: 'manual', createdAt: '', updatedAt: '' },
+      { id: 'l2', userId: 'u1', liabilityType: 'Personal Loan', name: 'Personal', amount: 120000, currency: 'INR', emi: 10000, source: 'manual', createdAt: '', updatedAt: '' },
+    ]
+
     const state = buildPulseState({
       profile: populatedProfile,
       completionPercentage: 100,
@@ -171,6 +187,8 @@ describe('pulseViewModel', () => {
         targetYear: g.targetYear,
       })),
       expenses,
+      assets,
+      liabilities,
     })
 
     expect(state.isNewUser).toBe(false)
@@ -190,6 +208,8 @@ describe('pulseViewModel', () => {
       budget,
       goals: [],
       expenses: [],
+      assets: [],
+      liabilities: [],
     })
     expect(state.attention).toHaveLength(1)
     expect(state.attention[0].title).toBe('Food')
@@ -210,6 +230,8 @@ describe('pulseViewModel', () => {
       budget: onTrackBudget,
       goals: [],
       expenses: [],
+      assets: [],
+      liabilities: [],
     })
     expect(state.attention).toHaveLength(0)
   })
@@ -229,6 +251,8 @@ describe('pulseViewModel', () => {
       budget,
       goals: [],
       expenses: many,
+      assets: [],
+      liabilities: [],
     })
     expect(state.recentActivity).toHaveLength(5)
   })
@@ -242,6 +266,8 @@ describe('pulseViewModel', () => {
       budget: null,
       goals: [],
       expenses: [],
+      assets: [],
+      liabilities: [],
     })
     expect(state.profileComplete).toBe(true)
     expect(state.lastIncompleteStep).toBe('savings')

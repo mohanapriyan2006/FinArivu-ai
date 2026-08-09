@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { Alert } from 'react-native'
 import {
   ActivityIndicator,
   Pressable,
@@ -12,9 +13,13 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
 import { usePulse } from '@/hooks/usePulse'
 import { useTheme } from '@/contexts/ThemeContext'
+import { AssetService } from '@/services/AssetService'
+import { LiabilityService } from '@/services/LiabilityService'
+import type { FormField } from './components/AddRecordSheet'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
@@ -23,6 +28,7 @@ import { QUICK_ACTIONS, MORE_ACTIONS } from '@/screens/Pulse/pulseViewModel'
 
 import { PulseHeader } from './components/PulseHeader'
 import { PulseQuickActions } from './components/PulseQuickActions'
+import { AddRecordSheet } from './components/AddRecordSheet'
 import { PulseAddBottomSheet } from './components/PulseAddBottomSheet'
 import { PulseNeedsAttention } from './components/PulseNeedsAttention'
 import { FinanceControlRow } from './components/FinanceControlRow'
@@ -31,15 +37,56 @@ import { PulseRecentActivity } from './components/PulseRecentActivity'
 import { PulseProfileCompletion } from './components/PulseProfileCompletion'
 
 type PulseNavigationProp = StackNavigationProp<RootStackParamList>
+type AddSheetType = 'savings' | 'investment' | 'loan' | 'credit_card' | 'fixed_deposit'
+
+const ADD_SHEET_FIELDS: Record<AddSheetType, FormField[]> = {
+  savings: [
+    { key: 'name', label: 'Account name', placeholder: 'Emergency Fund' },
+    { key: 'assetType', label: 'Account type', placeholder: 'Bank / Cash' },
+    { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric' },
+  ],
+  investment: [
+    { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund' },
+    { key: 'assetType', label: 'Investment type', placeholder: 'Mutual Fund / Stock' },
+    { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric' },
+  ],
+  loan: [
+    { key: 'name', label: 'Loan name', placeholder: 'Home Loan' },
+    { key: 'liabilityType', label: 'Loan type', placeholder: 'Personal / Home' },
+    { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric' },
+    { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric' },
+  ],
+  credit_card: [
+    { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia' },
+    { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric' },
+    { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric' },
+  ],
+  fixed_deposit: [
+    { key: 'name', label: 'FD name', placeholder: 'SBI Fixed Deposit' },
+    { key: 'value', label: 'Value', placeholder: '100000', keyboard: 'numeric' },
+    { key: 'interestRate', label: 'Interest rate (%)', placeholder: '7.5', keyboard: 'numeric' },
+  ],
+}
+
+const ADD_SHEET_TITLES: Record<AddSheetType, string> = {
+  savings: 'Add Savings',
+  investment: 'Add Investment',
+  loan: 'Add Loan',
+  credit_card: 'Add Credit Card',
+  fixed_deposit: 'Add Fixed Deposit',
+}
 
 export default function PulseScreen() {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<PulseNavigationProp>()
+  const { getToken } = useAuthContext()
   const { dismissed } = useFinancialProfile()
   const { state, isLoading, error, refetch } = usePulse()
 
   const [moreVisible, setMoreVisible] = useState(false)
+  const [addSheetVisible, setAddSheetVisible] = useState(false)
+  const [addSheetType, setAddSheetType] = useState<AddSheetType | null>(null)
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const handleQuickAction = (action: PulseQuickAction) => {
@@ -52,6 +99,14 @@ export default function PulseScreen() {
 
   const handleSheetSelect = (action: PulseQuickAction) => {
     setMoreVisible(false)
+    if (action.route.startsWith('__add_')) {
+      const type = action.route.replace('__add_', '') as AddSheetType | 'investment' | 'savings' | 'loan' | 'credit_card' | 'fd'
+      const sheetType: AddSheetType = type === 'fd' ? 'fixed_deposit' : type
+      if (ADD_SHEET_TITLES[sheetType]) {
+        openAddSheet(sheetType)
+        return
+      }
+    }
     navigation.navigate(action.route as keyof RootStackParamList, action.params as never)
   }
 
@@ -79,7 +134,45 @@ export default function PulseScreen() {
     }
   }
 
+  const openAddSheet = (type: AddSheetType) => {
+    setAddSheetType(type)
+    setAddSheetVisible(true)
+  }
+
+  const closeAddSheet = () => {
+    setAddSheetVisible(false)
+    setAddSheetType(null)
+  }
+
   const handleFinancePress = (item: PulseFinanceItem) => {
+    if (item.status === 'empty') {
+      switch (item.type) {
+        case 'savings':
+        case 'investment':
+          openAddSheet(item.type)
+          return
+        case 'loan':
+          openAddSheet('loan')
+          return
+        case 'credit_card':
+          openAddSheet('credit_card')
+          return
+        case 'expense':
+          navigation.navigate('QuickAddExpense')
+          return
+        case 'goal':
+          navigation.navigate('CreateGoal')
+          return
+        case 'budget':
+          navigation.navigate('FinancialProfileSetup', { startStep: 'expenses' })
+          return
+        case 'insurance':
+        case 'tax':
+          navigation.navigate('FinancialProfileSetup', { startStep: item.routeStep ?? 'insurance' })
+          return
+      }
+    }
+
     const route = item.route ?? trackerRoute(item.type)
     if (route) {
       navigation.navigate(route as keyof RootStackParamList, undefined as never)
@@ -87,6 +180,55 @@ export default function PulseScreen() {
     }
     if (item.routeStep) {
       navigation.navigate('FinancialProfileSetup', { startStep: item.routeStep })
+    }
+  }
+
+  const handleAddSubmit = async (values: Record<string, string>) => {
+    if (!addSheetType) return
+    try {
+      const token = await getToken()
+      switch (addSheetType) {
+        case 'savings':
+        case 'fixed_deposit':
+        case 'investment':
+          await AssetService.create(
+            {
+              name: values.name,
+              assetType: addSheetType === 'fixed_deposit' ? 'Fixed Deposit' : values.assetType || 'Bank',
+              value: Number(values.value || '0'),
+              interestRate: values.interestRate ? Number(values.interestRate) : undefined,
+              isEmergencyFund: false,
+            },
+            token
+          )
+          break
+        case 'loan':
+          await LiabilityService.create(
+            {
+              name: values.name,
+              liabilityType: values.liabilityType || 'Personal Loan',
+              amount: Number(values.amount || '0'),
+              emi: values.emi ? Number(values.emi) : undefined,
+            },
+            token
+          )
+          break
+        case 'credit_card':
+          await LiabilityService.create(
+            {
+              name: values.name,
+              liabilityType: 'Credit Card',
+              amount: Number(values.amount || '0'),
+              creditLimit: values.creditLimit ? Number(values.creditLimit) : undefined,
+            },
+            token
+          )
+          break
+      }
+      closeAddSheet()
+      refetch()
+    } catch (err) {
+      Alert.alert('Could not save', err instanceof Error ? err.message : 'Something went wrong')
     }
   }
 
@@ -210,6 +352,17 @@ export default function PulseScreen() {
           />
         ) : null}
       </ScrollView>
+
+      {addSheetType && (
+        <AddRecordSheet
+          visible={addSheetVisible}
+          title={ADD_SHEET_TITLES[addSheetType]}
+          fields={ADD_SHEET_FIELDS[addSheetType]}
+          onClose={closeAddSheet}
+          onSubmit={handleAddSubmit}
+          testID="pulse-add-record-sheet"
+        />
+      )}
 
       <PulseAddBottomSheet
         visible={moreVisible}

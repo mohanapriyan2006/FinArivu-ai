@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import { ChevronRight, type LucideIcon } from 'lucide-react-native'
+import { ChevronRight, Plus, type LucideIcon } from 'lucide-react-native'
 
 import { ProgressBar } from '@/components/insights/Common'
 import { ScalePress } from '@/components/animation/ScalePress'
@@ -110,14 +110,18 @@ export function FinanceControlRow({ item, onPress, testID }: FinanceControlRowPr
                 {item.value}
               </Text>
             ) : null}
-            <Pressable
-              onPress={onPress}
-              style={styles.chevronBox}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${item.title}`}
-            >
-              <ChevronRight size={20} color={colors.textSecondary} strokeWidth={2} />
-            </Pressable>
+            {item.status === 'empty' && item.emptyAction ? (
+              <View style={styles.addBox}>
+                <View style={styles.addIcon}>
+                  <Plus size={16} color={colors.primary} strokeWidth={2.5} />
+                </View>
+                <Text style={styles.addText}>{item.emptyAction}</Text>
+              </View>
+            ) : (
+              <View style={styles.chevronBox}>
+                <ChevronRight size={20} color={colors.textSecondary} strokeWidth={2} />
+              </View>
+            )}
           </View>
         </View>
 
@@ -194,6 +198,23 @@ const makeStyles = (colors: ThemeColors) =>
       height: 44,
       alignItems: 'center',
       justifyContent: 'center',
+    },
+    addBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 12,
+      backgroundColor: colors.primaryBackground,
+    },
+    addIcon: {
+      marginRight: 6,
+    },
+    addText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.sm,
+      fontWeight: Typography.fontWeights.semibold,
+      color: colors.primary,
     },
     progressContainer: {
       marginTop: 12,

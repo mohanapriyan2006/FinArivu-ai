@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
@@ -27,6 +27,12 @@ export function AddRecordSheet({ visible, title, fields, onClose, onSubmit, test
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
   const [values, setValues] = useState<Record<string, string>>({})
+
+  useEffect(() => {
+    if (visible) {
+      setValues({})
+    }
+  }, [visible])
 
   const handleSave = () => {
     onSubmit(values)
