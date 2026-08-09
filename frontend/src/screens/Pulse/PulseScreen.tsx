@@ -55,7 +55,36 @@ export default function PulseScreen() {
     navigation.navigate(action.route as keyof RootStackParamList, action.params as never)
   }
 
+  const trackerRoute = (type: PulseFinanceItem['type']): keyof RootStackParamList | null => {
+    switch (type) {
+      case 'expense':
+        return 'ExpenseTracker'
+      case 'budget':
+        return 'BudgetTracker'
+      case 'savings':
+        return 'SavingsTracker'
+      case 'investment':
+        return 'InvestmentTracker'
+      case 'goal':
+        return 'GoalsTracker'
+      case 'loan':
+        return 'LoanTracker'
+      case 'credit_card':
+        return 'CreditCardTracker'
+      case 'insurance':
+        return 'InsuranceTracker'
+      case 'tax':
+      default:
+        return null
+    }
+  }
+
   const handleFinancePress = (item: PulseFinanceItem) => {
+    const route = item.route ?? trackerRoute(item.type)
+    if (route) {
+      navigation.navigate(route as keyof RootStackParamList, undefined as never)
+      return
+    }
     if (item.routeStep) {
       navigation.navigate('FinancialProfileSetup', { startStep: item.routeStep })
     }

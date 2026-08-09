@@ -9,6 +9,14 @@ import SplashScreen from '@/screens/onboarding/SplashScreen'
 import OnboardingScreen from '@/screens/onboarding/OnboardingScreen'
 import QuickAddExpenseScreen from '@/screens/expenses/QuickAddExpenseScreen'
 import CreateGoalScreen from '@/screens/Pulse/CreateGoalScreen'
+import ExpenseTrackerScreen from '@/screens/Pulse/screens/ExpenseTrackerScreen'
+import BudgetTrackerScreen from '@/screens/Pulse/screens/BudgetTrackerScreen'
+import SavingsTrackerScreen from '@/screens/Pulse/screens/SavingsTrackerScreen'
+import InvestmentTrackerScreen from '@/screens/Pulse/screens/InvestmentTrackerScreen'
+import GoalsTrackerScreen from '@/screens/Pulse/screens/GoalsTrackerScreen'
+import LoanTrackerScreen from '@/screens/Pulse/screens/LoanTrackerScreen'
+import CreditCardTrackerScreen from '@/screens/Pulse/screens/CreditCardTrackerScreen'
+import InsuranceTrackerScreen from '@/screens/Pulse/screens/InsuranceTrackerScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import EditProfileScreen from '@/screens/profile/EditProfileScreen'
 import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
@@ -25,6 +33,14 @@ export type RootStackParamList = {
   EditProfile: undefined
   QuickAddExpense: undefined
   WeeklyReport: undefined
+  ExpenseTracker: undefined
+  BudgetTracker: undefined
+  SavingsTracker: undefined
+  InvestmentTracker: undefined
+  GoalsTracker: undefined
+  LoanTracker: undefined
+  CreditCardTracker: undefined
+  InsuranceTracker: undefined
 }
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -63,6 +79,14 @@ export default function AppNavigator() {
           <Stack.Screen name="FinancialProfileSetup" component={FinancialProfileSetupScreen} />
           <Stack.Screen name="Main" component={MainTabNavigator} />
           <Stack.Screen name="CreateGoal" component={CreateGoalScreen} />
+          <Stack.Screen name="ExpenseTracker" component={ExpenseTrackerScreen} />
+          <Stack.Screen name="BudgetTracker" component={BudgetTrackerScreen} />
+          <Stack.Screen name="SavingsTracker" component={SavingsTrackerScreen} />
+          <Stack.Screen name="InvestmentTracker" component={InvestmentTrackerScreen} />
+          <Stack.Screen name="GoalsTracker" component={GoalsTrackerScreen} />
+          <Stack.Screen name="LoanTracker" component={LoanTrackerScreen} />
+          <Stack.Screen name="CreditCardTracker" component={CreditCardTrackerScreen} />
+          <Stack.Screen name="InsuranceTracker" component={InsuranceTrackerScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen

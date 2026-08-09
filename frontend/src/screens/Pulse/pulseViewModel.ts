@@ -177,6 +177,7 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
       iconColor: colors.color,
       iconBackground: colors.background,
       routeStep: 'expenses',
+      route: 'ExpenseTracker',
       addRoute: 'QuickAddExpense',
       emptyAction: 'Add expense',
     })

@@ -9,4 +9,12 @@ export type RootStackParamList = {
   EditProfile: undefined
   QuickAddExpense: undefined
   WeeklyReport: undefined
+  ExpenseTracker: undefined
+  BudgetTracker: undefined
+  SavingsTracker: undefined
+  InvestmentTracker: undefined
+  GoalsTracker: undefined
+  LoanTracker: undefined
+  CreditCardTracker: undefined
+  InsuranceTracker: undefined
 }

@@ -51,7 +51,7 @@ export const BudgetService = {
     return response.data?.data
   },
 
-  async update(id: string, data: BudgetInput, token: string | null): Promise<Budget> {
+  async update(id: string, data: Partial<BudgetInput>, token: string | null): Promise<Budget> {
     const response = await api.put(`/v1/budgets/${id}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     })

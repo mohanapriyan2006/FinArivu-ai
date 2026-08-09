@@ -34,7 +34,7 @@ export const ExpenseService = {
     return response.data?.data
   },
 
-  async update(id: string, data: ExpenseInput, token: string | null): Promise<Expense> {
+  async update(id: string, data: Partial<ExpenseInput>, token: string | null): Promise<Expense> {
     const response = await api.put(`/v1/expenses/${id}`, data, {
       headers: { Authorization: `Bearer ${token}` },
     })

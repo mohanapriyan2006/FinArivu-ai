@@ -26,6 +26,7 @@ export interface PulseFinanceItem {
   icon: LucideIcon
   iconColor: string
   iconBackground: string
+  route?: string
   routeStep?: OnboardingStepId
   addRoute?: string
   emptyAction?: string
