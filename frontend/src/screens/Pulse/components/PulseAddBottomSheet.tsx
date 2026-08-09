@@ -133,15 +133,12 @@ const makeStyles = (colors: ThemeColors) =>
       marginBottom: 8,
     },
     item: {
-      width: '48%',
       flexDirection: 'column',
       alignItems: 'center',
       justifyContent: 'center',
-      padding: 16,
+      padding: 6,
       borderRadius: 16,
       backgroundColor: colors.background,
-      marginBottom: 12,
-      minHeight: 96,
     },
     iconBox: {
       width: 48,
