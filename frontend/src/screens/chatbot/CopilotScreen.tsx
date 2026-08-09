@@ -249,7 +249,7 @@ export default function CopilotScreen({ navigation }: any) {
 
         <KeyboardAvoidingView
           style={styles.keyboardView}
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
           keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
         >
           {messages.length === 0 ? (
@@ -280,12 +280,14 @@ export default function CopilotScreen({ navigation }: any) {
             />
           )}
 
-          <CopilotInput
-            value={inputText}
-            onChangeText={setInputText}
-            onSend={() => handleSendMessage()}
-            disabled={isLoading || isStreaming}
-          />
+          <View style={styles.inputContainer}>
+            <CopilotInput
+              value={inputText}
+              onChangeText={setInputText}
+              onSend={() => handleSendMessage()}
+              disabled={isLoading || isStreaming}
+            />
+          </View>
         </KeyboardAvoidingView>
       </View>
     </SafeAreaView>
@@ -307,7 +309,13 @@ const makeStyles = (colors: any) =>
     },
     listContent: {
       paddingVertical: 16,
-      paddingBottom: 150,
+      paddingHorizontal: 16,
+      paddingBottom: 24,
+    },
+    inputContainer: {
+      paddingHorizontal: 16,
+      paddingTop: 8,
+      paddingBottom: Platform.OS === 'ios' ? 16 : 12,
     },
     menuOverlay: {
       flex: 1,
