@@ -69,7 +69,7 @@ class CopilotChatRequest(BaseSchema):
     }
 
     session_id: str = Field(..., min_length=1, max_length=255)
-    message: str = Field(..., min_length=1, max_length=2000)
+    message: str = Field(..., min_length=1, max_length=100000)
     context_hints: list[str] = Field(
         default_factory=list,
         max_length=10,
