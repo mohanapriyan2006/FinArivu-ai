@@ -208,7 +208,7 @@ export default function HomeScreen() {
   const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
-  const { completion, dismissed, dismissPrompt, resumeStep } = useFinancialProfile()
+  const { profile, completion, dismissed, dismissPrompt, resumeStep } = useFinancialProfile()
   const { getToken } = useAuthContext()
 
   const [dashboard, setDashboard] = useState<DashboardCard[] | null>(null)
@@ -371,6 +371,50 @@ export default function HomeScreen() {
                 <Text style={styles.pillBadgeText}>📈 +2.4% Today</Text>
               </View>
             </View>
+          </View>
+
+          <View style={styles.cardSpacing}>
+            <GlassCard isDark={isDark}>
+              <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
+                Financial Summary
+              </Text>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryCell}>
+                  <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
+                    {formatInr(profile.income?.monthlyTakeHome ?? 0)}
+                  </Text>
+                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                    Income
+                  </Text>
+                </View>
+                <View style={styles.summaryCell}>
+                  <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
+                    {formatInr(profile.expenses?.totalMonthlyExpenses ?? 0)}
+                  </Text>
+                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                    Expenses
+                  </Text>
+                </View>
+              </View>
+              <View style={styles.summaryRow}>
+                <View style={styles.summaryCell}>
+                  <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
+                    {formatInr(profile.savings?.totalSavings ?? 0)}
+                  </Text>
+                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                    Savings
+                  </Text>
+                </View>
+                <View style={styles.summaryCell}>
+                  <Text style={[styles.summaryValue, { color: colors.textPrimary }]}>
+                    {profile.goals?.goals?.length ?? 0}
+                  </Text>
+                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
+                    Goals
+                  </Text>
+                </View>
+              </View>
+            </GlassCard>
           </View>
 
           {completion.percentage < PROFILE_COMPLETION_THRESHOLD && !dismissed ? (
@@ -568,6 +612,26 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: Typography.fontWeights.semibold,
     color: '#4F46E5',
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 16,
+  },
+  summaryCell: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryValue: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 18,
+    fontWeight: Typography.fontWeights.bold,
+  },
+  summaryLabel: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 12,
+    fontWeight: Typography.fontWeights.medium,
+    marginTop: 4,
   },
   loading: {
     paddingVertical: 48,
