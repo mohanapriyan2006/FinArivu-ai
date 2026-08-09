@@ -4,7 +4,7 @@ import { CustomBottomTabBar } from '@/components/navigation/CustomBottomTabBar'
 import HomeScreen from '@/screens/dashboard/HomeScreen'
 import InsightsHubScreen from '@/screens/insights/InsightsHubScreen'
 import CopilotScreen from '@/screens/chatbot/CopilotScreen'
-import PulseScreen from '@/screens/goals/PulseScreen'
+import PulseScreen from '@/screens/Pulse/PulseScreen'
 import ProfileScreen from '@/screens/profile/ProfileScreen'
 
 const Tab = createBottomTabNavigator()
