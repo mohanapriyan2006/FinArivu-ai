@@ -16,10 +16,23 @@ import Animated, {
 } from 'react-native-reanimated'
 import { ArrowUp, Mic, Paperclip } from 'lucide-react-native'
 import * as DocumentPicker from 'expo-document-picker'
-import {
-  ExpoSpeechRecognitionModule,
-  useSpeechRecognitionEvent,
-} from 'expo-speech-recognition'
+
+// Lazy / safe import for Expo SDK modules that may not be available in Expo Go
+let ExpoSpeechRecognitionModule: any = {
+  stop: () => {},
+  requestPermissionsAsync: async () => ({ granted: false }),
+}
+let useSpeechRecognitionEvent = (event: string, handler: (e: any) => void) => {}
+let isSpeechRecognitionAvailable = false
+
+try {
+  const speech = require('expo-speech-recognition')
+  ExpoSpeechRecognitionModule = speech.ExpoSpeechRecognitionModule
+  useSpeechRecognitionEvent = speech.useSpeechRecognitionEvent
+  isSpeechRecognitionAvailable = true
+} catch (e) {
+  console.warn('expo-speech-recognition is not available in this runtime:', e)
+}
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
@@ -93,6 +106,13 @@ export function CopilotInput({
   })
 
   const handleMicPress = useCallback(async () => {
+    if (!isSpeechRecognitionAvailable) {
+      Alert.alert(
+        'Voice input unavailable',
+        'Voice input requires a development build. Use the keyboard or build a custom development client.'
+      )
+      return
+    }
     if (isListening) {
       setIsListening(false)
       ExpoSpeechRecognitionModule.stop()

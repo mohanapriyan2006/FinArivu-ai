@@ -2,7 +2,16 @@ import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Bot, Sparkles, Volume2 } from 'lucide-react-native'
-import * as Speech from 'expo-speech'
+
+let Speech: any = { stop: () => {}, speak: () => {} }
+let isTtsAvailable = false
+
+try {
+  Speech = require('expo-speech')
+  isTtsAvailable = true
+} catch (e) {
+  console.warn('expo-speech is not available in this runtime:', e)
+}
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ThemeColors, Typography } from '@/theme'
@@ -90,6 +99,7 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
   }
 
   const handleSpeak = () => {
+    if (!isTtsAvailable) return
     if (isSpeaking) {
       Speech.stop()
       setIsSpeaking(false)
