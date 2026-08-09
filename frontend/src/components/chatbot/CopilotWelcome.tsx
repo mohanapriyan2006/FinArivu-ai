@@ -5,7 +5,9 @@ import {
   Bot,
   Calculator,
   Calendar,
+  Clock,
   Compass,
+  EyeOff,
   PieChart,
   Target,
   TrendingUp,
@@ -63,6 +65,37 @@ const SUGGESTIONS2 = [
     prompt: 'Generate my latest weekly financial health summary report.',
     icon: Calendar,
     color: '#EC4899',
+  },
+]
+
+const SUGGESTIONS3 = [
+  {
+    id: 'today',
+    label: 'What next today',
+    prompt: 'What is the single most important financial action I should take today?',
+    icon: Clock,
+    color: '#5B4EFA',
+  },
+  {
+    id: 'week',
+    label: 'What next this week',
+    prompt: 'What are my top 3 financial priorities for this week?',
+    icon: Calendar,
+    color: '#3B82F6',
+  },
+  {
+    id: 'month',
+    label: 'What next this month',
+    prompt: 'What should I focus on financially this month to stay on track?',
+    icon: TrendingUp,
+    color: '#F59E0B',
+  },
+  {
+    id: 'ignore',
+    label: 'What to ignore',
+    prompt: 'What financial distractions, spending urges, or market noise should I ignore right now?',
+    icon: EyeOff,
+    color: '#F43F5E',
   },
 ]
 
@@ -129,6 +162,33 @@ export function CopilotWelcome({ onSelectSuggestion }: CopilotWelcomeProps) {
           contentContainerStyle={styles.chipsScrollContent}
         >
           {SUGGESTIONS2.map((item) => {
+            const IconComponent = item.icon
+            return (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [
+                  styles.chipButton,
+                  pressed && styles.chipButtonPressed,
+                ]}
+                onPress={() => onSelectSuggestion(item.prompt)}
+                accessibilityRole="button"
+                accessibilityLabel={item.label}
+              >
+                <View style={[styles.iconWrapper, { backgroundColor: `${item.color}1F` }]}>
+                  <IconComponent size={15} color={item.color} strokeWidth={2.2} />
+                </View>
+                <Text style={styles.chipText}>{item.label}</Text>
+              </Pressable>
+            )
+          })}
+        </ScrollView>
+        <View style={{height: 20}}/>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.chipsScrollContent}
+        >
+          {SUGGESTIONS3.map((item) => {
             const IconComponent = item.icon
             return (
               <Pressable
