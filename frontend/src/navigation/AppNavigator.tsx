@@ -19,7 +19,6 @@ import CreditCardTrackerScreen from '@/screens/Pulse/screens/CreditCardTrackerSc
 import InsuranceTrackerScreen from '@/screens/Pulse/screens/InsuranceTrackerScreen'
 import AddInvestmentScreen from '@/screens/Pulse/screens/AddInvestmentScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
-import EditProfileScreen from '@/screens/profile/EditProfileScreen'
 import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 import FinancialProfileSetupScreen from '@/screens/financialProfile/FinancialProfileSetupScreen'
 import FinancialHealthPlaceholderScreen from '@/screens/insights/FinancialHealthPlaceholderScreen'
@@ -32,7 +31,6 @@ export type RootStackParamList = {
   FinancialProfileSetup: { startStep?: string } | undefined
   CreateGoal: undefined
   Notifications: undefined
-  EditProfile: undefined
   QuickAddExpense: undefined
   WeeklyReport: undefined
   ExpenseTracker: undefined
@@ -93,7 +91,6 @@ export default function AppNavigator() {
           <Stack.Screen name="InsuranceTracker" component={InsuranceTrackerScreen} />
           <Stack.Screen name="AddInvestment" component={AddInvestmentScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen
             name="QuickAddExpense"
             component={QuickAddExpenseScreen}

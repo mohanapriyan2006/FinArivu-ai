@@ -159,13 +159,13 @@ export default function InsightsHubScreen() {
           onPress={handleHealthPress}
         />
 
-        {state.missing.length > 0 ? (
+        {/* {state.missing.length > 0 ? (
           <MissingDataSection
             items={state.missing}
             onPress={handleMissingPress}
             testID="insights-missing"
           />
-        ) : null}
+        ) : null} */}
 
         {state.topInsight ? (
           <TopInsightCard

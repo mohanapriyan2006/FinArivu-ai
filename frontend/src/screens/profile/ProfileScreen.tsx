@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Image,
   Pressable,
@@ -39,6 +39,9 @@ import { SettingsListItem } from './SettingsListItem'
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useTheme, type ThemeMode } from '@/contexts/ThemeContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
+import { ProfileService, type Profile } from '@/services/ProfileService'
+import { AvatarStore } from '@/services/AvatarStore'
+import EditProfileModal from './EditProfileModal'
 import { ProfileProgressBar } from '@/components/financialProfile/ProfileProgressBar'
 import { ProfileSectionCard } from '@/components/financialProfile/ProfileSectionCard'
 import { PROFILE_COMPLETION_THRESHOLD, PROFILE_SECTIONS } from '@/utils/profileCompletion'
@@ -80,12 +83,53 @@ export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
-  const { user, logout } = useAuthContext()
+  const { user, logout, getToken } = useAuthContext()
   const { completion, resumeStep } = useFinancialProfile()
   const styles = makeStyles(colors)
 
-  const displayName = user?.fullName || 'Mohanapriyan'
+  const [savedProfile, setSavedProfile] = useState<Profile | null>(null)
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false)
+
+  const displayName = savedProfile?.fullName || user?.fullName || 'Mohanapriyan'
   const email = user?.email || 'mohan@finarivu.ai'
+
+  const openEditModal = () => setIsEditModalVisible(true)
+  const closeEditModal = () => setIsEditModalVisible(false)
+
+  useEffect(() => {
+    async function load() {
+      if (!user?.id) return
+      try {
+        const token = await getToken()
+        const [profileData, storedAvatar] = await Promise.all([
+          ProfileService.getProfile(token),
+          AvatarStore.getAvatarUrl(user.id),
+        ])
+        setSavedProfile(profileData)
+        setAvatarUrl(storedAvatar ?? AVATAR_URI)
+      } catch (err) {
+        console.error('Failed to load profile/avatar:', err)
+      }
+    }
+    load()
+  }, [user])
+
+  const handleSaved = async () => {
+    if (!user?.id) return
+    try {
+      const token = await getToken()
+      const [profileData, storedAvatar] = await Promise.all([
+        ProfileService.getProfile(token),
+        AvatarStore.getAvatarUrl(user.id),
+      ])
+      setSavedProfile(profileData)
+      setAvatarUrl(storedAvatar ?? AVATAR_URI)
+    } catch (err) {
+      console.error('Failed to refresh profile:', err)
+    }
+    closeEditModal()
+  }
 
   const handleBack = () => {
     if (navigation.canGoBack()) {
@@ -113,7 +157,7 @@ export default function ProfileScreen() {
         </Pressable>
         <Text style={styles.headerTitle}>Profile & Settings</Text>
         <Pressable
-          onPress={() => navigation.navigate('EditProfile')}
+          onPress={openEditModal}
           style={styles.iconButton}
           accessibilityRole="button"
           accessibilityLabel="Edit Profile"
@@ -133,10 +177,10 @@ export default function ProfileScreen() {
         <View style={styles.heroCard}>
           <View style={styles.heroContent}>
             <View style={styles.avatarWrapper}>
-              <Image source={{ uri: AVATAR_URI }} style={styles.avatar} />
+              <Image source={{ uri: avatarUrl ?? AVATAR_URI }} style={styles.avatar} />
               <Pressable
                 style={styles.avatarBadge}
-                onPress={() => navigation.navigate('EditProfile')}
+                onPress={openEditModal}
               >
                 <Pencil size={12} color={colors.surface} strokeWidth={2.5} />
               </Pressable>
@@ -257,8 +301,8 @@ export default function ProfileScreen() {
           <SettingsListItem
             icon={User}
             title="Personal Details"
-            subtitle="Name, age, city & monthly income"
-            onPress={() => navigation.navigate('EditProfile')}
+            subtitle="Name, age, city & occupation"
+            onPress={openEditModal}
           />
 
           <SettingsListItem
@@ -309,6 +353,14 @@ export default function ProfileScreen() {
           />
         </View>
       </ScrollView>
+
+      <EditProfileModal
+        visible={isEditModalVisible}
+        onClose={closeEditModal}
+        onSaved={handleSaved}
+        initialProfile={savedProfile}
+        initialAvatarUrl={avatarUrl ?? undefined}
+      />
     </SafeAreaView>
   )
 }
