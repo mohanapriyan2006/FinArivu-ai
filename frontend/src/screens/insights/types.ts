@@ -1,7 +1,7 @@
 import type { LucideIcon } from 'lucide-react-native'
 
 export type InsightCategory =
-  | 'CASH_FLOW'
+  | 'CASHFLOW'
   | 'SPENDING'
   | 'SAVINGS'
   | 'BUDGET'
@@ -12,8 +12,10 @@ export type InsightCategory =
   | 'INVESTMENT'
   | 'RETIREMENT'
   | 'FINANCIAL_HEALTH'
+  | 'EMERGENCY'
+  | 'HEALTH'
 
-export type HealthFactorStatus = 'strong' | 'fair' | 'weak' | 'unknown'
+export type HealthFactorStatus = 'strong' | 'fair' | 'weak' | 'unknown' | 'good' | 'warning' | 'danger'
 
 export interface HealthFactor {
   id: string
@@ -41,8 +43,8 @@ export interface WeeklyMetric {
 export interface Trend {
   id: string
   label: string
-  from: string
-  to: string
+  fromValue: string
+  toValue: string
   delta: string
   isPositive: boolean
 }
@@ -62,7 +64,39 @@ export interface PositiveItem {
   title: string
 }
 
+export interface MissingDataItem {
+  id: string
+  title: string
+  explanation: string
+  actionLabel: string
+  route: string
+}
+
+export interface RawWeeklyMetric {
+  id: string
+  label: string
+  value: string
+}
+
+// Backend `GET /v1/insights` response (camelCase because the Pydantic schemas use alias generator).
+export interface InsightsResponse {
+  hasData: boolean
+  health: {
+    score: number
+    status: string
+    factors: HealthFactor[]
+    explanation: string
+  } | null
+  topInsight: TopInsight | null
+  weekly: RawWeeklyMetric[]
+  trends: Trend[]
+  attention: AttentionItem[]
+  positive: PositiveItem[]
+  missing: MissingDataItem[]
+}
+
 export interface InsightsViewModel {
+  hasData: boolean
   healthScore: number | null
   healthStatus: string
   healthFactors: HealthFactor[]
@@ -72,6 +106,7 @@ export interface InsightsViewModel {
   trends: Trend[]
   attentionItems: AttentionItem[]
   positiveItems: PositiveItem[]
+  missing: MissingDataItem[]
   isNewUser: boolean
 }
 

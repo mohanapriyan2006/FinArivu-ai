@@ -1,78 +1,42 @@
 import React from 'react'
 import { StyleSheet, Text, View } from 'react-native'
-import type { LucideIcon } from 'lucide-react-native'
-import {
-  Wallet,
-  ShoppingBag,
-  PiggyBank,
-  PieChart,
-  Target,
-  Banknote,
-  CreditCard,
-  TrendingUp,
-  Landmark,
-} from 'lucide-react-native'
+import { Plus } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { AttentionItem } from '../types'
+import type { MissingDataItem } from '../types'
 import { InsightCard } from './InsightCard'
 
-interface AttentionSectionProps {
-  items: AttentionItem[]
-  onPress: (item: AttentionItem) => void
+interface MissingDataSectionProps {
+  items: MissingDataItem[]
+  onPress: (item: MissingDataItem) => void
   testID?: string
 }
 
-function iconForCategory(category: AttentionItem['category']): LucideIcon {
-  switch (category) {
-    case 'CASHFLOW':
-      return Wallet
-    case 'SPENDING':
-      return ShoppingBag
-    case 'SAVINGS':
-      return PiggyBank
-    case 'BUDGET':
-      return PieChart
-    case 'GOAL':
-      return Target
-    case 'DEBT':
-      return Banknote
-    case 'CREDIT_CARD':
-      return CreditCard
-    case 'NET_WORTH':
-      return TrendingUp
-    case 'INVESTMENT':
-      return Landmark
-    default:
-      return Wallet
-  }
-}
-
-export function AttentionSection({
+export function MissingDataSection({
   items,
   onPress,
   testID,
-}: AttentionSectionProps) {
+}: MissingDataSectionProps) {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
 
   return (
     <View style={styles.section} testID={testID}>
       <Text style={[styles.sectionLabel, { color: colors.textSecondary }]}>
-        NEEDS ATTENTION
+        COMPLETE YOUR FINANCES
       </Text>
       {items.map((item) => (
         <InsightCard
           key={item.id}
-          icon={iconForCategory(item.category)}
+          icon={Plus}
           title={item.title}
           explanation={item.explanation}
           actionLabel={item.actionLabel}
           onPress={() => onPress(item)}
-          variant={item.category === 'BUDGET' ? 'warning' : 'danger'}
-          testID={`attention-${item.id}`}
+          variant="primary"
+          testID={`insights-missing-${item.id}`}
         />
       ))}
     </View>

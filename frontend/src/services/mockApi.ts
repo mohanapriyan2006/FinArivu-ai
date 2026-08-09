@@ -176,19 +176,61 @@ export function getMockResponse(config: AxiosRequestConfig) {
   }
 
   if (url === '/v1/insights' && method === 'get') {
-    return [
-      {
-        id: 'insight-1',
-        userId: 'mock-user',
-        category: 'savings',
-        title: 'Great savings rate',
-        description: 'You are saving 25% of your income.',
-        priority: 'high',
-        action: 'Keep it up',
-        isRead: false,
-        createdAt: now,
+    return {
+      data: {
+        hasData: true,
+        health: {
+          score: 72,
+          status: 'good',
+          factors: [
+            { id: 'savings', name: 'Savings', status: 'good' },
+            { id: 'emergency', name: 'Emergency', status: 'warning' },
+            { id: 'debt', name: 'Debt', status: 'good' },
+            { id: 'goals', name: 'Goals', status: 'good' },
+            { id: 'budget', name: 'Budget', status: 'good' },
+          ],
+          explanation: 'Your savings rate is healthy; build your emergency fund.',
+        },
+        topInsight: {
+          category: 'SAVINGS',
+          title: 'You saved ₹15,000 this month',
+          explanation: 'You saved 25% of your income.',
+          metric: '+₹15,000',
+          actionLabel: 'View savings',
+          route: 'SavingsTracker',
+        },
+        weekly: [
+          { id: 'income', label: 'Income', value: '₹60,000' },
+          { id: 'spent', label: 'Spent', value: '₹45,000' },
+          { id: 'saved', label: 'Saved', value: '+₹15,000' },
+          { id: 'net', label: 'Net', value: '+₹15,000' },
+        ],
+        trends: [
+          {
+            id: 'spending',
+            label: 'Spending',
+            fromValue: '₹50,000',
+            toValue: '₹45,000',
+            delta: '10%',
+            isPositive: true,
+          },
+          {
+            id: 'cashflow',
+            label: 'Monthly cash flow',
+            fromValue: '₹0',
+            toValue: '₹15,000',
+            delta: '₹15,000',
+            isPositive: true,
+          },
+        ],
+        attention: [],
+        positive: [
+          { id: 'cashflow', title: 'Cash flow is positive' },
+          { id: 'savings', title: 'Healthy savings rate' },
+        ],
+        missing: [],
       },
-    ]
+    }
   }
 
   if (url === '/v1/insights/unread' && method === 'get') {

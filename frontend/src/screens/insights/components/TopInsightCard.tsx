@@ -30,7 +30,7 @@ interface TopInsightCardProps {
 
 function iconForCategory(category: TopInsight['category']): LucideIcon {
   switch (category) {
-    case 'CASH_FLOW':
+    case 'CASHFLOW':
       return Wallet
     case 'SPENDING':
       return ShoppingBag

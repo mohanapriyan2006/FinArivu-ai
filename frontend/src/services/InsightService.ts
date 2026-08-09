@@ -1,4 +1,5 @@
 import { api } from './api'
+import type { InsightsResponse } from '@/screens/insights/types'
 
 export interface Insight {
   id: string
@@ -13,8 +14,15 @@ export interface Insight {
 }
 
 export const InsightService = {
-  async list(token: string | null): Promise<Insight[]> {
+  async getInsights(token: string | null): Promise<InsightsResponse> {
     const response = await api.get('/v1/insights', {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return (response.data?.data ?? response.data) as InsightsResponse
+  },
+
+  async list(token: string | null): Promise<Insight[]> {
+    const response = await api.get('/v1/insights/list', {
       headers: { Authorization: `Bearer ${token}` },
     })
     const payload = response.data?.data ?? response.data

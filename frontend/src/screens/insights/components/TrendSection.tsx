@@ -25,18 +25,18 @@ export function TrendSection({ trends, testID }: TrendSectionProps) {
         <View
           key={trend.id}
           style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
-          accessibilityLabel={`${trend.label} trend from ${trend.from} to ${trend.to}`}
+          accessibilityLabel={`${trend.label} trend from ${trend.fromValue} to ${trend.toValue}`}
         >
           <Text style={[styles.label, { color: colors.textPrimary }]}>
             {trend.label}
           </Text>
           <View style={styles.values}>
             <Text style={[styles.value, { color: colors.textSecondary }]}>
-              {trend.from}
+              {trend.fromValue}
             </Text>
             <Text style={[styles.arrow, { color: colors.textTertiary }]}>→</Text>
             <Text style={[styles.value, { color: colors.textPrimary }]}>
-              {trend.to}
+              {trend.toValue}
             </Text>
           </View>
           <View style={styles.delta}>

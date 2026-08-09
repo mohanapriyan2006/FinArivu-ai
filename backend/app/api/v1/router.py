@@ -13,6 +13,7 @@ from app.api.v1 import (
     financial_profile,
     goals,
     income,
+    insights,
     liabilities,
     profiles,
     reports,
@@ -35,6 +36,7 @@ api_router.include_router(assets.router)
 api_router.include_router(liabilities.router)
 api_router.include_router(financial_profile.router)
 api_router.include_router(financial.router)
+api_router.include_router(insights.router)
 api_router.include_router(reports.router)
 api_router.include_router(chat.router)
 api_router.include_router(copilot_router)

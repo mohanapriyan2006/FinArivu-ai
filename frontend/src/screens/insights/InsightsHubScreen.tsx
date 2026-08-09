@@ -15,10 +15,10 @@ import { Bell } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useInsights } from './useInsights'
-import { Typography } from '@/theme'
+import { Typography, BaseColors } from '@/theme'
 import type { ThemeColors } from '@/theme'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
-import type { AttentionItem, TopInsight } from './types'
+import type { AttentionItem, MissingDataItem, TopInsight } from './types'
 
 import { FinancialHealthHero } from './components/FinancialHealthHero'
 import { TopInsightCard } from './components/TopInsightCard'
@@ -26,8 +26,8 @@ import { WeeklySummary } from './components/WeeklySummary'
 import { TrendSection } from './components/TrendSection'
 import { AttentionSection } from './components/AttentionSection'
 import { PositiveInsights } from './components/PositiveInsights'
+import { MissingDataSection } from './components/MissingDataSection'
 import { InsightsSkeleton } from './components/InsightsSkeleton'
-import { InsightsEmptyState } from './components/InsightsEmptyState'
 import { InsightsErrorState } from './components/InsightsErrorState'
 
 type InsightsNavigationProp = StackNavigationProp<RootStackParamList>
@@ -58,12 +58,11 @@ export default function InsightsHubScreen() {
     )
   }
 
-  const handleCompleteProfile = () => {
-    navigation.navigate('FinancialProfileSetup')
-  }
-
-  const handleAddExpense = () => {
-    navigation.navigate('QuickAddExpense')
+  const handleMissingPress = (item: MissingDataItem) => {
+    navigation.navigate(
+      item.route as keyof RootStackParamList,
+      undefined
+    )
   }
 
   const handleNotifications = () => {
@@ -100,25 +99,6 @@ export default function InsightsHubScreen() {
             message={error}
             onRetry={refetch}
             testID="insights-error"
-          />
-        </ScrollView>
-      )
-    }
-
-    if (state.isNewUser) {
-      return (
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          testID="insights-empty-scroll"
-        >
-          <InsightsEmptyState
-            onCompleteProfile={handleCompleteProfile}
-            onAddExpense={handleAddExpense}
-            testID="insights-empty"
           />
         </ScrollView>
       )
@@ -178,6 +158,14 @@ export default function InsightsHubScreen() {
           explanation={state.healthExplanation}
           onPress={handleHealthPress}
         />
+
+        {state.missing.length > 0 ? (
+          <MissingDataSection
+            items={state.missing}
+            onPress={handleMissingPress}
+            testID="insights-missing"
+          />
+        ) : null}
 
         {state.topInsight ? (
           <TopInsightCard
