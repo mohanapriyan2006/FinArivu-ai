@@ -44,7 +44,7 @@ function toNumber(value: unknown): number {
 
 export const DashboardService = {
   async getSummary(token: string | null): Promise<DashboardSummary | null> {
-    const response = await api.get('/v1/dashboard', {
+    const response = await api.get('/v1/financial/dashboard', {
       headers: { Authorization: `Bearer ${token}` },
     })
     const data = response.data?.data

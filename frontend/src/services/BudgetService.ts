@@ -65,9 +65,31 @@ export const BudgetService = {
   },
 
   async getAnalysis(token: string | null): Promise<BudgetAnalysis> {
-    const response = await api.get('/v1/budgets/analysis', {
+    const response = await api.get('/v1/financial/budget-analysis', {
       headers: { Authorization: `Bearer ${token}` },
     })
-    return response.data?.data
+    const data = response.data?.data
+    const firstRecommendation = Array.isArray(data.recommendations) ? data.recommendations[0] : ''
+    return {
+      categories: (data.categories || []).map((c: any) => {
+        const budget = Number(c.budget ?? 0)
+        const spent = Number(c.spent ?? 0)
+        return {
+          category: c.categoryName,
+          budget,
+          spent,
+          remaining: budget - spent,
+          usage: Number(c.usage ?? 0),
+          status: c.status,
+          recommendation: firstRecommendation,
+        }
+      }),
+      summary: {
+        totalBudget: Number(data.totalBudget ?? 0),
+        totalSpent: Number(data.totalSpent ?? 0),
+        totalRemaining: Number(data.remainingBudget ?? 0),
+        overallUsage: Number(data.overallUtilization ?? 0),
+      },
+    }
   },
 }
