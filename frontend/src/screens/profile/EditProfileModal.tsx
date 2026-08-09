@@ -11,7 +11,8 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
-import { Briefcase, Building2, Calendar, Link, User, X } from 'lucide-react-native'
+import * as ImagePicker from 'expo-image-picker'
+import { Briefcase, Building2, Calendar, Link, Upload, User, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -55,8 +56,19 @@ export default function EditProfileModal({
   const [selectedDefault, setSelectedDefault] = useState<string>(DEFAULT_AVATARS[0])
   const [customUrl, setCustomUrl] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const toFullUrl = (url: string): string => {
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+      return url
+    }
+    const base = (process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api').replace('/api', '')
+    return `${base}${url.startsWith('/') ? '' : '/'}${url}`
+  }
 
   const avatarUrl = customUrl.trim() || selectedDefault || DEFAULT_AVATARS[0]
+  const displayAvatarUrl = toFullUrl(avatarUrl)
 
   useEffect(() => {
     if (!visible) return
@@ -88,6 +100,44 @@ export default function EditProfileModal({
     }
   }
 
+  const handleUploadFromDevice = async () => {
+    setUploadError(null)
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.8,
+      })
+
+      if (result.canceled || !result.assets?.[0]) {
+        return
+      }
+
+      const asset = result.assets[0]
+      if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+        setUploadError('Image must be smaller than 5MB')
+        return
+      }
+
+      setUploading(true)
+      const token = await getToken()
+      if (!token || !user?.id) {
+        setUploading(false)
+        return
+      }
+
+      const { avatarUrl: uploadedUrl } = await ProfileService.uploadAvatar(asset.uri, token)
+      setCustomUrl(uploadedUrl)
+      setSelectedDefault('')
+      setUploadError(null)
+    } catch (err) {
+      console.error('Avatar upload failed:', err)
+      setUploadError('Failed to upload avatar')
+    } finally {
+      setUploading(false)
+    }
+  }
+
   const handleSave = async () => {
     setSaving(true)
     try {
@@ -102,6 +152,7 @@ export default function EditProfileModal({
         age: ageNum,
         city: city.trim() || undefined,
         occupation: occupation.trim() || undefined,
+        avatarUrl: avatarUrl || undefined,
       }
 
       await ProfileService.updateProfile(payload, token)
@@ -157,7 +208,7 @@ export default function EditProfileModal({
         >
           <View style={styles.avatarSection}>
             <View style={styles.selectedAvatarRing}>
-              <Image source={{ uri: avatarUrl }} style={styles.selectedAvatar} />
+              <Image source={{ uri: displayAvatarUrl }} style={styles.selectedAvatar} />
             </View>
 
             <ScrollView
@@ -178,6 +229,27 @@ export default function EditProfileModal({
                 </Pressable>
               ))}
             </ScrollView>
+
+            <Pressable
+              onPress={handleUploadFromDevice}
+              disabled={uploading}
+              style={styles.uploadButton}
+              accessibilityRole="button"
+              accessibilityLabel="Upload from device"
+            >
+              {uploading ? (
+                <ActivityIndicator size="small" color={colors.primary} />
+              ) : (
+                <>
+                  <Upload size={18} color={colors.primary} style={styles.uploadIcon} />
+                  <Text style={styles.uploadButtonText}>Upload from device</Text>
+                </>
+              )}
+            </Pressable>
+
+            {uploadError ? (
+              <Text style={styles.uploadError}>{uploadError}</Text>
+            ) : null}
 
             <View style={styles.customUrlField}>
               <Text style={styles.customUrlLabel}>Or paste image URL</Text>
@@ -356,6 +428,36 @@ function makeStyles(colors: ThemeColors) {
       height: 54,
       borderRadius: 27,
       backgroundColor: colors.primarySoft,
+    },
+    uploadButton: {
+      width: '100%',
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderRadius: 16,
+      borderWidth: 1,
+      borderColor: colors.primary,
+      paddingHorizontal: 14,
+      height: 48,
+      marginTop: 8,
+    },
+    uploadIcon: {
+      marginRight: 8,
+    },
+    uploadButtonText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 15,
+      fontWeight: Typography.fontWeights.medium,
+      color: colors.primary,
+    },
+    uploadError: {
+      fontFamily: Typography.fontFamily,
+      fontSize: 13,
+      fontWeight: Typography.fontWeights.medium,
+      color: colors.danger,
+      marginTop: 8,
+      textAlign: 'center',
     },
     customUrlField: {
       width: '100%',

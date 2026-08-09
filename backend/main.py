@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.router import api_router
 from app.core.config import settings
@@ -48,6 +50,10 @@ def create_application() -> FastAPI:
 
     # Routes
     app.include_router(api_router, prefix="/api")
+
+    # Static files
+    os.makedirs("static", exist_ok=True)
+    app.mount("/static", StaticFiles(directory="static"), name="static")
 
     @app.get("/health", tags=["Health"], summary="Root health check")
     async def root_health() -> dict:

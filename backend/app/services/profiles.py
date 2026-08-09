@@ -54,3 +54,11 @@ class ProfileService(BaseService[Profile]):
         if obj is None:
             raise NotFoundError("Profile not found")
         return obj
+
+    async def update_avatar(self, user_id: uuid.UUID, file_path: str) -> Profile:
+        """Update the avatar URL on a user's profile."""
+        existing = await self._repo.get_by_user_id(user_id)
+        if existing is None:
+            profile = await self.get_or_create_by_user(user_id, {"avatar_url": file_path})
+            return await self._repo.update(profile.id, {"avatar_url": file_path})
+        return await self._repo.update(existing.id, {"avatar_url": file_path})

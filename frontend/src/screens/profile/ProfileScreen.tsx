@@ -78,6 +78,15 @@ const SECTION_TO_STEP: Record<ProfileSectionId, OnboardingStepId> = {
 }
 
 const AVATAR_URI = 'https://i.pravatar.cc/150?img=11'
+const API_BASE = (process.env.EXPO_PUBLIC_API_URL || 'http://10.0.2.2:8000/api').replace('/api', '')
+
+function toFullAvatarUrl(url: string | null | undefined): string {
+  if (!url) return AVATAR_URI
+  if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('data:')) {
+    return url
+  }
+  return `${API_BASE}${url.startsWith('/') ? '' : '/'}${url}`
+}
 
 export default function ProfileScreen() {
   const { colors, mode, setMode } = useTheme()
@@ -107,7 +116,8 @@ export default function ProfileScreen() {
           AvatarStore.getAvatarUrl(user.id),
         ])
         setSavedProfile(profileData)
-        setAvatarUrl(storedAvatar ?? AVATAR_URI)
+        const backendUrl = profileData?.avatarUrl
+        setAvatarUrl(toFullAvatarUrl(backendUrl ?? storedAvatar ?? AVATAR_URI))
       } catch (err) {
         console.error('Failed to load profile/avatar:', err)
       }
@@ -124,7 +134,8 @@ export default function ProfileScreen() {
         AvatarStore.getAvatarUrl(user.id),
       ])
       setSavedProfile(profileData)
-      setAvatarUrl(storedAvatar ?? AVATAR_URI)
+      const backendUrl = profileData?.avatarUrl
+      setAvatarUrl(toFullAvatarUrl(backendUrl ?? storedAvatar ?? AVATAR_URI))
     } catch (err) {
       console.error('Failed to refresh profile:', err)
     }
@@ -135,6 +146,10 @@ export default function ProfileScreen() {
     if (navigation.canGoBack()) {
       navigation.goBack()
     }
+  }
+
+  const handleNotifications = () => {
+    navigation.navigate('Notifications')
   }
 
   const themeOptions: { label: string; value: ThemeMode; icon: typeof Sun }[] = [
@@ -156,13 +171,13 @@ export default function ProfileScreen() {
           <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
         </Pressable>
         <Text style={styles.headerTitle}>Profile & Settings</Text>
-        <Pressable
-          onPress={openEditModal}
-          style={styles.iconButton}
+         <Pressable
+          onPress={handleNotifications}
+          style={styles.bellButton}
           accessibilityRole="button"
-          accessibilityLabel="Edit Profile"
+          accessibilityLabel="Notifications"
         >
-          <Pencil size={20} color={colors.primary} strokeWidth={2} />
+          <Bell size={22} color={colors.textPrimary} strokeWidth={2} />
         </Pressable>
       </View>
 
@@ -606,6 +621,12 @@ function makeStyles(colors: ThemeColors) {
     },
     progressBarContainer: {
       width: '100%',
+    },
+     bellButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
   })
 }

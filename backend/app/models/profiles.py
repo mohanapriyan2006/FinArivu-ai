@@ -43,6 +43,7 @@ class Profile(Base):
     completed_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
+    avatar_url: Mapped[str | None] = mapped_column(String(512), nullable=True)
 
     user: Mapped["User"] = relationship("User", back_populates="profile")
 

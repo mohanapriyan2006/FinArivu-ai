@@ -26,6 +26,7 @@ class ProfileBase(BaseSchema):
     employment_type: str | None = Field(default=None, max_length=100)
     dependents: int | None = Field(default=None, ge=0)
     children_count: int | None = Field(default=None, ge=0)
+    avatar_url: str | None = Field(default=None, max_length=512)
 
     @field_validator("age", mode="before")
     @classmethod

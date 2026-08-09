@@ -123,6 +123,15 @@ async def _ensure_columns(
             logger.info("Added %s.%s", table, name)
 
 
+async def _migrate_profiles_avatar(conn: AsyncConnection) -> None:
+    """Idempotently add avatar_url column to profiles."""
+    await _ensure_columns(
+        conn,
+        "profiles",
+        {"avatar_url": "VARCHAR(512)"},
+    )
+
+
 async def _migrate_financial_profile(conn: AsyncConnection) -> None:
     """Idempotently add financial profile columns and ensure new tables exist."""
     await _ensure_columns(
@@ -173,4 +182,5 @@ async def apply_migrations(engine: AsyncEngine) -> None:
         await _migrate_users(conn)
         await _migrate_expense_categories(conn)
         await _migrate_financial_profile(conn)
+        await _migrate_profiles_avatar(conn)
     logger.info("Database migrations complete")
