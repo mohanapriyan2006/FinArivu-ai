@@ -14,7 +14,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated'
-import { ArrowUp, Mic, Paperclip } from 'lucide-react-native'
+import { ArrowUp, Mic, Paperclip, X } from 'lucide-react-native'
 import * as DocumentPicker from 'expo-document-picker'
 
 // Lazy / safe import for Expo SDK modules that may not be available in Expo Go
@@ -47,6 +47,9 @@ interface CopilotInputProps {
     size: number
     mimeType?: string
   }) => void
+  onRemoveAttachedFile?: () => void
+  attachedFileName?: string
+  isExtractingDocument?: boolean
   placeholder?: string
   disabled?: boolean
 }
@@ -56,6 +59,9 @@ export function CopilotInput({
   onChangeText,
   onSend,
   onFilePicked,
+  onRemoveAttachedFile,
+  attachedFileName,
+  isExtractingDocument,
   placeholder = 'Ask your Personal CFO anything...',
   disabled = false,
 }: CopilotInputProps) {
@@ -77,6 +83,9 @@ export function CopilotInput({
   }))
 
   const canSend = value.trim().length > 0 && !disabled
+  const placeholderText = attachedFileName
+    ? `Ask about ${attachedFileName}...`
+    : placeholder
 
   const appendTranscript = useCallback(
     (transcript: string) => {
@@ -142,6 +151,11 @@ export function CopilotInput({
   }, [isListening])
 
   const handleAttachmentPress = useCallback(async () => {
+    if (disabled || isExtractingDocument) return
+    if (attachedFileName) {
+      onRemoveAttachedFile?.()
+      return
+    }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [
@@ -170,7 +184,7 @@ export function CopilotInput({
     } catch (err) {
       console.warn('Document picker error:', err)
     }
-  }, [onFilePicked])
+  }, [isExtractingDocument, attachedFileName, onRemoveAttachedFile, onFilePicked])
 
   return (
     <View style={styles.floatingContainer}>
@@ -180,9 +194,15 @@ export function CopilotInput({
         onPress={handleAttachmentPress}
         disabled={disabled}
         accessibilityRole="button"
-        accessibilityLabel="Add attachment"
+        accessibilityLabel={attachedFileName ? 'Remove attachment' : 'Add attachment'}
       >
-        <Paperclip size={20} color={colors.textSecondary} strokeWidth={2.2} />
+        {isExtractingDocument ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : attachedFileName ? (
+          <X size={20} color={colors.danger} strokeWidth={2.2} />
+        ) : (
+          <Paperclip size={20} color={colors.textSecondary} strokeWidth={2.2} />
+        )}
       </Pressable>
 
       {/* Main Input Field */}
@@ -190,7 +210,7 @@ export function CopilotInput({
         style={styles.textInput}
         value={value}
         onChangeText={onChangeText}
-        placeholder={placeholder}
+        placeholder={placeholderText}
         placeholderTextColor={colors.textTertiary}
         multiline
         editable={!disabled}
