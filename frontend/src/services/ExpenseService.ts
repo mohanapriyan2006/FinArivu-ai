@@ -20,30 +20,27 @@ export interface ExpenseInput {
 
 export const ExpenseService = {
   async list(token: string | null): Promise<Expense[]> {
-    const response = await api.get('/v1/expenses', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    const payload = response.data?.data ?? response.data
-    return Array.isArray(payload) ? payload : []
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+    const response = await api.get('/v1/expenses', config)
+    const payload = response.data?.data
+    const items = payload?.items ?? payload
+    return Array.isArray(items) ? items : []
   },
 
   async create(data: ExpenseInput, token: string | null): Promise<Expense> {
-    const response = await api.post('/v1/expenses', data, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+    const response = await api.post('/v1/expenses', data, config)
     return response.data?.data
   },
 
   async update(id: string, data: Partial<ExpenseInput>, token: string | null): Promise<Expense> {
-    const response = await api.put(`/v1/expenses/${id}`, data, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+    const response = await api.put(`/v1/expenses/${id}`, data, config)
     return response.data?.data
   },
 
   async delete(id: string, token: string | null): Promise<void> {
-    await api.delete(`/v1/expenses/${id}`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+    await api.delete(`/v1/expenses/${id}`, config)
   },
 }

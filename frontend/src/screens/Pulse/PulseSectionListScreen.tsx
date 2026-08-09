@@ -561,7 +561,7 @@ export default function PulseSectionListScreen() {
       ) : (
         <FlatList
           data={records}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item, index) => `${section}-${item.id}-${index}`}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 120 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
