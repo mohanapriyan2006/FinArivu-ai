@@ -9,10 +9,41 @@ function getKey(userId: string): string {
   return `${FINANCIAL_PROFILE_PREFIX}${userId}`
 }
 
+/**
+ * In-memory fallback used when AsyncStorage is unavailable (e.g. web platform
+ * without the native module). Keeps the onboarding stepper state coherent
+ * within a single session.
+ */
+const memoryStore: Record<string, string> = {}
+
+async function safeGetItem(key: string): Promise<string | null> {
+  try {
+    return await AsyncStorage.getItem(key)
+  } catch {
+    return memoryStore[key] ?? null
+  }
+}
+
+async function safeSetItem(key: string, value: string): Promise<void> {
+  try {
+    await AsyncStorage.setItem(key, value)
+  } catch {
+    memoryStore[key] = value
+  }
+}
+
+async function safeRemoveItem(key: string): Promise<void> {
+  try {
+    await AsyncStorage.removeItem(key)
+  } catch {
+    delete memoryStore[key]
+  }
+}
+
 export const FinancialProfileStore = {
   async getProfile(userId: string): Promise<FinancialProfile | null> {
     try {
-      const json = await AsyncStorage.getItem(getKey(userId))
+      const json = await safeGetItem(getKey(userId))
       if (!json) return null
       try {
         return JSON.parse(json) as FinancialProfile
@@ -27,7 +58,7 @@ export const FinancialProfileStore = {
 
   async saveProfile(userId: string, profile: FinancialProfile): Promise<void> {
     try {
-      await AsyncStorage.setItem(getKey(userId), JSON.stringify(profile))
+      await safeSetItem(getKey(userId), JSON.stringify(profile))
     } catch (error) {
       console.warn('[FinancialProfileStore] saveProfile failed:', error)
     }
@@ -64,7 +95,7 @@ export const FinancialProfileStore = {
 
   async clearProfile(userId: string): Promise<void> {
     try {
-      await AsyncStorage.removeItem(getKey(userId))
+      await safeRemoveItem(getKey(userId))
     } catch (error) {
       console.warn('[FinancialProfileStore] clearProfile failed:', error)
     }

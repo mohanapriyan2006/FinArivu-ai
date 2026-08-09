@@ -29,7 +29,7 @@ const defaultProfile: FinancialProfile = { initialized: false }
 const FinancialProfileContext = createContext<FinancialProfileContextType | null>(null)
 
 export function FinancialProfileProvider({ children }: { children: React.ReactNode }) {
-  const { user } = useAuthContext()
+  const { user, getToken } = useAuthContext()
   const userId = user?.id ?? 'anonymous'
 
   const [profile, setProfile] = useState<FinancialProfile>(defaultProfile)
@@ -39,7 +39,8 @@ export function FinancialProfileProvider({ children }: { children: React.ReactNo
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const stored = await FinancialProfileService.getProfile(userId)
+      const token = await getToken()
+      const stored = await FinancialProfileService.getProfile(userId, token)
       setProfile(stored ?? defaultProfile)
     } catch (error) {
       console.warn('[FinancialProfileProvider] load failed:', error)
@@ -47,7 +48,7 @@ export function FinancialProfileProvider({ children }: { children: React.ReactNo
     } finally {
       setLoading(false)
     }
-  }, [userId])
+  }, [userId, getToken])
 
   useEffect(() => {
     load()
@@ -65,10 +66,11 @@ export function FinancialProfileProvider({ children }: { children: React.ReactNo
 
   const saveSection = useCallback(
     async (update: SectionUpdate) => {
-      const next = await FinancialProfileService.updateProfileSection(userId, update)
+      const token = await getToken()
+      const next = await FinancialProfileService.updateProfileSection(userId, update, token)
       setProfile(next)
     },
-    [userId]
+    [userId, getToken]
   )
 
   const finishSetup = useCallback(async () => {
