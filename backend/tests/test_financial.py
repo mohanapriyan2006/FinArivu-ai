@@ -27,7 +27,7 @@ async def test_net_worth(async_client, auth_headers, test_user):
     response = await async_client.get("/api/v1/financial/net-worth", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["net_worth"] == "80000.00"
+    assert data["netWorth"] == "80000.00"
 
 
 async def test_health_score(async_client, auth_headers, test_user):
@@ -92,3 +92,32 @@ async def test_retirement_projection(async_client, auth_headers, test_user):
     data = response.json()["data"]
     assert data["years_to_retirement"] == 30
     assert Decimal(data["retirement_corpus"]) > 0
+
+
+async def test_dashboard(async_client, auth_headers, test_user):
+    await async_client.post(
+        "/api/v1/assets",
+        headers=auth_headers,
+        json={"asset_type": "Bank", "name": "Savings", "value": "100000.00"},
+    )
+    await async_client.post(
+        "/api/v1/liabilities",
+        headers=auth_headers,
+        json={"liability_type": "Credit Card", "name": "CC", "amount": "20000.00"},
+    )
+    response = await async_client.get("/api/v1/financial/dashboard", headers=auth_headers)
+    assert response.status_code == 200
+    data = response.json()["data"]
+    assert data["netWorth"] == "80000.00"
+    assert data["totalAssets"] == "100000.00"
+    assert data["totalLiabilities"] == "20000.00"
+    assert data["netCashFlow"] == "0"
+    assert len(data["cards"]) == 4
+    checking = next(c for c in data["cards"] if c["id"] == "checking")
+    assert checking["value"] == "100000.00"
+    assert checking["hasData"] is True
+    credit_card = next(c for c in data["cards"] if c["id"] == "credit_cards")
+    assert credit_card["value"] == "20000.00"
+    assert credit_card["hasData"] is True
+    loans = next(c for c in data["cards"] if c["id"] == "loan")
+    assert loans["hasData"] is False

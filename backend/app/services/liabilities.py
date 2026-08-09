@@ -24,7 +24,7 @@ class LiabilityService(BaseService[Liability]):
         data: LiabilityCreate,
     ) -> Liability:
         """Create a liability for the authenticated user."""
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         liability = Liability(**payload)
         return await self._repo.create(liability)
@@ -49,7 +49,7 @@ class LiabilityService(BaseService[Liability]):
         liability = await self._repo.get_by_id(liability_id)
         if liability is None or liability.user_id != user_id:
             raise NotFoundError("Liability not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(liability_id, update_dict)
         if obj is None:
             raise NotFoundError("Liability not found")

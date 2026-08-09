@@ -24,7 +24,7 @@ class AssetService(BaseService[Asset]):
         data: AssetCreate,
     ) -> Asset:
         """Create an asset for the authenticated user."""
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         asset = Asset(**payload)
         return await self._repo.create(asset)
@@ -49,7 +49,7 @@ class AssetService(BaseService[Asset]):
         asset = await self._repo.get_by_id(asset_id)
         if asset is None or asset.user_id != user_id:
             raise NotFoundError("Asset not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(asset_id, update_dict)
         if obj is None:
             raise NotFoundError("Asset not found")

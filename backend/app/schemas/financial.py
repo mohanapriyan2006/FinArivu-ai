@@ -137,12 +137,28 @@ class GoalProjectionsResponse(BaseSchema):
     total_monthly_contribution: Decimal
 
 
-class DashboardResponse(BaseSchema):
-    """Aggregated dashboard data."""
+class DashboardCard(BaseSchema):
+    """A single metric card shown on the home dashboard."""
 
-    net_worth: NetWorthResponse
-    health_score: HealthScoreResponse
-    budget_analysis: BudgetAnalysisResponse
-    goal_projections: GoalProjectionsResponse
+    id: str
+    title: str
+    label: str
+    value: Decimal
+    count: int
+    has_data: bool
+    route: str | None = None
+
+
+class DashboardResponse(BaseSchema):
+    """Aggregated dashboard data for the home screen."""
+
+    total_income: Decimal
+    total_expenses: Decimal
+    net_cash_flow: Decimal
+    net_worth: Decimal
+    total_assets: Decimal
+    total_liabilities: Decimal
     recent_income: list[dict]
     recent_expenses: list[dict]
+    expense_breakdown: list[dict]
+    cards: list[DashboardCard]

@@ -18,6 +18,7 @@ from app.exceptions import NotFoundError
 from app.models.profiles import Profile
 from app.repositories.assets import AssetRepository
 from app.repositories.budgets import BudgetRepository
+from app.repositories.categories import ExpenseCategoryRepository
 from app.repositories.expenses import ExpenseRepository
 from app.repositories.goals import GoalRepository
 from app.repositories.income import IncomeRepository
@@ -26,6 +27,7 @@ from app.repositories.profiles import ProfileRepository
 from app.schemas.financial import (
     BudgetAnalysisCategory,
     BudgetAnalysisResponse,
+    DashboardCard,
     DashboardResponse,
     GoalContributionResponse,
     GoalProjectionsResponse,
@@ -44,6 +46,7 @@ class FinancialService:
         self._session = session
         self._income_repo = IncomeRepository(session)
         self._expense_repo = ExpenseRepository(session)
+        self._category_repo = ExpenseCategoryRepository(session)
         self._budget_repo = BudgetRepository(session)
         self._goal_repo = GoalRepository(session)
         self._asset_repo = AssetRepository(session)
@@ -295,6 +298,113 @@ class FinancialService:
                 for p in projections.goals
             ],
             total_monthly_contribution=projections.total_monthly_contribution,
+        )
+
+    async def get_dashboard(self, user_id: uuid.UUID) -> DashboardResponse:
+        """Aggregate all data needed for the home dashboard."""
+        today = date.today()
+        start, end = self._month_bounds(today.year, today.month)
+
+        assets = await self._asset_repo.list_for_user(user_id, limit=1000)
+        liabilities = await self._liability_repo.list_for_user(user_id, limit=1000)
+
+        asset_rows = [
+            {"asset_type": a.asset_type, "value": a.value} for a in assets
+        ]
+        liability_rows = [
+            {"liability_type": l.liability_type, "amount": l.amount} for l in liabilities
+        ]
+        net_worth_result = calculate_net_worth(asset_rows, liability_rows)
+
+        total_income = Decimal(str(await self._income_repo.sum_for_period(user_id, start, end)))
+        total_expenses = Decimal(str(await self._expense_repo.sum_for_period(user_id, start, end)))
+
+        recent_income = await self._income_repo.list_for_user(user_id, start_date=start, end_date=end, limit=5)
+        recent_expenses = await self._expense_repo.list_for_user(user_id, start_date=start, end_date=end, limit=5)
+
+        category_rows = await self._expense_repo.sum_by_category(user_id, start, end)
+        categories = await self._category_repo.list(limit=1000)
+        category_names = {c.id: c.name for c in categories}
+        expense_breakdown = [
+            {"category": category_names.get(category_id, str(category_id)), "amount": float(amount)}
+            for category_id, amount in category_rows
+        ]
+
+        def sum_asset(types: set[str]) -> tuple[Decimal, int]:
+            matched = [a for a in assets if a.asset_type in types]
+            value = sum(Decimal(str(a.value)) for a in matched)
+            return value, len(matched)
+
+        def sum_liability(types: set[str]) -> tuple[Decimal, int]:
+            matched = [l for l in liabilities if l.liability_type in types]
+            amount = sum(Decimal(str(l.amount)) for l in matched)
+            return amount, len(matched)
+
+        checking_value, checking_count = sum_asset({"Cash", "Bank"})
+        investment_value, investment_count = sum_asset({
+            "Mutual Fund", "Stock", "PPF", "EPF", "NPS", "Crypto",
+        })
+        credit_card_value, credit_card_count = sum_liability({"Credit Card"})
+        loan_value, loan_count = sum_liability({
+            "Home Loan", "Car Loan", "Personal Loan", "Education Loan", "Medical Loan", "Other",
+        })
+
+        cards = [
+            DashboardCard(
+                id="checking",
+                title="Checking",
+                label="Assets",
+                value=checking_value,
+                count=checking_count,
+                has_data=checking_count > 0,
+                route="SavingsTracker",
+            ),
+            DashboardCard(
+                id="investments",
+                title="Investments",
+                label="Assets",
+                value=investment_value,
+                count=investment_count,
+                has_data=investment_count > 0,
+                route="InvestmentTracker",
+            ),
+            DashboardCard(
+                id="credit_cards",
+                title="Credit Cards",
+                label="Liabilities",
+                value=credit_card_value,
+                count=credit_card_count,
+                has_data=credit_card_count > 0,
+                route="CreditCardTracker",
+            ),
+            DashboardCard(
+                id="loan",
+                title="Loan",
+                label="Liabilities",
+                value=loan_value,
+                count=loan_count,
+                has_data=loan_count > 0,
+                route="LoanTracker",
+            ),
+        ]
+
+        return DashboardResponse(
+            total_income=total_income,
+            total_expenses=total_expenses,
+            net_cash_flow=total_income - total_expenses,
+            net_worth=net_worth_result.net_worth,
+            total_assets=net_worth_result.total_assets,
+            total_liabilities=net_worth_result.total_liabilities,
+            recent_income=[
+                {"id": str(i.id), "source": i.source, "amount": float(i.amount), "income_date": i.income_date.isoformat() if i.income_date else None}
+                for i in recent_income
+            ],
+            recent_expenses=[
+                {"id": str(e.id), "description": e.description, "amount": float(e.amount), "expense_date": e.expense_date.isoformat() if e.expense_date else None}
+                for e in recent_expenses
+            ],
+            expense_breakdown=expense_breakdown,
+            cards=cards,
         )
 
     @staticmethod

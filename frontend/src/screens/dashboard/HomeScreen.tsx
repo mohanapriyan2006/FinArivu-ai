@@ -1,4 +1,4 @@
-import React, { useMemo, useEffect } from 'react'
+import React, { useCallback, useMemo, useEffect, useState } from 'react'
 import {
   StyleSheet,
   Text,
@@ -6,6 +6,7 @@ import {
   ScrollView,
   useWindowDimensions,
   Pressable,
+  ActivityIndicator,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
@@ -29,11 +30,13 @@ import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
 import { CompletionCard } from '@/components/financialProfile/CompletionCard'
 import { PROFILE_COMPLETION_THRESHOLD } from '@/utils/profileCompletion'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 import { Typography } from '@/theme'
+import { DashboardService, type DashboardCard } from '@/services/DashboardService'
 
 interface WaveBackgroundProps {
   isDark: boolean
@@ -171,55 +174,34 @@ const GlassCard: React.FC<GlassCardProps> = ({ children, style, isDark }) => {
   )
 }
 
-interface CardData {
-  id: string
-  title: string
-  label: 'Assets' | 'Liabilities'
-  value: string
-  subtitle: string
-  icon: React.ComponentType<any>
-  subtitleColorType: 'primary' | 'success' | 'muted'
+const cardIcons: Record<string, React.ComponentType<any>> = {
+  checking: Landmark,
+  investments: TrendingUp,
+  credit_cards: CreditCard,
+  loan: Banknote,
 }
 
-// Updated data set for Indian context
-const CARDS_DATA: CardData[] = [
-  {
-    id: 'checking',
-    title: 'Checking',
-    label: 'Assets',
-    value: '₹45,200.00',
-    subtitle: 'Primary Account',
-    icon: Landmark,
-    subtitleColorType: 'primary',
-  },
-  {
-    id: 'investments',
-    title: 'Investments',
-    label: 'Assets',
-    value: '₹1,24,500.00',
-    subtitle: '+12.5% this week',
-    icon: TrendingUp,
-    subtitleColorType: 'success',
-  },
-  {
-    id: 'credit_cards',
-    title: 'Credit Cards',
-    label: 'Liabilities',
-    value: '-₹4,250.00',
-    subtitle: 'Next payment in 4 days',
-    icon: CreditCard,
-    subtitleColorType: 'muted',
-  },
-  {
-    id: 'loan',
-    title: 'Loan',
-    label: 'Liabilities',
-    value: '-₹4,85,000.00',
-    subtitle: '3.2% Fixed Rate',
-    icon: Banknote,
-    subtitleColorType: 'muted',
-  },
-]
+const cardSubtitles: Record<string, (count: number) => string> = {
+  checking: (count) => `${count} account${count === 1 ? '' : 's'}`,
+  investments: (count) => `${count} holding${count === 1 ? '' : 's'}`,
+  credit_cards: (count) => `${count} card${count === 1 ? '' : 's'}`,
+  loan: (count) => `${count} loan${count === 1 ? '' : 's'}`,
+}
+
+function formatInr(amount: number): string {
+  const isNegative = amount < 0
+  const value = Math.abs(amount)
+  const formatted = value.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return `${isNegative ? '-' : ''}₹${formatted}`
+}
+
+function splitInrParts(amount: number) {
+  const formatted = formatInr(amount)
+  const dotIndex = formatted.lastIndexOf('.')
+  const integer = dotIndex >= 0 ? formatted.slice(0, dotIndex) : formatted
+  const decimal = dotIndex >= 0 ? formatted.slice(dotIndex) : '.00'
+  return { currency: '₹', integer: integer.replace('₹', ''), decimal }
+}
 
 // 3. HomeScreen Component
 export default function HomeScreen() {
@@ -227,28 +209,47 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
   const { completion, dismissed, dismissPrompt, resumeStep } = useFinancialProfile()
+  const { getToken } = useAuthContext()
 
-  const heroValue = useMemo(
-    () => ({
-      currency: '₹',
-      integer: '14,28,950',
-      decimal: '.00',
-    }),
-    []
-  )
+  const [dashboard, setDashboard] = useState<DashboardCard[] | null>(null)
+  const [netWorth, setNetWorth] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const renderCardItem = (card: CardData) => {
-    const IconComponent = card.icon
-
-    // Define subtitle color based on dynamic theme and specification
-    let subtitleColor = colors.textSecondary
-    if (card.subtitleColorType === 'primary') {
-      subtitleColor = '#4F46E5' // Primary Indigo
-    } else if (card.subtitleColorType === 'success') {
-      subtitleColor = '#22C55E' // Success Green
-    } else if (card.subtitleColorType === 'muted') {
-      subtitleColor = colors.textSecondary
+  const fetchDashboard = useCallback(async () => {
+    setLoading(true)
+    setError(null)
+    try {
+      const token = await getToken()
+      const data = await DashboardService.getSummary(token)
+      if (data) {
+        setNetWorth(data.netWorth ?? 0)
+        setDashboard(data.cards ?? null)
+      } else {
+        setNetWorth(0)
+        setDashboard(null)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not load dashboard')
+    } finally {
+      setLoading(false)
     }
+  }, [getToken])
+
+  useEffect(() => {
+    fetchDashboard()
+  }, [fetchDashboard])
+
+  const heroValue = useMemo(() => splitInrParts(netWorth), [netWorth])
+
+  const renderCardItem = (card: DashboardCard) => {
+    const IconComponent = cardIcons[card.id]
+
+    const subtitleColor = card.label === 'Assets' ? '#4F46E5' : colors.textSecondary
+    const getSubtitle = cardSubtitles[card.id]
+    const subtitle = card.hasData
+      ? getSubtitle?.(card.count) ?? ''
+      : `No ${card.title.toLowerCase()} added`
 
     return (
       <GlassCard key={card.id} isDark={isDark} style={styles.cardSpacing}>
@@ -279,7 +280,7 @@ export default function HomeScreen() {
                 pressed && styles.refreshButtonPressed,
               ]}
               onPress={() => {
-                // Micro-feedback action can go here
+                fetchDashboard()
               }}
               hitSlop={8}
             >
@@ -289,13 +290,29 @@ export default function HomeScreen() {
         </View>
 
         {/* Middle Row */}
-        <Text style={[styles.cardAmount, { color: colors.textPrimary }]}>
-          {card.value}
-        </Text>
+        {card.hasData ? (
+          <Text style={[styles.cardAmount, { color: colors.textPrimary }]}>
+            {formatInr(card.value)}
+          </Text>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.addInfoButton,
+              pressed && styles.addInfoButtonPressed,
+            ]}
+            onPress={() => {
+              if (card.route) {
+                navigation.navigate(card.route as any)
+              }
+            }}
+          >
+            <Text style={styles.addInfoButtonText}>Add info</Text>
+          </Pressable>
+        )}
 
         {/* Bottom Row */}
         <Text style={[styles.cardSubtitle, { color: subtitleColor }]}>
-          {card.subtitle}
+          {subtitle}
         </Text>
       </GlassCard>
     )
@@ -370,10 +387,31 @@ export default function HomeScreen() {
             </View>
           ) : null}
 
-          {/* Cards Section */}
-          <View style={styles.cardsSection}>
-            {CARDS_DATA.map((card) => renderCardItem(card))}
-          </View>
+          {loading ? (
+            <View style={styles.loading}>
+              <ActivityIndicator size="large" color="#5B4EFA" />
+            </View>
+          ) : error ? (
+            <View style={styles.errorContainer}>
+              <Text style={[styles.errorText, { color: colors.textPrimary }]}>
+                {error}
+              </Text>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.retryButton,
+                  pressed && styles.refreshButtonPressed,
+                ]}
+                onPress={fetchDashboard}
+              >
+                <Text style={[styles.retryText, { color: '#4F46E5' }]}>Retry</Text>
+              </Pressable>
+            </View>
+          ) : (
+            /* Cards Section */
+            <View style={styles.cardsSection}>
+              {dashboard?.map((card) => renderCardItem(card))}
+            </View>
+          )}
         </ScrollView>
       </SafeAreaView>
     </View>
@@ -513,5 +551,48 @@ const styles = StyleSheet.create({
     fontSize: 13, // Pixel-perfect subtitle font size
     fontWeight: Typography.fontWeights.medium,
     marginTop: 8, // Strict spacing scale
+  },
+  addInfoButton: {
+    marginTop: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+    alignSelf: 'flex-start',
+  },
+  addInfoButtonPressed: {
+    opacity: 0.7,
+  },
+  addInfoButtonText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 14,
+    fontWeight: Typography.fontWeights.semibold,
+    color: '#4F46E5',
+  },
+  loading: {
+    paddingVertical: 48,
+    alignItems: 'center',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    marginTop: 24,
+  },
+  errorText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 14,
+    fontWeight: Typography.fontWeights.medium,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: 'rgba(79, 70, 229, 0.1)',
+  },
+  retryText: {
+    fontFamily: Typography.fontFamily,
+    fontSize: 14,
+    fontWeight: Typography.fontWeights.semibold,
   },
 })

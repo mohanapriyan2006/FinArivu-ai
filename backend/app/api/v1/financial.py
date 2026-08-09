@@ -43,6 +43,19 @@ async def health_score(
     return success_response(data=result.model_dump(), message="Health score computed")
 
 
+@router.get("/dashboard", response_model=dict, summary="Get dashboard summary")
+async def dashboard(
+    request: Request,
+    service: FinancialService = Depends(get_financial_service),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Return the aggregated dashboard data for the authenticated user."""
+    user_uuid = uuid.UUID(user_id)
+    result = await service.get_dashboard(user_uuid)
+    request.state.user_id = user_uuid
+    return success_response(data=result.model_dump(), message="Dashboard retrieved successfully")
+
+
 @router.get("/net-worth", response_model=dict, summary="Get net worth summary")
 async def net_worth(
     request: Request,
