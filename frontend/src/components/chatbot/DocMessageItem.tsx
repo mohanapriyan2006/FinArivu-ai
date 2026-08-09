@@ -1,7 +1,8 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { Bot, Sparkles } from 'lucide-react-native'
+import { Bot, Sparkles, Volume2 } from 'lucide-react-native'
+import * as Speech from 'expo-speech'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ThemeColors, Typography } from '@/theme'
@@ -63,6 +64,7 @@ interface DocMessageItemProps {
 export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMessageItemProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
+  const [isSpeaking, setIsSpeaking] = useState(false)
 
   // ── USER MESSAGE BUBBLE (Right-aligned, 16px radius, max 80%) ──────
   if (item.role === 'user') {
@@ -85,6 +87,24 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
     } else if (onSelectFollowUp) {
       onSelectFollowUp((action.payload?.question as string) || action.label)
     }
+  }
+
+  const handleSpeak = () => {
+    if (isSpeaking) {
+      Speech.stop()
+      setIsSpeaking(false)
+      return
+    }
+
+    Speech.stop()
+    setIsSpeaking(true)
+    Speech.speak(item.content, {
+      language: 'en',
+      onStart: () => setIsSpeaking(true),
+      onDone: () => setIsSpeaking(false),
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    })
   }
 
   const renderArtifact = (artifact: ChatArtifact, index: number) => {
@@ -164,6 +184,25 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
         {item.disclaimer ? (
           <Text style={styles.disclaimerText}>{item.disclaimer}</Text>
         ) : null}
+
+        {/* Text-to-speech control */}
+        <View style={styles.speakerRow}>
+          <Pressable
+            onPress={handleSpeak}
+            style={[
+              styles.speakerButton,
+              isSpeaking && styles.speakerButtonActive,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={isSpeaking ? 'Stop reading' : 'Read aloud'}
+          >
+            <Volume2
+              size={16}
+              color={isSpeaking ? colors.primary : colors.textSecondary}
+              strokeWidth={2.2}
+            />
+          </Pressable>
+        </View>
       </View>
 
       {/* Follow-up Chips at bottom */}
@@ -305,5 +344,24 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 11,
       marginTop: 8,
       fontStyle: 'italic',
+    },
+    speakerRow: {
+      marginTop: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    speakerButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    speakerButtonActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
     },
   })

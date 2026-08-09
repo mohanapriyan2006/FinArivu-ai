@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
+  Alert,
   Keyboard,
   Platform,
   Pressable,
@@ -12,7 +14,12 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated'
-import { ArrowUp, Mic, Paperclip, Plus } from 'lucide-react-native'
+import { ArrowUp, Mic, Paperclip } from 'lucide-react-native'
+import * as DocumentPicker from 'expo-document-picker'
+import {
+  ExpoSpeechRecognitionModule,
+  useSpeechRecognitionEvent,
+} from 'expo-speech-recognition'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
@@ -21,6 +28,12 @@ interface CopilotInputProps {
   value: string
   onChangeText: (text: string) => void
   onSend: () => void
+  onFilePicked?: (file: {
+    uri: string
+    name: string
+    size: number
+    mimeType?: string
+  }) => void
   placeholder?: string
   disabled?: boolean
 }
@@ -29,12 +42,14 @@ export function CopilotInput({
   value,
   onChangeText,
   onSend,
+  onFilePicked,
   placeholder = 'Ask your Personal CFO anything...',
   disabled = false,
 }: CopilotInputProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
+  const [isListening, setIsListening] = useState(false)
   const sendScale = useSharedValue(value.trim() ? 1.0 : 0.85)
 
   useEffect(() => {
@@ -50,15 +65,104 @@ export function CopilotInput({
 
   const canSend = value.trim().length > 0 && !disabled
 
+  const appendTranscript = useCallback(
+    (transcript: string) => {
+      const base = value.trim()
+      onChangeText(base ? `${base} ${transcript}` : transcript)
+    },
+    [value, onChangeText]
+  )
+
+  useSpeechRecognitionEvent('result', (event) => {
+    const transcript = event.results?.[0]?.transcript
+    if (!transcript) return
+
+    if (event.isFinal) {
+      appendTranscript(transcript)
+      setIsListening(false)
+      ExpoSpeechRecognitionModule.stop()
+    }
+  })
+
+  useSpeechRecognitionEvent('error', () => {
+    setIsListening(false)
+  })
+
+  useSpeechRecognitionEvent('end', () => {
+    setIsListening(false)
+  })
+
+  const handleMicPress = useCallback(async () => {
+    if (isListening) {
+      setIsListening(false)
+      ExpoSpeechRecognitionModule.stop()
+      return
+    }
+
+    try {
+      const { granted } = await ExpoSpeechRecognitionModule.requestPermissionsAsync()
+      if (!granted) {
+        Alert.alert(
+          'Microphone access needed',
+          'Allow microphone and speech recognition to use voice input.'
+        )
+        return
+      }
+
+      setIsListening(true)
+      ExpoSpeechRecognitionModule.start({
+        lang: 'en-US',
+        interimResults: false,
+        maxAlternatives: 1,
+      })
+    } catch (err) {
+      console.warn('Speech recognition error:', err)
+      setIsListening(false)
+    }
+  }, [isListening])
+
+  const handleAttachmentPress = useCallback(async () => {
+    try {
+      const result = await DocumentPicker.getDocumentAsync({
+        type: [
+          'application/pdf',
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          'text/plain',
+        ],
+        copyToCacheDirectory: true,
+        multiple: false,
+      })
+
+      if (result.canceled || !result.assets?.length) return
+
+      const asset = result.assets[0]
+      if ((asset.size ?? 0) > 5 * 1024 * 1024) {
+        Alert.alert('File too large', 'Please select a document under 5 MB.')
+        return
+      }
+
+      onFilePicked?.({
+        uri: asset.uri,
+        name: asset.name,
+        size: asset.size ?? 0,
+        mimeType: asset.mimeType,
+      })
+    } catch (err) {
+      console.warn('Document picker error:', err)
+    }
+  }, [onFilePicked])
+
   return (
     <View style={styles.floatingContainer}>
-      {/* Plus / Attachment Action Button */}
+      {/* Attachment Action Button */}
       <Pressable
         style={styles.actionIconButton}
+        onPress={handleAttachmentPress}
+        disabled={disabled}
         accessibilityRole="button"
         accessibilityLabel="Add attachment"
       >
-        <Plus size={20} color={colors.textSecondary} strokeWidth={2.2} />
+        <Paperclip size={20} color={colors.textSecondary} strokeWidth={2.2} />
       </Pressable>
 
       {/* Main Input Field */}
@@ -76,15 +180,19 @@ export function CopilotInput({
       />
 
       {/* Voice Mic Button */}
-      {!value.trim() && (
-        <Pressable
-          style={styles.actionIconButton}
-          accessibilityRole="button"
-          accessibilityLabel="Voice input"
-        >
+      <Pressable
+        style={[styles.actionIconButton, isListening && styles.listeningButton]}
+        onPress={handleMicPress}
+        disabled={disabled}
+        accessibilityRole="button"
+        accessibilityLabel={isListening ? 'Stop listening' : 'Voice input'}
+      >
+        {isListening ? (
+          <ActivityIndicator size="small" color={colors.primary} />
+        ) : (
           <Mic size={18} color={colors.textSecondary} strokeWidth={2.2} />
-        </Pressable>
-      )}
+        )}
+      </Pressable>
 
       {/* Send Button */}
       <Animated.View style={sendAnimatedStyle}>
@@ -98,11 +206,7 @@ export function CopilotInput({
           accessibilityRole="button"
           accessibilityLabel="Send message"
         >
-          <ArrowUp
-            size={18}
-            color="#FFFFFF"
-            strokeWidth={2.5}
-          />
+          <ArrowUp size={18} color="#FFFFFF" strokeWidth={2.5} />
         </Pressable>
       </Animated.View>
     </View>
@@ -138,6 +242,9 @@ const makeStyles = (colors: any) =>
       alignItems: 'center',
       justifyContent: 'center',
       backgroundColor: colors.background,
+    },
+    listeningButton: {
+      backgroundColor: colors.primarySoft,
     },
     textInput: {
       flex: 1,

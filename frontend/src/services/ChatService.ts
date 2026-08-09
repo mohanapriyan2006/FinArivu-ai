@@ -240,3 +240,32 @@ export const renameCopilotSession = async (
 export const deleteCopilotSession = async (sessionId: string): Promise<void> => {
   await api.delete(`/v1/copilot/sessions/${sessionId}`)
 }
+
+export interface CopilotDocumentUpload {
+  uri: string
+  name: string
+  type: string
+}
+
+export interface CopilotDocumentUploadResponse {
+  text: string
+  filename: string
+}
+
+/**
+ * Upload a document and receive extracted text from the backend.
+ */
+export const uploadCopilotDocument = async (
+  file: CopilotDocumentUpload
+): Promise<CopilotDocumentUploadResponse> => {
+  const formData = new FormData()
+  formData.append('file', file as any)
+
+  const response = await api.post('/v1/chat/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
+  return response.data?.data as CopilotDocumentUploadResponse
+}

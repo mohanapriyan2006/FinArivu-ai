@@ -6,6 +6,7 @@ import {
   renameCopilotSession,
   sendCopilotMessage,
   streamCopilotMessage,
+  uploadCopilotDocument,
   type CopilotChatResponse,
   type CopilotHistoryMessage,
   type CopilotSession,
@@ -37,6 +38,7 @@ export interface UseCopilotReturn {
   clearMessages: () => void
   newChat: () => void
   sendMessage: (text: string, contextHints?: string[]) => Promise<void>
+  sendDocument: (file: { uri: string; name: string; type: string }) => Promise<void>
   sendStream: (text: string, contextHints?: string[]) => void
   retry: () => Promise<void>
   loadHistory: (skip?: number, limit?: number) => Promise<void>
@@ -146,6 +148,24 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       }
     },
     [appendMessage, buildAssistantMessage, isLoading, isStreaming, sessionId, loadSessions]
+  )
+
+  const sendDocument = useCallback(
+    async (file: { uri: string; name: string; type: string }) => {
+      try {
+        setError(null)
+        setIsLoading(true)
+        const { text, filename } = await uploadCopilotDocument(file)
+        const message = `[Attached file: ${filename}]\n\n${text}`
+        setIsLoading(false)
+        await sendMessage(message)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to upload document.'
+        setError(message)
+        setIsLoading(false)
+      }
+    },
+    [sendMessage]
   )
 
   const sendStream = useCallback(
@@ -305,6 +325,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     clearMessages,
     newChat,
     sendMessage,
+    sendDocument,
     sendStream,
     retry,
     loadHistory,

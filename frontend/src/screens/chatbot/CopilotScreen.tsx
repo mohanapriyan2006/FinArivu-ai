@@ -42,6 +42,7 @@ export default function CopilotScreen({ navigation }: any) {
     thinkingStep,
     isOnline,
     sendMessage,
+    sendDocument,
     loadHistory,
     clearMessages,
     newChat,
@@ -79,6 +80,18 @@ export default function CopilotScreen({ navigation }: any) {
       scrollToBottom()
     },
     [inputText, sendMessage, scrollToBottom]
+  )
+
+  const handleFilePicked = useCallback(
+    async (file: { uri: string; name: string; size: number; mimeType?: string }) => {
+      await sendDocument({
+        uri: file.uri,
+        name: file.name,
+        type: file.mimeType || 'application/octet-stream',
+      })
+      scrollToBottom()
+    },
+    [sendDocument, scrollToBottom]
   )
 
   useEffect(() => {
@@ -387,6 +400,7 @@ export default function CopilotScreen({ navigation }: any) {
               value={inputText}
               onChangeText={setInputText}
               onSend={() => handleSendMessage()}
+              onFilePicked={handleFilePicked}
               disabled={isLoading || isStreaming}
             />
           </View>
