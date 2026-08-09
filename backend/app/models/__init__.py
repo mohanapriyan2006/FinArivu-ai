@@ -14,6 +14,7 @@ from app.models.expense_estimates import MonthlyExpenseEstimate
 from app.models.tax_profiles import TaxProfile
 from app.models.insurance import Insurance
 from app.models.weekly_reports import WeeklyReport
+from app.models.ai_chat_sessions import AIChatSession
 from app.models.ai_conversations import AIConversation
 from app.models.ai_feedback import AIFeedback
 from app.models.ai_messages import AIMessage
@@ -38,6 +39,7 @@ __all__ = [
     "TaxProfile",
     "Insurance",
     "WeeklyReport",
+    "AIChatSession",
     "AIConversation",
     "AIFeedback",
     "AIMessage",

@@ -10,10 +10,11 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Clock, History, MoreVertical, Plus, Trash2, X } from 'lucide-react-native'
+import { Clock, History, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -48,12 +49,16 @@ export default function CopilotScreen({ navigation }: any) {
     sessions,
     loadSessions,
     loadSession,
+    renameSession,
+    deleteSession,
   } = useCopilot()
 
   const [inputText, setInputText] = useState('')
   const [refreshing, setRefreshing] = useState(false)
   const [menuVisible, setMenuVisible] = useState(false)
   const [historyVisible, setHistoryVisible] = useState(false)
+  const [renameSessionId, setRenameSessionId] = useState<string | null>(null)
+  const [renameTitle, setRenameTitle] = useState('')
 
   const flatListRef = useRef<FlatList>(null)
 
@@ -119,6 +124,45 @@ export default function CopilotScreen({ navigation }: any) {
     setMenuVisible(false)
     setHistoryVisible(true)
   }, [])
+
+  const handleDeleteSession = useCallback(
+    (targetSessionId: string) => {
+      Alert.alert(
+        'Delete chat',
+        'Are you sure you want to delete this chat?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Delete',
+            style: 'destructive',
+            onPress: async () => {
+              await deleteSession(targetSessionId)
+              await loadSessions()
+            },
+          },
+        ]
+      )
+    },
+    [deleteSession, loadSessions]
+  )
+
+  const handleStartRename = useCallback((targetSessionId: string, currentTitle: string) => {
+    setRenameSessionId(targetSessionId)
+    setRenameTitle(currentTitle)
+  }, [])
+
+  const handleCancelRename = useCallback(() => {
+    setRenameSessionId(null)
+    setRenameTitle('')
+  }, [])
+
+  const handleConfirmRename = useCallback(async () => {
+    if (!renameSessionId || !renameTitle.trim()) return
+    await renameSession(renameSessionId, renameTitle.trim())
+    setRenameSessionId(null)
+    setRenameTitle('')
+    await loadSessions()
+  }, [renameSession, renameSessionId, renameTitle, loadSessions])
 
   const handleOpenSession = useCallback(
     async (targetSessionId: string) => {
@@ -222,29 +266,87 @@ export default function CopilotScreen({ navigation }: any) {
                 keyExtractor={(item) => item.sessionId}
                 contentContainerStyle={styles.listContent}
                 renderItem={({ item }) => (
-                  <Pressable
-                    style={styles.previewItem}
-                    onPress={() => handleOpenSession(item.sessionId)}
-                    accessibilityRole="button"
-                    accessibilityLabel={`Open chat: ${item.title}`}
-                  >
-                    <View style={styles.previewIcon}>
-                      <History size={18} color={colors.primary} strokeWidth={2} />
-                    </View>
-                    <View style={styles.previewInfo}>
-                      <Text style={styles.previewTitle}>{item.title}</Text>
-                      <View style={styles.previewTimeRow}>
-                        <Clock size={12} color={colors.textSecondary} strokeWidth={2} />
-                        <Text style={styles.previewTime}>
-                          {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
-                        </Text>
+                  <View style={styles.previewItem}>
+                    <Pressable
+                      style={styles.previewMain}
+                      onPress={() => handleOpenSession(item.sessionId)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Open chat: ${item.title}`}
+                    >
+                      <View style={styles.previewIcon}>
+                        <History size={18} color={colors.primary} strokeWidth={2} />
                       </View>
-                    </View>
-                  </Pressable>
+                      <View style={styles.previewInfo}>
+                        <Text style={styles.previewTitle}>{item.title}</Text>
+                        <View style={styles.previewTimeRow}>
+                          <Clock size={12} color={colors.textSecondary} strokeWidth={2} />
+                          <Text style={styles.previewTime}>
+                            {item.updatedAt ? new Date(item.updatedAt).toLocaleString() : ''}
+                          </Text>
+                        </View>
+                      </View>
+                    </Pressable>
+                    <Pressable
+                      style={styles.previewAction}
+                      onPress={() => handleStartRename(item.sessionId, item.title)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Rename chat: ${item.title}`}
+                    >
+                      <Pencil size={18} color={colors.primary} strokeWidth={2} />
+                    </Pressable>
+                    <Pressable
+                      style={styles.previewAction}
+                      onPress={() => handleDeleteSession(item.sessionId)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Delete chat: ${item.title}`}
+                    >
+                      <Trash2 size={18} color={colors.danger} strokeWidth={2} />
+                    </Pressable>
+                  </View>
                 )}
               />
             )}
           </SafeAreaView>
+        </Modal>
+
+        <Modal
+          visible={renameSessionId !== null}
+          transparent
+          animationType="fade"
+          onRequestClose={handleCancelRename}
+        >
+          <Pressable style={styles.renameOverlay} onPress={handleCancelRename}>
+            <View style={styles.renameCard}>
+              <Text style={styles.renameTitle}>Rename chat</Text>
+              <TextInput
+                style={styles.renameInput}
+                value={renameTitle}
+                onChangeText={setRenameTitle}
+                placeholder="Chat title"
+                maxLength={255}
+                autoFocus
+                onSubmitEditing={handleConfirmRename}
+              />
+              <View style={styles.renameActions}>
+                <Pressable
+                  style={[styles.renameButton, { backgroundColor: colors.border }]}
+                  onPress={handleCancelRename}
+                >
+                  <Text style={[styles.renameButtonText, { color: colors.textPrimary }]}>
+                    Cancel
+                  </Text>
+                </Pressable>
+                <Pressable
+                  style={[styles.renameButton, { backgroundColor: colors.primary }]}
+                  onPress={handleConfirmRename}
+                >
+                  <Text style={[styles.renameButtonText, { color: colors.surface }]}>
+                    Save
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Pressable>
         </Modal>
 
         <KeyboardAvoidingView
@@ -386,11 +488,16 @@ const makeStyles = (colors: any) =>
     previewItem: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 20,
-      paddingVertical: 16,
-      gap: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 12,
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
+    },
+    previewMain: {
+      flex: 1,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     previewIcon: {
       width: 36,
@@ -418,5 +525,55 @@ const makeStyles = (colors: any) =>
       ...Typography.labelSmall,
       color: colors.textSecondary,
       fontSize: 11,
+    },
+    previewAction: {
+      padding: 8,
+      marginLeft: 4,
+    },
+    renameOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0,0,0,0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 24,
+    },
+    renameCard: {
+      backgroundColor: colors.surface,
+      borderRadius: 12,
+      padding: 20,
+      width: '100%',
+      maxWidth: 360,
+      gap: 12,
+    },
+    renameTitle: {
+      ...Typography.headlineMedium,
+      color: colors.textHero,
+      fontSize: 18,
+      fontWeight: '700',
+    },
+    renameInput: {
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 8,
+      paddingHorizontal: 12,
+      paddingVertical: 10,
+      color: colors.textPrimary,
+      backgroundColor: colors.background,
+      fontSize: 16,
+    },
+    renameActions: {
+      flexDirection: 'row',
+      justifyContent: 'flex-end',
+      gap: 12,
+      marginTop: 8,
+    },
+    renameButton: {
+      paddingHorizontal: 16,
+      paddingVertical: 10,
+      borderRadius: 8,
+    },
+    renameButtonText: {
+      ...Typography.bodySmall,
+      fontWeight: '600',
     },
   })

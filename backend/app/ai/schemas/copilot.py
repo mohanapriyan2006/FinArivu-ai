@@ -85,6 +85,12 @@ class CopilotFeedbackRequest(BaseSchema):
     comment: str = Field(default="", max_length=500)
 
 
+class CopilotSessionRenameRequest(BaseSchema):
+    """Request to rename a saved copilot chat session."""
+
+    title: str = Field(..., min_length=1, max_length=255)
+
+
 # ── Planner output (internal) ────────────────────────────────────────────
 
 class PlannerOutput(BaseSchema):

@@ -17,6 +17,7 @@ from sse_starlette.sse import EventSourceResponse
 from app.ai.schemas import (
     CopilotChatRequest,
     CopilotFeedbackRequest,
+    CopilotSessionRenameRequest,
 )
 from app.ai.controller import AIController, CopilotController
 from app.ai.memory.session_memory import SessionMemory
@@ -168,6 +169,47 @@ async def copilot_sessions(
     return success_response(
         data=sessions,
         message="Sessions retrieved",
+    )
+
+
+@router.put(
+    "/sessions/{session_id}",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Rename a saved copilot chat session",
+)
+async def copilot_rename_session(
+    session_id: str,
+    body: CopilotSessionRenameRequest,
+    controller: CopilotController = Depends(_get_copilot_controller),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Rename a saved chat session."""
+    await controller.rename_session(
+        uuid.UUID(user_id), session_id, body.title,
+    )
+    return success_response(
+        data={"session_id": session_id},
+        message="Session renamed",
+    )
+
+
+@router.delete(
+    "/sessions/{session_id}",
+    response_model=dict,
+    status_code=status.HTTP_200_OK,
+    summary="Delete a saved copilot chat session",
+)
+async def copilot_delete_session(
+    session_id: str,
+    controller: CopilotController = Depends(_get_copilot_controller),
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """Soft-delete a saved chat session."""
+    await controller.delete_session(uuid.UUID(user_id), session_id)
+    return success_response(
+        data={"session_id": session_id},
+        message="Session deleted",
     )
 
 

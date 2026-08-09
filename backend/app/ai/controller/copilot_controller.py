@@ -80,6 +80,23 @@ class CopilotController:
         """Return the user's saved chat sessions."""
         return await self._service.get_sessions(user_id, limit=limit)
 
+    async def rename_session(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        title: str,
+    ) -> None:
+        """Rename a saved chat session."""
+        await self._service.rename_session(user_id, session_id, title)
+
+    async def delete_session(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+    ) -> None:
+        """Delete a saved chat session."""
+        await self._service.delete_session(user_id, session_id)
+
     async def check_health(self) -> CopilotHealthResponse:
         """Check AI provider health."""
         return await self._service.check_health()

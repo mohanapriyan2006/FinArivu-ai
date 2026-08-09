@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  deleteCopilotSession,
   getCopilotHistory,
   getCopilotSessions,
+  renameCopilotSession,
   sendCopilotMessage,
   streamCopilotMessage,
   type CopilotChatResponse,
@@ -40,6 +42,8 @@ export interface UseCopilotReturn {
   loadHistory: (skip?: number, limit?: number) => Promise<void>
   loadSessions: () => Promise<void>
   loadSession: (sessionId: string) => Promise<void>
+  renameSession: (sessionId: string, title: string) => Promise<void>
+  deleteSession: (sessionId: string) => Promise<void>
   setOnline: (online: boolean) => void
 }
 
@@ -95,6 +99,15 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     createdAt: new Date().toISOString(),
   }), [])
 
+  const loadSessions = useCallback(async () => {
+    try {
+      const list = await getCopilotSessions()
+      setSessions(list)
+    } catch (err) {
+      console.warn('Failed to load copilot sessions:', err)
+    }
+  }, [])
+
   const sendMessage = useCallback(
     async (text: string, contextHints: string[] = []) => {
       const trimmed = text.trim()
@@ -115,6 +128,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       try {
         const response = await sendCopilotMessage(sessionId, trimmed, contextHints)
         appendMessage(buildAssistantMessage(response))
+        await loadSessions()
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unable to connect to the AI service.'
         setError(message)
@@ -131,7 +145,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         setIsLoading(false)
       }
     },
-    [appendMessage, buildAssistantMessage, isLoading, isStreaming, sessionId]
+    [appendMessage, buildAssistantMessage, isLoading, isStreaming, sessionId, loadSessions]
   )
 
   const sendStream = useCallback(
@@ -205,15 +219,6 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     [sessionId]
   )
 
-  const loadSessions = useCallback(async () => {
-    try {
-      const list = await getCopilotSessions()
-      setSessions(list)
-    } catch (err) {
-      console.warn('Failed to load copilot sessions:', err)
-    }
-  }, [])
-
   const loadSession = useCallback(
     async (targetSessionId: string) => {
       setError(null)
@@ -239,6 +244,36 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       }
     },
     []
+  )
+
+  const renameSession = useCallback(
+    async (targetSessionId: string, title: string) => {
+      try {
+        await renameCopilotSession(targetSessionId, title)
+        setSessions((prev) =>
+          prev.map((s) =>
+            s.sessionId === targetSessionId ? { ...s, title } : s
+          )
+        )
+        await loadSessions()
+      } catch (err) {
+        console.warn('Failed to rename copilot session:', err)
+      }
+    },
+    [loadSessions]
+  )
+
+  const deleteSession = useCallback(
+    async (targetSessionId: string) => {
+      try {
+        await deleteCopilotSession(targetSessionId)
+        setSessions((prev) => prev.filter((s) => s.sessionId !== targetSessionId))
+        await loadSessions()
+      } catch (err) {
+        console.warn('Failed to delete copilot session:', err)
+      }
+    },
+    [loadSessions]
   )
 
   const setOnline = useCallback((online: boolean) => {
@@ -275,6 +310,8 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     loadHistory,
     loadSessions,
     loadSession,
+    renameSession,
+    deleteSession,
     setOnline,
   }
 }

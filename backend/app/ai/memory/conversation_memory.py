@@ -1,18 +1,22 @@
 """Conversation memory backed by the ``ai_messages`` table.
 
 Loads recent history for LLM context injection and persists every
-user ↔ assistant exchange with full metadata.
+user ↔ assistant exchange with full metadata. Session metadata is
+kept in ``ai_chat_sessions`` so titles and delete state are first-class.
 """
 
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import and_, desc, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.ai_chat_sessions import AIChatSession
 from app.models.ai_messages import AIMessage
+from app.repositories.ai_chat_sessions import AIChatSessionRepository
 
 
 class ConversationMemory:
@@ -23,6 +27,7 @@ class ConversationMemory:
 
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
+        self._session_repo = AIChatSessionRepository(session)
 
     async def load_history(
         self,
@@ -54,6 +59,21 @@ class ConversationMemory:
             for row in rows
             if row.role in {"user", "assistant"}
         ]
+
+    async def _ensure_session(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        content: str,
+        role: str,
+    ) -> None:
+        """Ensure a session row exists and seed the title from the first user message."""
+        title: str | None = None
+        if role == "user":
+            title = content[:60] + ("..." if len(content) > 60 else "")
+        await self._session_repo.get_or_create_for_session(
+            user_id, session_id, title
+        )
 
     async def save_message(
         self,
@@ -91,6 +111,9 @@ class ConversationMemory:
         self._session.add(msg)
         await self._session.flush()
         await self._session.refresh(msg)
+
+        await self._ensure_session(user_id, session_id, msg.content, role)
+
         return msg
 
     async def get_session_messages(
@@ -121,49 +144,79 @@ class ConversationMemory:
         *,
         limit: int = 50,
     ) -> list[dict[str, Any]]:
-        """Return distinct sessions for the user with a preview title and time."""
-        query = (
-            select(AIMessage)
-            .where(
-                AIMessage.user_id == user_id,
-                AIMessage.role.in_(("user", "assistant")),
+        """Return active sessions for the user with aggregated message data."""
+        stmt = (
+            select(
+                AIChatSession.session_id,
+                AIChatSession.title,
+                AIChatSession.created_at,
+                AIChatSession.updated_at,
+                func.count(AIMessage.id).label("message_count"),
+                func.max(AIMessage.created_at).label("last_message_at"),
             )
-            .order_by(AIMessage.created_at.asc())
-            .limit(2000)
-        )
-        result = await self._session.execute(query)
-        rows = list(result.scalars().all())
-
-        sessions: dict[str, dict[str, Any]] = {}
-        for row in rows:
-            sid = row.session_id
-            if sid not in sessions:
-                sessions[sid] = {
-                    "session_id": sid,
-                    "title": None,
-                    "created_at": row.created_at,
-                    "updated_at": row.created_at,
-                    "message_count": 0,
-                }
-            if row.role == "user" and sessions[sid]["title"] is None:
-                sessions[sid]["title"] = (
-                    row.content[:60] + ("..." if len(row.content) > 60 else "")
+            .select_from(AIChatSession)
+            .outerjoin(
+                AIMessage,
+                and_(
+                    AIChatSession.user_id == AIMessage.user_id,
+                    AIChatSession.session_id == AIMessage.session_id,
+                ),
+            )
+            .where(
+                AIChatSession.user_id == user_id,
+                AIChatSession.is_deleted.is_(False),
+            )
+            .group_by(
+                AIChatSession.id,
+                AIChatSession.session_id,
+                AIChatSession.title,
+                AIChatSession.created_at,
+                AIChatSession.updated_at,
+            )
+            .order_by(
+                desc(
+                    func.coalesce(
+                        func.max(AIMessage.created_at),
+                        AIChatSession.updated_at,
+                    )
                 )
-            sessions[sid]["message_count"] += 1
-            if row.created_at and row.created_at > sessions[sid]["updated_at"]:
-                sessions[sid]["updated_at"] = row.created_at
+            )
+            .limit(limit)
+        )
+        result = await self._session.execute(stmt)
+        rows = result.all()
 
-        return sorted(
-            [
-                {
-                    "session_id": sid,
-                    "title": data["title"] or "New chat",
-                    "created_at": data["created_at"].isoformat() if data["created_at"] else None,
-                    "updated_at": data["updated_at"].isoformat() if data["updated_at"] else None,
-                    "message_count": data["message_count"],
-                }
-                for sid, data in sessions.items()
-            ],
-            key=lambda s: s["updated_at"] or "",
-            reverse=True,
-        )[:limit]
+        # Fallback to the first user message content for sessions with no title.
+        session_ids = [r.session_id for r in rows if r.title is None]
+        fallback_titles: dict[str, str] = {}
+        if session_ids:
+            first_msg_query = (
+                select(AIMessage.session_id, AIMessage.content, AIMessage.created_at)
+                .where(
+                    AIMessage.user_id == user_id,
+                    AIMessage.session_id.in_(session_ids),
+                    AIMessage.role == "user",
+                )
+                .order_by(AIMessage.created_at.asc())
+            )
+            msg_result = await self._session.execute(first_msg_query)
+            for sid, content, _ in msg_result.all():
+                if sid not in fallback_titles:
+                    fallback_titles[sid] = content[:60] + (
+                        "..." if len(content) > 60 else ""
+                    )
+
+        return [
+            {
+                "session_id": r.session_id,
+                "title": r.title or fallback_titles.get(r.session_id, "New chat"),
+                "created_at": r.created_at.isoformat() if r.created_at else None,
+                "updated_at": (
+                    (r.last_message_at or r.updated_at).isoformat()
+                    if (r.last_message_at or r.updated_at)
+                    else None
+                ),
+                "message_count": r.message_count,
+            }
+            for r in rows
+        ]

@@ -223,3 +223,20 @@ export const checkCopilotHealth = async (): Promise<CopilotHealthResponse> => {
   const response = await api.get('/v1/copilot/health')
   return response.data?.data as CopilotHealthResponse
 }
+
+/**
+ * Rename a saved copilot chat session.
+ */
+export const renameCopilotSession = async (
+  sessionId: string,
+  title: string
+): Promise<void> => {
+  await api.put(`/v1/copilot/sessions/${sessionId}`, { title })
+}
+
+/**
+ * Delete a saved copilot chat session.
+ */
+export const deleteCopilotSession = async (sessionId: string): Promise<void> => {
+  await api.delete(`/v1/copilot/sessions/${sessionId}`)
+}

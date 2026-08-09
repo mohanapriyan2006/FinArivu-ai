@@ -29,6 +29,7 @@ from app.ai.schemas import (
 )
 from app.ai.tools.user_context import UserContextLoader
 from app.core.logger import logger
+from app.services.ai_chat_sessions import AIChatSessionService
 
 
 class CopilotService:
@@ -41,6 +42,7 @@ class CopilotService:
     def __init__(self, session: AsyncSession) -> None:
         self._session = session
         self._memory = ConversationMemory(session)
+        self._session_service = AIChatSessionService(session)
         self._context_loader = UserContextLoader(session)
         self._guardrails = GuardrailEngine()
 
@@ -270,6 +272,23 @@ class CopilotService:
     ) -> list[dict[str, Any]]:
         """Return the user's saved chat sessions."""
         return await self._memory.get_sessions(user_id, limit=limit)
+
+    async def rename_session(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        title: str,
+    ) -> None:
+        """Rename a saved chat session."""
+        await self._session_service.rename_session(user_id, session_id, title)
+
+    async def delete_session(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+    ) -> None:
+        """Soft-delete a saved chat session."""
+        await self._session_service.delete_session(user_id, session_id)
 
     async def check_health(self) -> CopilotHealthResponse:
         """Check AI provider health."""
