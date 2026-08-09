@@ -110,6 +110,7 @@ class AIController:
             planner_output,
             agent_results,
             start,
+            financial_context,
         )
 
         # Mask any PII that might have been echoed before persistence or response.
@@ -247,7 +248,7 @@ class AIController:
         planner_output = self._to_planner_output(execution_plan)
 
         async for event in self._response_builder.build_stream(
-            sanitised_message, planner_output, agent_results,
+            sanitised_message, planner_output, agent_results, financial_context,
         ):
             yield event
 

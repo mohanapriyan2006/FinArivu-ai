@@ -29,18 +29,27 @@ class ContextBuilder:
         session_id: str,
         required_domains: list[FinancialDomain] | None = None,
     ) -> FinancialContext:
-        """Load the financial context for a user, filtered by required domains."""
+        """Load the financial context for a user, filtered by required domains.
+
+        A compact ``user_snapshot`` is always loaded (regardless of
+        ``required_domains``) so the ResponseBuilder can include the user's
+        financial details in every LLM prompt for personalisation.
+        """
         if required_domains is None:
             required: set[FinancialDomain] = set(FinancialDomain)
         else:
             required = set(required_domains)
 
-        if not required:
-            summary = await self._build_conversation_summary(user_id, session_id)
-            return FinancialContext(conversation_summary=summary)
-
+        # Always load the full profile + summary for the user snapshot.
         financial_profile = await self._service.get_full_profile(user_id)
         summary = await self._build_conversation_summary(user_id, session_id)
+        user_snapshot = self._build_user_snapshot(financial_profile, user_id)
+
+        if not required:
+            return FinancialContext(
+                conversation_summary=summary,
+                user_snapshot=user_snapshot,
+            )
 
         available: list[str] = []
         missing: list[str] = []
@@ -187,6 +196,7 @@ class ContextBuilder:
             preferences=profile.get("preferences", {}) if profile else {},
             data_available=available,
             data_missing=missing,
+            user_snapshot=user_snapshot,
         )
 
     async def _health_score(self, user_id: uuid.UUID) -> dict[str, Any]:
@@ -204,3 +214,111 @@ class ContextBuilder:
 
         lines = [f"{m.role}: {m.content[:120]}" for m in messages]
         return "\n".join(lines)
+
+    @staticmethod
+    def _build_user_snapshot(
+        financial_profile: dict[str, Any],
+        user_id: uuid.UUID,
+    ) -> dict[str, Any]:
+        """Build a compact, LLM-friendly snapshot of the user's finances.
+
+        This is always loaded regardless of which agents are planned, so the
+        ResponseBuilder can include it in every LLM prompt for personalisation.
+        """
+        profile = financial_profile.get("profile") or {}
+        income = financial_profile.get("income") or {}
+        expenses = financial_profile.get("expenses") or {}
+        savings = financial_profile.get("savings") or {}
+        investments = financial_profile.get("investments") or []
+        fixed_deposits = financial_profile.get("fixed_deposits") or []
+        loans = financial_profile.get("loans") or []
+        credit_cards = financial_profile.get("credit_cards") or []
+        goals = financial_profile.get("goals") or []
+        insurance = financial_profile.get("insurance") or []
+        tax_profile = financial_profile.get("tax_profile") or {}
+
+        total_investments = sum(
+            float(item.get("value", 0)) for item in investments
+        )
+        total_fd = sum(float(item.get("value", 0)) for item in fixed_deposits)
+        total_loans = sum(float(item.get("amount", 0)) for item in loans)
+        total_card_outstanding = sum(
+            float(item.get("amount", 0)) for item in credit_cards
+        )
+        total_assets = (
+            float(savings.get("total", 0))
+            + total_investments
+            + total_fd
+        )
+        total_liabilities = total_loans + total_card_outstanding
+        net_worth = total_assets - total_liabilities
+
+        return {
+            "profile": {
+                "age": profile.get("age"),
+                "employment_type": profile.get("employment_type"),
+                "city": profile.get("city"),
+                "dependents": profile.get("dependents"),
+                "children": profile.get("children_count"),
+                "retirement_age": profile.get("retirement_age"),
+            },
+            "monthly_income": income.get("monthly_take_home"),
+            "monthly_expenses": expenses.get("monthly_estimate"),
+            "savings": {
+                "total": float(savings.get("total", 0)),
+                "emergency_fund": float(savings.get("emergency_fund", 0)),
+                "general_savings": float(savings.get("general_savings", 0)),
+                "goal_savings": float(savings.get("goal_savings", 0)),
+            },
+            "investments": {
+                "total": total_investments,
+                "count": len(investments),
+                "types": list(
+                    {item.get("asset_type", "Unknown") for item in investments}
+                ),
+            },
+            "fixed_deposits": {
+                "total": total_fd,
+                "count": len(fixed_deposits),
+            },
+            "loans": {
+                "total_outstanding": total_loans,
+                "count": len(loans),
+                "total_emi": sum(
+                    float(item.get("emi", 0) or 0) for item in loans
+                ),
+            },
+            "credit_cards": {
+                "total_outstanding": total_card_outstanding,
+                "count": len(credit_cards),
+            },
+            "goals": {
+                "count": len(goals),
+                "items": [
+                    {
+                        "name": g.get("goal_name", "Unnamed"),
+                        "target": float(g.get("target_amount", 0)),
+                        "current": float(g.get("current_amount", 0)),
+                        "target_date": str(g.get("target_date", "")),
+                    }
+                    for g in goals
+                ],
+            },
+            "insurance": {
+                "count": len(insurance),
+                "policies": [
+                    {
+                        "type": p.get("insurance_type", "Unknown"),
+                        "coverage": float(p.get("coverage_amount", 0) or 0),
+                        "annual_premium": float(p.get("annual_premium", 0) or 0),
+                    }
+                    for p in insurance
+                ],
+            },
+            "tax_regime": tax_profile.get("tax_regime") if tax_profile else None,
+            "totals": {
+                "total_assets": total_assets,
+                "total_liabilities": total_liabilities,
+                "net_worth": net_worth,
+            },
+        }

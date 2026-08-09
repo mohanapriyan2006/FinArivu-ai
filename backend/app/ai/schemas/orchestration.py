@@ -53,6 +53,10 @@ class FinancialContext(BaseModel):
     preferences: dict[str, Any] = Field(default_factory=dict)
     data_available: list[str] = Field(default_factory=list)
     data_missing: list[str] = Field(default_factory=list)
+    # Compact, always-loaded snapshot of the user's financial profile.
+    # Populated by ContextBuilder regardless of required_domains so the
+    # ResponseBuilder can include it in every LLM prompt for personalisation.
+    user_snapshot: dict[str, Any] = Field(default_factory=dict)
 
 
 class IntentResult(BaseModel):

@@ -29,6 +29,7 @@ from app.ai.schemas import (
     StreamEventType,
     SuggestedAction,
 )
+from app.ai.schemas.orchestration import FinancialContext
 from app.core.logger import logger
 from app.financial.artifacts.artifact_builder import ArtifactBuilder
 
@@ -39,6 +40,8 @@ _EXPLANATION_TEMPLATE: str = """\
 The user asked: "{user_message}"
 
 {contextual_note}
+
+{user_snapshot_section}
 
 The following data was computed by FinArivu's financial engines:
 
@@ -83,6 +86,7 @@ class ResponseBuilder:
         plan: PlannerOutput,
         results: list[AgentResult],
         decision: ResponseDecision | None = None,
+        financial_context: FinancialContext | None = None,
     ) -> tuple[str, dict[str, Any], AIProviderResponse | None]:
         """Build the final response text and merged data dict.
 
@@ -96,10 +100,12 @@ class ResponseBuilder:
 
         style = plan.response_style.value if hasattr(plan.response_style, "value") else str(plan.response_style)
         contextual_note = self._contextual_note(decision)
+        user_snapshot_section = self._format_user_snapshot(financial_context)
 
         prompt = _EXPLANATION_TEMPLATE.format(
             user_message=user_message,
             contextual_note=contextual_note,
+            user_snapshot_section=user_snapshot_section,
             agent_data=agent_summaries,
             style=style,
         )
@@ -134,6 +140,7 @@ class ResponseBuilder:
         user_message: str,
         plan: PlannerOutput,
         results: list[AgentResult],
+        financial_context: FinancialContext | None = None,
     ) -> AsyncIterator[StreamEvent]:
         """Stream the explanation token-by-token as SSE events."""
         merged_data = self._merge_data(results)
@@ -142,6 +149,7 @@ class ResponseBuilder:
         decision = self._decision_engine.decide(plan.intent.value, results, user_message)
         style = plan.response_style.value if hasattr(plan.response_style, "value") else str(plan.response_style)
         contextual_note = self._contextual_note(decision)
+        user_snapshot_section = self._format_user_snapshot(financial_context)
 
         # Emit agent completion events.
         for r in results:
@@ -161,6 +169,7 @@ class ResponseBuilder:
         prompt = _EXPLANATION_TEMPLATE.format(
             user_message=user_message,
             contextual_note=contextual_note,
+            user_snapshot_section=user_snapshot_section,
             agent_data=agent_summaries,
             style=style,
         )
@@ -194,13 +203,14 @@ class ResponseBuilder:
         plan: PlannerOutput,
         results: list[AgentResult],
         start_time: float,
+        financial_context: FinancialContext | None = None,
     ) -> BuildResult:
         """Build the full enriched response with artifacts and metadata."""
         decision = self._decision_engine.decide(plan.intent.value, results, user_message)
         actions, follow_ups = self._action_engine.build(plan.intent.value, results)
 
         message, merged_data, ai_response = await self.build(
-            user_message, plan, results, decision,
+            user_message, plan, results, decision, financial_context,
         )
 
         summary = self._build_summary(message)
@@ -227,6 +237,131 @@ class ResponseBuilder:
             metadata=metadata,
             response_type=decision.response_type,
         )
+
+    @staticmethod
+    def _format_user_snapshot(
+        financial_context: FinancialContext | None,
+    ) -> str:
+        """Format the user's financial snapshot for inclusion in the LLM prompt.
+
+        This is always included (when available) so the AI can personalise
+        responses even for general/educational questions where no agent
+        computed structured data.
+        """
+        if financial_context is None:
+            return ""
+
+        snapshot = financial_context.user_snapshot
+        if not snapshot:
+            return ""
+
+        profile = snapshot.get("profile") or {}
+        lines: list[str] = ["USER FINANCIAL SNAPSHOT (use this to personalise the response):"]
+
+        # Profile
+        profile_parts: list[str] = []
+        if profile.get("age") is not None:
+            profile_parts.append(f"age {profile['age']}")
+        if profile.get("employment_type"):
+            profile_parts.append(f"{profile['employment_type']} employee")
+        if profile.get("city"):
+            profile_parts.append(f"based in {profile['city']}")
+        if profile.get("dependents") is not None:
+            profile_parts.append(f"{profile['dependents']} dependents")
+        if profile.get("retirement_age") is not None:
+            profile_parts.append(f"plans to retire at {profile['retirement_age']}")
+        if profile_parts:
+            lines.append(f"  Profile: {', '.join(profile_parts)}")
+
+        # Income & expenses
+        monthly_income = snapshot.get("monthly_income")
+        if monthly_income is not None:
+            lines.append(f"  Monthly take-home income: ₹{monthly_income:,.0f}")
+        monthly_expenses = snapshot.get("monthly_expenses")
+        if monthly_expenses is not None:
+            lines.append(f"  Monthly expenses: ₹{monthly_expenses:,.0f}")
+
+        # Savings
+        savings = snapshot.get("savings") or {}
+        if savings.get("total", 0) > 0:
+            lines.append(
+                f"  Total savings: ₹{savings['total']:,.0f} "
+                f"(emergency fund ₹{savings.get('emergency_fund', 0):,.0f}, "
+                f"general ₹{savings.get('general_savings', 0):,.0f}, "
+                f"goal-linked ₹{savings.get('goal_savings', 0):,.0f})"
+            )
+
+        # Investments
+        investments = snapshot.get("investments") or {}
+        if investments.get("total", 0) > 0:
+            types_str = ", ".join(investments.get("types", [])) or "various"
+            lines.append(
+                f"  Investments: ₹{investments['total']:,.0f} "
+                f"across {investments.get('count', 0)} holding(s) ({types_str})"
+            )
+
+        # Fixed deposits
+        fds = snapshot.get("fixed_deposits") or {}
+        if fds.get("total", 0) > 0:
+            lines.append(f"  Fixed deposits: ₹{fds['total']:,.0f} ({fds.get('count', 0)} FD(s))")
+
+        # Loans
+        loans = snapshot.get("loans") or {}
+        if loans.get("total_outstanding", 0) > 0:
+            lines.append(
+                f"  Loans outstanding: ₹{loans['total_outstanding']:,.0f} "
+                f"({loans.get('count', 0)} loan(s), total EMI ₹{loans.get('total_emi', 0):,.0f}/month)"
+            )
+
+        # Credit cards
+        cards = snapshot.get("credit_cards") or {}
+        if cards.get("total_outstanding", 0) > 0:
+            lines.append(
+                f"  Credit card outstanding: ₹{cards['total_outstanding']:,.0f} "
+                f"({cards.get('count', 0)} card(s))"
+            )
+
+        # Goals
+        goals = snapshot.get("goals") or {}
+        if goals.get("count", 0) > 0:
+            goal_lines = [f"  Goals ({goals['count']}):"]
+            for g in goals.get("items", []):
+                goal_lines.append(
+                    f"    - {g.get('name', 'Unnamed')}: target ₹{g.get('target', 0):,.0f}, "
+                    f"saved ₹{g.get('current', 0):,.0f}, by {g.get('target_date', 'N/A')}"
+                )
+            lines.extend(goal_lines)
+
+        # Insurance
+        insurance = snapshot.get("insurance") or {}
+        if insurance.get("count", 0) > 0:
+            ins_lines = [f"  Insurance ({insurance['count']} policy/policies):"]
+            for p in insurance.get("policies", []):
+                ins_lines.append(
+                    f"    - {p.get('type', 'Unknown')}: coverage ₹{p.get('coverage', 0):,.0f}, "
+                    f"premium ₹{p.get('annual_premium', 0):,.0f}/year"
+                )
+            lines.extend(ins_lines)
+
+        # Tax
+        tax_regime = snapshot.get("tax_regime")
+        if tax_regime:
+            lines.append(f"  Tax regime: {tax_regime}")
+
+        # Net worth summary
+        totals = snapshot.get("totals") or {}
+        if totals:
+            lines.append(
+                f"  Net worth: ₹{totals.get('net_worth', 0):,.0f} "
+                f"(assets ₹{totals.get('total_assets', 0):,.0f}, "
+                f"liabilities ₹{totals.get('total_liabilities', 0):,.0f})"
+            )
+
+        if len(lines) == 1:
+            # Only the header — no data available.
+            return ""
+
+        return "\n".join(lines)
 
     @staticmethod
     def _contextual_note(decision: ResponseDecision) -> str:
