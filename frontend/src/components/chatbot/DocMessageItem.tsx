@@ -130,10 +130,6 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
       <View style={styles.docBody}>
         <Text style={styles.explanationText}>{item.content}</Text>
 
-        {item.summary ? (
-          <Text style={styles.summaryText}>{item.summary}</Text>
-        ) : null}
-
         {/* Render artifacts from backend only */}
         {item.artifacts && item.artifacts.length > 0 && (
           <View style={styles.artifactsList}>{item.artifacts.map(renderArtifact)}</View>
@@ -256,14 +252,6 @@ const makeStyles = (colors: any) =>
       fontSize: 14,
       lineHeight: 22,
       marginBottom: 4,
-    },
-    summaryText: {
-      ...Typography.bodySmall,
-      color: colors.textTertiary,
-      fontSize: 12,
-      lineHeight: 18,
-      marginBottom: 8,
-      fontStyle: 'italic',
     },
     actionsContainer: {
       marginTop: 8,

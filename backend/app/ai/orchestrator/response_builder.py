@@ -49,7 +49,9 @@ The following data was computed by FinArivu's financial engines:
 
 Using ONLY the data above, write a clear, {style} response for the user.
 Do NOT invent numbers. Do NOT add a disclaimer — the system handles that.
-Keep the response under 300 words.
+Write a complete, full answer. Do not stop mid-sentence or leave bullet \
+points unfinished. If the user's question needs several points or a longer \
+explanation, cover it completely before ending.
 """
 
 
@@ -119,7 +121,7 @@ class ResponseBuilder:
             ai_response = await self._provider.chat(
                 messages,
                 temperature=0.4,
-                max_tokens=1024,
+                max_tokens=4096,
             )
             return ai_response.content, merged_data, ai_response
         except Exception as exc:
@@ -182,7 +184,7 @@ class ResponseBuilder:
             async for token in self._provider.stream(
                 messages,
                 temperature=0.4,
-                max_tokens=1024,
+                max_tokens=4096,
             ):
                 yield StreamEvent(
                     event_type=StreamEventType.TOKEN,
