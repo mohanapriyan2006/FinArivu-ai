@@ -112,6 +112,10 @@ export function CopilotInput({
 const makeStyles = (colors: any) =>
   StyleSheet.create({
     floatingContainer: {
+      position: 'absolute',
+      bottom: 80,
+      right: 10,
+      left: 10,
       flexDirection: 'row',
       alignItems: 'center',
       backgroundColor: colors.surface,

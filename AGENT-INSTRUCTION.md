@@ -50,6 +50,7 @@ DO NOT BUILD:
 - Intraday Trading Signals
 - Portfolio Management
 - Auto Investing
+- Do not push code to git yourself
 
 These violate FinArivu's legal positioning.
 

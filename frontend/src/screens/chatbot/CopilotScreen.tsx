@@ -310,7 +310,7 @@ const makeStyles = (colors: any) =>
     listContent: {
       paddingVertical: 16,
       paddingHorizontal: 16,
-      paddingBottom: 24,
+      paddingBottom: 150,
     },
     inputContainer: {
       paddingHorizontal: 16,
