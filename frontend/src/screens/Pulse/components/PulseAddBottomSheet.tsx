@@ -63,7 +63,7 @@ export function PulseAddBottomSheet({
                           { backgroundColor: colors.primaryBackground },
                         ]}
                       >
-                        <Icon size={22} color={colors.primary} strokeWidth={2} />
+                        <Icon size={26} color={colors.primary} strokeWidth={2} />
                       </View>
                       <Text style={styles.itemLabel} numberOfLines={2} ellipsizeMode="tail">
                         {action.label}
@@ -134,28 +134,29 @@ const makeStyles = (colors: ThemeColors) =>
     },
     item: {
       width: '48%',
-      flexDirection: 'row',
+      flexDirection: 'column',
       alignItems: 'center',
-      padding: 14,
+      justifyContent: 'center',
+      padding: 16,
       borderRadius: 16,
       backgroundColor: colors.background,
       marginBottom: 12,
-      minHeight: 64,
+      minHeight: 96,
     },
     iconBox: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 48,
+      height: 48,
+      borderRadius: 14,
       alignItems: 'center',
       justifyContent: 'center',
-      marginRight: 12,
+      marginBottom: 10,
     },
     itemLabel: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.sm,
       fontWeight: Typography.fontWeights.semibold,
       color: colors.textPrimary,
-      flex: 1,
+      textAlign: 'center',
     },
     cancel: {
       height: 52,
