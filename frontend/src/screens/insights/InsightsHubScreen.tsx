@@ -70,6 +70,155 @@ export default function InsightsHubScreen() {
     navigation.navigate('Notifications')
   }
 
+  const content = () => {
+    if (isLoading) {
+      return (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          testID="insights-skeleton-scroll"
+        >
+          <InsightsSkeleton />
+        </ScrollView>
+      )
+    }
+
+    if (error && state.isNewUser) {
+      return (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          testID="insights-error-scroll"
+        >
+          <InsightsErrorState
+            message={error}
+            onRetry={refetch}
+            testID="insights-error"
+          />
+        </ScrollView>
+      )
+    }
+
+    if (state.isNewUser) {
+      return (
+        <ScrollView
+          contentContainerStyle={[
+            styles.scrollContent,
+            { paddingBottom: insets.bottom + 100 },
+          ]}
+          showsVerticalScrollIndicator={false}
+          testID="insights-empty-scroll"
+        >
+          <InsightsEmptyState
+            onCompleteProfile={handleCompleteProfile}
+            onAddExpense={handleAddExpense}
+            testID="insights-empty"
+          />
+        </ScrollView>
+      )
+    }
+
+    return (
+      <ScrollView
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingBottom: insets.bottom + 100 },
+        ]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
+          />
+        }
+        testID="insights-screen"
+      >
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Your financial picture at a glance
+        </Text>
+
+        {error ? (
+          <View
+            style={[
+              styles.errorBanner,
+              {
+                backgroundColor: colors.dangerBackground,
+                borderColor: colors.danger,
+              },
+            ]}
+            testID="insights-error-banner"
+          >
+            <Text style={[styles.errorText, { color: colors.danger }]}>
+              {error}
+            </Text>
+            <Pressable
+              onPress={refetch}
+              accessibilityRole="button"
+              accessibilityLabel="Retry loading insights"
+            >
+              <Text style={[styles.retryText, { color: colors.danger }]}>
+                Retry
+              </Text>
+            </Pressable>
+          </View>
+        ) : null}
+
+        <FinancialHealthHero
+          score={state.healthScore}
+          status={state.healthStatus}
+          factors={state.healthFactors}
+          explanation={state.healthExplanation}
+          onPress={handleHealthPress}
+        />
+
+        {state.topInsight ? (
+          <TopInsightCard
+            insight={state.topInsight}
+            onPress={() => handleTopInsightPress(state.topInsight!)}
+            testID="insights-top-insight"
+          />
+        ) : null}
+
+        {state.weeklySummary ? (
+          <WeeklySummary
+            metrics={state.weeklySummary}
+            testID="insights-weekly-summary"
+          />
+        ) : null}
+
+        {state.trends.length > 0 ? (
+          <TrendSection
+            trends={state.trends}
+            testID="insights-trends"
+          />
+        ) : null}
+
+        {state.attentionItems.length > 0 ? (
+          <AttentionSection
+            items={state.attentionItems}
+            onPress={handleAttentionPress}
+            testID="insights-attention"
+          />
+        ) : null}
+
+        {state.positiveItems.length > 0 ? (
+          <PositiveInsights
+            items={state.positiveItems}
+            testID="insights-positive"
+          />
+        ) : null}
+      </ScrollView>
+    )
+  }
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
       <StatusBar style={isDark ? 'light' : 'dark'} translucent />
@@ -86,114 +235,7 @@ export default function InsightsHubScreen() {
         </Pressable>
       </View>
 
-      {isLoading && !error ? (
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          testID="insights-skeleton-scroll"
-        >
-          <InsightsSkeleton />
-        </ScrollView>
-      ) : error ? (
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          testID="insights-error-scroll"
-        >
-          <InsightsErrorState
-            message={error}
-            onRetry={refetch}
-            testID="insights-error"
-          />
-        </ScrollView>
-      ) : state.isNewUser ? (
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          testID="insights-empty-scroll"
-        >
-          <InsightsEmptyState
-            onCompleteProfile={handleCompleteProfile}
-            onAddExpense={handleAddExpense}
-            testID="insights-empty"
-          />
-        </ScrollView>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[
-            styles.scrollContent,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={refetch}
-              tintColor={colors.primary}
-              colors={[colors.primary]}
-            />
-          }
-          testID="insights-screen"
-        >
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Your financial picture at a glance
-          </Text>
-
-          <FinancialHealthHero
-            score={state.healthScore}
-            status={state.healthStatus}
-            factors={state.healthFactors}
-            explanation={state.healthExplanation}
-            onPress={handleHealthPress}
-          />
-
-          {state.topInsight ? (
-            <TopInsightCard
-              insight={state.topInsight}
-              onPress={() => handleTopInsightPress(state.topInsight!)}
-              testID="insights-top-insight"
-            />
-          ) : null}
-
-          {state.weeklySummary ? (
-            <WeeklySummary
-              metrics={state.weeklySummary}
-              testID="insights-weekly-summary"
-            />
-          ) : null}
-
-          {state.trends.length > 0 ? (
-            <TrendSection
-              trends={state.trends}
-              testID="insights-trends"
-            />
-          ) : null}
-
-          {state.attentionItems.length > 0 ? (
-            <AttentionSection
-              items={state.attentionItems}
-              onPress={handleAttentionPress}
-              testID="insights-attention"
-            />
-          ) : null}
-
-          {state.positiveItems.length > 0 ? (
-            <PositiveInsights
-              items={state.positiveItems}
-              testID="insights-positive"
-            />
-          ) : null}
-        </ScrollView>
-      )}
+      {content()}
     </SafeAreaView>
   )
 }
@@ -230,5 +272,27 @@ const makeStyles = (colors: ThemeColors) =>
       fontWeight: Typography.fontWeights.medium,
       textAlign: 'center',
       marginBottom: 4,
+    },
+    errorBanner: {
+      marginHorizontal: 24,
+      marginBottom: 16,
+      borderRadius: 16,
+      borderWidth: 1,
+      padding: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    errorText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.body,
+      fontWeight: Typography.fontWeights.medium,
+      flex: 1,
+      marginRight: 12,
+    },
+    retryText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.body,
+      fontWeight: Typography.fontWeights.semibold,
     },
   })

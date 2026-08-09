@@ -28,18 +28,55 @@ export function useInsights(): UseInsightsResult {
     setError(null)
     try {
       const token = await getToken()
-      const [dash, budgetAnalysis, goalList, expenseList, incomeList] = await Promise.all([
-        DashboardService.getSummary(token),
-        BudgetService.getAnalysis(token),
-        GoalService.list(token),
-        ExpenseService.list(token),
-        IncomeService.list(token),
-      ])
-      setDashboard(dash)
-      setBudget(budgetAnalysis)
-      setGoals(Array.isArray(goalList) ? goalList : [])
-      setExpenses(Array.isArray(expenseList) ? expenseList : [])
-      setIncome(Array.isArray(incomeList) ? incomeList : [])
+      const [dashResult, budgetResult, goalResult, expenseResult, incomeResult] =
+        await Promise.allSettled([
+          DashboardService.getSummary(token),
+          BudgetService.getAnalysis(token),
+          GoalService.list(token),
+          ExpenseService.list(token),
+          IncomeService.list(token),
+        ])
+
+      let hasError = false
+
+      if (dashResult.status === 'fulfilled') {
+        setDashboard(dashResult.value)
+      } else {
+        hasError = true
+        console.warn('[useInsights] dashboard failed:', dashResult.reason)
+      }
+
+      if (budgetResult.status === 'fulfilled') {
+        setBudget(budgetResult.value)
+      } else {
+        hasError = true
+        console.warn('[useInsights] budget analysis failed:', budgetResult.reason)
+      }
+
+      if (goalResult.status === 'fulfilled') {
+        setGoals(Array.isArray(goalResult.value) ? goalResult.value : [])
+      } else {
+        hasError = true
+        console.warn('[useInsights] goals failed:', goalResult.reason)
+      }
+
+      if (expenseResult.status === 'fulfilled') {
+        setExpenses(Array.isArray(expenseResult.value) ? expenseResult.value : [])
+      } else {
+        hasError = true
+        console.warn('[useInsights] expenses failed:', expenseResult.reason)
+      }
+
+      if (incomeResult.status === 'fulfilled') {
+        setIncome(Array.isArray(incomeResult.value) ? incomeResult.value : [])
+      } else {
+        hasError = true
+        console.warn('[useInsights] income failed:', incomeResult.reason)
+      }
+
+      if (hasError) {
+        setError('Some financial data could not be loaded.')
+      }
     } catch (err) {
       setError(
         err instanceof Error ? err.message : 'Could not load your latest insights.'
