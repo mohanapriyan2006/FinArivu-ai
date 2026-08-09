@@ -22,6 +22,7 @@ import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import EditProfileScreen from '@/screens/profile/EditProfileScreen'
 import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 import FinancialProfileSetupScreen from '@/screens/financialProfile/FinancialProfileSetupScreen'
+import FinancialHealthPlaceholderScreen from '@/screens/insights/FinancialHealthPlaceholderScreen'
 
 export type RootStackParamList = {
   Splash: undefined
@@ -43,6 +44,7 @@ export type RootStackParamList = {
   CreditCardTracker: undefined
   InsuranceTracker: undefined
   AddInvestment: undefined
+  FinancialHealth: undefined
 }
 
 const Stack = createStackNavigator<RootStackParamList>()
@@ -98,6 +100,7 @@ export default function AppNavigator() {
             options={{ presentation: 'modal' }}
           />
           <Stack.Screen name="WeeklyReport" component={WeeklyReportStoryScreen} />
+          <Stack.Screen name="FinancialHealth" component={FinancialHealthPlaceholderScreen} />
         </Stack.Group>
       )}
     </Stack.Navigator>
