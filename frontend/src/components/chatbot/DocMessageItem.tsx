@@ -4,7 +4,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated'
 import { Bot, Sparkles } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Typography } from '@/theme'
+import { ThemeColors, Typography } from '@/theme'
 import {
   BudgetArtifactCard,
   GoalArtifactCard,
@@ -13,6 +13,7 @@ import {
   TaxArtifactCard,
 } from './ArtifactCards'
 import { FollowUpChips } from './FollowUpChips'
+import { MarkdownMessage } from './MarkdownMessage'
 
 export interface ChatArtifact {
   type: string
@@ -128,7 +129,7 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
 
       {/* Main Explanation Block */}
       <View style={styles.docBody}>
-        <Text style={styles.explanationText}>{item.content}</Text>
+        <MarkdownMessage content={item.content} />
 
         {/* Render artifacts from backend only */}
         {item.artifacts && item.artifacts.length > 0 && (
@@ -171,7 +172,7 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
   )
 }
 
-const makeStyles = (colors: any) =>
+const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     userWrapper: {
       alignSelf: 'flex-end',
@@ -245,13 +246,6 @@ const makeStyles = (colors: any) =>
     docBody: {
       backgroundColor: 'transparent',
       paddingLeft: 36, // indent under avatar for clean doc look
-    },
-    explanationText: {
-      ...Typography.bodyMedium,
-      color: colors.textPrimary,
-      fontSize: 14,
-      lineHeight: 22,
-      marginBottom: 4,
     },
     actionsContainer: {
       marginTop: 8,
