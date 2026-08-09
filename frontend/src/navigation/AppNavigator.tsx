@@ -18,6 +18,8 @@ import LoanTrackerScreen from '@/screens/Pulse/screens/LoanTrackerScreen'
 import CreditCardTrackerScreen from '@/screens/Pulse/screens/CreditCardTrackerScreen'
 import InsuranceTrackerScreen from '@/screens/Pulse/screens/InsuranceTrackerScreen'
 import AddInvestmentScreen from '@/screens/Pulse/screens/AddInvestmentScreen'
+import PulseSectionListScreen from '@/screens/Pulse/PulseSectionListScreen'
+import PulseSectionCreateScreen from '@/screens/Pulse/PulseSectionCreateScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 import FinancialProfileSetupScreen from '@/screens/financialProfile/FinancialProfileSetupScreen'
@@ -42,6 +44,8 @@ export type RootStackParamList = {
   CreditCardTracker: undefined
   InsuranceTracker: undefined
   AddInvestment: undefined
+  PulseSectionList: { section: string }
+  PulseSectionCreate: { section: string; record?: Record<string, unknown> }
   FinancialHealth: undefined
 }
 
@@ -98,6 +102,8 @@ export default function AppNavigator() {
           />
           <Stack.Screen name="WeeklyReport" component={WeeklyReportStoryScreen} />
           <Stack.Screen name="FinancialHealth" component={FinancialHealthPlaceholderScreen} />
+          <Stack.Screen name="PulseSectionList" component={PulseSectionListScreen} />
+          <Stack.Screen name="PulseSectionCreate" component={PulseSectionCreateScreen} options={{ presentation: 'modal' }} />
         </Stack.Group>
       )}
     </Stack.Navigator>

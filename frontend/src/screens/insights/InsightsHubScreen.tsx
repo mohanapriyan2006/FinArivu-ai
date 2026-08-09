@@ -59,10 +59,7 @@ export default function InsightsHubScreen() {
   }
 
   const handleMissingPress = (item: MissingDataItem) => {
-    navigation.navigate(
-      item.route as keyof RootStackParamList,
-      undefined
-    )
+    ;(navigation as unknown as { navigate: (name: string, params?: unknown) => void }).navigate(item.route, undefined)
   }
 
   const handleNotifications = () => {

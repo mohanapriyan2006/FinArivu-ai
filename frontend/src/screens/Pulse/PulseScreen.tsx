@@ -145,42 +145,11 @@ export default function PulseScreen() {
   }
 
   const handleFinancePress = (item: PulseFinanceItem) => {
-    if (item.status === 'empty') {
-      switch (item.type) {
-        case 'savings':
-        case 'investment':
-          openAddSheet(item.type)
-          return
-        case 'loan':
-          openAddSheet('loan')
-          return
-        case 'credit_card':
-          openAddSheet('credit_card')
-          return
-        case 'expense':
-          navigation.navigate('QuickAddExpense')
-          return
-        case 'goal':
-          navigation.navigate('CreateGoal')
-          return
-        case 'budget':
-          navigation.navigate('FinancialProfileSetup', { startStep: 'expenses' })
-          return
-        case 'insurance':
-        case 'tax':
-          navigation.navigate('FinancialProfileSetup', { startStep: item.routeStep ?? 'insurance' })
-          return
-      }
-    }
-
-    const route = item.route ?? trackerRoute(item.type)
-    if (route) {
-      navigation.navigate(route as keyof RootStackParamList, undefined as never)
+    if (item.type === 'budget') {
+      navigation.navigate('BudgetTracker')
       return
     }
-    if (item.routeStep) {
-      navigation.navigate('FinancialProfileSetup', { startStep: item.routeStep })
-    }
+    navigation.navigate('PulseSectionList', { section: item.id })
   }
 
   const handleAddSubmit = async (values: Record<string, string>) => {

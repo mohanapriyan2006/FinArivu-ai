@@ -17,4 +17,6 @@ export type RootStackParamList = {
   CreditCardTracker: undefined
   InsuranceTracker: undefined
   AddInvestment: undefined
+  PulseSectionList: { section: string }
+  PulseSectionCreate: { section: string; record?: Record<string, unknown> }
 }
