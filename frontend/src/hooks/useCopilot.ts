@@ -226,7 +226,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       setIsLoading(true)
       setSessionId(targetSessionId)
       try {
-        const history = await getCopilotHistory(targetSessionId, 0, 200)
+        const history = await getCopilotHistory(targetSessionId, 0, 100)
         const mapped: ChatMessageItemData[] = history.map((h: CopilotHistoryMessage) => ({
           id: h.id,
           role: h.role as 'user' | 'assistant',
