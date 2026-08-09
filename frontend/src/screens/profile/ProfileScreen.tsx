@@ -191,7 +191,7 @@ export default function ProfileScreen() {
             </View>
           </View>
 
-          {PROFILE_SECTIONS.filter((s) => !s.isOptional).map((section) => {
+          {/* {PROFILE_SECTIONS.filter((s) => !s.isOptional).map((section) => {
             const status = completion.bySection[section.id]
             return (
               <ProfileSectionCard
@@ -207,7 +207,8 @@ export default function ProfileScreen() {
                 }
               />
             )
-          })}
+          })} */}
+
         </View>
 
         {/* Appearance Mode Segmented Selector */}
@@ -539,13 +540,15 @@ function makeStyles(colors: ThemeColors) {
     },
     continueButton: {
       backgroundColor: colors.primary,
-      paddingHorizontal: 16,
+      paddingHorizontal: 8,
       paddingVertical: 10,
       borderRadius: 14,
+      marginLeft: -20,
+      marginTop: -10,
     },
     continueText: {
       fontFamily: Typography.fontFamily,
-      fontSize: 13,
+      fontSize: 10,
       fontWeight: Typography.fontWeights.semibold,
       color: colors.surface,
     },
