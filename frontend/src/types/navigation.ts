@@ -17,4 +17,5 @@ export type RootStackParamList = {
   LoanTracker: undefined
   CreditCardTracker: undefined
   InsuranceTracker: undefined
+  AddInvestment: undefined
 }

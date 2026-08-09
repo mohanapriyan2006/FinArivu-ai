@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 
 import { ScalePress } from '@/components/animation/ScalePress'
 import { useTheme } from '@/contexts/ThemeContext'
@@ -39,42 +39,50 @@ export function PulseAddBottomSheet({
           <View style={styles.handle} />
           <Text style={styles.title}>Add to FinArivu</Text>
 
-          <View style={styles.grid}>
-            {actions.map((action) => {
-              const Icon = action.icon
-              return (
-                <ScalePress
-                  key={action.id}
-                  onPress={() => onSelect(action)}
-                  testID={`${testID ? `${testID}-` : ''}${action.id}`}
-                  accessibilityRole="button"
-                  accessibilityLabel={`Add ${action.label}`}
-                  scale={0.97}
-                >
-                  <View style={styles.item}>
-                    <View
-                      style={[
-                        styles.iconBox,
-                        { backgroundColor: colors.primaryBackground },
-                      ]}
-                    >
-                      <Icon size={24} color={colors.primary} strokeWidth={2} />
-                    </View>
-                    <Text style={styles.itemLabel}>{action.label}</Text>
-                  </View>
-                </ScalePress>
-              )
-            })}
-          </View>
-
-          <Pressable
-            style={styles.cancel}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Cancel"
+          <ScrollView
+            style={styles.scroll}
+            contentContainerStyle={styles.content}
+            showsVerticalScrollIndicator={false}
           >
-            <Text style={styles.cancelText}>Cancel</Text>
-          </Pressable>
+            <View style={styles.grid}>
+              {actions.map((action) => {
+                const Icon = action.icon
+                return (
+                  <ScalePress
+                    key={action.id}
+                    onPress={() => onSelect(action)}
+                    testID={`${testID ? `${testID}-` : ''}${action.id}`}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Add ${action.label}`}
+                    scale={0.97}
+                  >
+                    <View style={styles.item}>
+                      <View
+                        style={[
+                          styles.iconBox,
+                          { backgroundColor: colors.primaryBackground },
+                        ]}
+                      >
+                        <Icon size={22} color={colors.primary} strokeWidth={2} />
+                      </View>
+                      <Text style={styles.itemLabel} numberOfLines={2} ellipsizeMode="tail">
+                        {action.label}
+                      </Text>
+                    </View>
+                  </ScalePress>
+                )
+              })}
+            </View>
+
+            <Pressable
+              style={styles.cancel}
+              onPress={onClose}
+              accessibilityRole="button"
+              accessibilityLabel="Cancel"
+            >
+              <Text style={styles.cancelText}>Cancel</Text>
+            </Pressable>
+          </ScrollView>
         </View>
       </View>
     </Modal>
@@ -92,10 +100,15 @@ const makeStyles = (colors: ThemeColors) =>
       backgroundColor: colors.surface,
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
-      paddingHorizontal: 20,
       paddingTop: 12,
-      paddingBottom: 32,
-      pointerEvents: 'auto',
+      paddingBottom: 28,
+      maxHeight: '80%',
+    },
+    scroll: {
+      paddingHorizontal: 20,
+    },
+    content: {
+      paddingBottom: 20,
     },
     handle: {
       width: 40,
@@ -116,17 +129,18 @@ const makeStyles = (colors: ThemeColors) =>
     grid: {
       flexDirection: 'row',
       flexWrap: 'wrap',
-      gap: 12,
-      marginBottom: 20,
+      justifyContent: 'space-between',
+      marginBottom: 8,
     },
     item: {
-      width: '47%',
+      width: '48%',
       flexDirection: 'row',
       alignItems: 'center',
       padding: 14,
       borderRadius: 16,
       backgroundColor: colors.background,
-      gap: 12,
+      marginBottom: 12,
+      minHeight: 64,
     },
     iconBox: {
       width: 44,
@@ -134,6 +148,7 @@ const makeStyles = (colors: ThemeColors) =>
       borderRadius: 12,
       alignItems: 'center',
       justifyContent: 'center',
+      marginRight: 12,
     },
     itemLabel: {
       fontFamily: Typography.fontFamily,
@@ -145,14 +160,15 @@ const makeStyles = (colors: ThemeColors) =>
     cancel: {
       height: 52,
       borderRadius: 18,
-      backgroundColor: colors.primary,
+      backgroundColor: colors.primaryBackground,
       alignItems: 'center',
       justifyContent: 'center',
+      marginTop: 8,
     },
     cancelText: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.base,
       fontWeight: Typography.fontWeights.semibold,
-      color: colors.surface,
+      color: colors.primary,
     },
   })

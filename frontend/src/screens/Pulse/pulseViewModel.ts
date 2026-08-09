@@ -478,14 +478,14 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
 export const QUICK_ACTIONS: PulseQuickAction[] = [
   { id: 'add-expense', label: 'Expense', icon: Plus, route: 'QuickAddExpense' },
   { id: 'add-goal', label: 'Goal', icon: Target, route: 'CreateGoal' },
-  { id: 'add-investment', label: 'Investment', icon: TrendingUp, route: 'FinancialProfileSetup', params: { startStep: 'investments' } },
+  { id: 'add-investment', label: 'Investment', icon: TrendingUp, route: 'AddInvestment' },
   { id: 'more', label: 'More', icon: MoreHorizontal, route: '__more__' },
 ]
 
 export const MORE_ACTIONS: PulseQuickAction[] = [
   { id: 'more-expense', label: 'Expense', icon: Receipt, route: 'QuickAddExpense' },
   { id: 'more-goal', label: 'Goal', icon: Target, route: 'CreateGoal' },
-  { id: 'more-investment', label: 'Investment', icon: TrendingUp, route: 'FinancialProfileSetup', params: { startStep: 'investments' } },
+  { id: 'more-investment', label: 'Investment', icon: TrendingUp, route: 'AddInvestment' },
   { id: 'more-loan', label: 'Loan', icon: Banknote, route: 'FinancialProfileSetup', params: { startStep: 'loans' } },
   { id: 'more-savings', label: 'Savings', icon: Wallet, route: 'FinancialProfileSetup', params: { startStep: 'savings' } },
   { id: 'more-fd', label: 'Fixed Deposit', icon: Landmark, route: 'FinancialProfileSetup', params: { startStep: 'fixedDeposits' } },
