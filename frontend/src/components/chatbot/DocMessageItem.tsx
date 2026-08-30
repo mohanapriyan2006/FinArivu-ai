@@ -253,7 +253,6 @@ const makeStyles = (colors: ThemeColors) =>
     aiDocContainer: {
       alignSelf: 'stretch',
       marginVertical: 10,
-      paddingHorizontal: 16,
     },
     aiHeaderRow: {
       flexDirection: 'row',
