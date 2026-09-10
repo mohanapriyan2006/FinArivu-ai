@@ -237,7 +237,8 @@ export default function HomeScreen() {
   }, [getToken])
 
   useEffect(() => {
-    fetchDashboard()
+    fetchDashboard();
+    console.log(profile);
   }, [fetchDashboard])
 
   const heroValue = useMemo(() => splitInrParts(netWorth), [netWorth])

@@ -384,9 +384,9 @@ class FinancialProfileService:
         insurance = await self._insurance_repo.list_for_user(user_id)
         tax = await self._tax_repo.get_by_user_id(user_id)
 
-        cash_assets = [a for a in assets if a.asset_type == "Cash"]
+        cash_assets = [a for a in assets if a.asset_type in {"Cash", "Bank"}]
         investment_assets = [
-            a for a in assets if a.asset_type not in {"Cash", "Fixed Deposit"}
+            a for a in assets if a.asset_type not in {"Cash", "Bank", "Fixed Deposit"}
         ]
         fixed_deposits = [a for a in assets if a.asset_type == "Fixed Deposit"]
         loans = [l for l in liabilities if l.liability_type != "Credit Card"]
@@ -446,11 +446,10 @@ class FinancialProfileService:
 
         assets = await self._asset_repo.list_for_user(user_id)
         savings_complete = any(
-            a.asset_type == "Cash" and a.savings_bucket is not None
-            for a in assets
+            a.asset_type in {"Cash", "Bank"} for a in assets
         )
         investment_complete = any(
-            a.asset_type not in {"Cash", "Fixed Deposit"} for a in assets
+            a.asset_type not in {"Cash", "Bank", "Fixed Deposit"} for a in assets
         )
 
         liabilities = await self._liability_repo.list_for_user(user_id)
@@ -576,7 +575,9 @@ class FinancialProfileService:
             "goal": Decimal("0"),
         }
         for asset in assets:
-            bucket = asset.savings_bucket or "general"
+            bucket = asset.savings_bucket or (
+                "emergency" if asset.is_emergency_fund else "general"
+            )
             totals[bucket] = totals.get(bucket, Decimal("0")) + asset.value
         return {
             "emergency_fund": float(totals["emergency"]),

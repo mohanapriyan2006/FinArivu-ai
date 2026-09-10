@@ -88,7 +88,7 @@ class ControllerService:
                 user_id, session_id, plan, start,
             )
 
-        execution_plan = plan.to_execution_plan(timeout_seconds=settings.ai_agent_timeout_seconds)
+        execution_plan = plan.to_execution_plan(agent_timeout_seconds=settings.ai_agent_timeout_seconds)
         agent_results = await self._orchestrator.execute(
             user_id,
             session_id,
@@ -199,7 +199,7 @@ class ControllerService:
             await self._memory.save_message(user_id, session_id, "assistant", text)
             return
 
-        execution_plan = plan.to_execution_plan(timeout_seconds=settings.ai_agent_timeout_seconds)
+        execution_plan = plan.to_execution_plan(agent_timeout_seconds=settings.ai_agent_timeout_seconds)
 
         yield StreamEvent(
             event_type=StreamEventType.AGENT_START,
