@@ -100,9 +100,9 @@ export default function PulseScreen() {
   const handleSheetSelect = (action: PulseQuickAction) => {
     setMoreVisible(false)
     if (action.route.startsWith('__add_')) {
-      const type = action.route.replace('__add_', '') as AddSheetType | 'investment' | 'savings' | 'loan' | 'credit_card' | 'fd'
-      const sheetType: AddSheetType = type === 'fd' ? 'fixed_deposit' : type
-      if (ADD_SHEET_TITLES[sheetType]) {
+      const type = action.route.replace(/^__add_|__$/g, '')
+      const sheetType = (type === 'fd' ? 'fixed_deposit' : type) as AddSheetType
+      if (sheetType in ADD_SHEET_TITLES) {
         openAddSheet(sheetType)
         return
       }

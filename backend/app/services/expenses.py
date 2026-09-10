@@ -26,7 +26,7 @@ class ExpenseService(BaseService[Expense]):
         data: ExpenseCreate,
     ) -> Expense:
         """Create an expense record for the authenticated user."""
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         expense = Expense(**payload)
         return await self._repo.create(expense)
@@ -66,7 +66,7 @@ class ExpenseService(BaseService[Expense]):
         expense = await self._repo.get_by_id(expense_id)
         if expense is None or expense.user_id != user_id:
             raise NotFoundError("Expense record not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(expense_id, update_dict)
         if obj is None:
             raise NotFoundError("Expense record not found")

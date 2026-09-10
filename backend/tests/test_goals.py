@@ -44,7 +44,7 @@ async def test_update_and_delete_goal(async_client, auth_headers, test_user):
         json={"current_amount": "50000.00"},
     )
     assert update.status_code == 200
-    assert update.json()["data"]["current_amount"] == "50000.00"
+    assert update.json()["data"]["currentAmount"] == "50000.00"
 
     delete = await async_client.delete(f"/api/v1/goals/{goal_id}", headers=auth_headers)
     assert delete.status_code == 200

@@ -24,7 +24,7 @@ class GoalService(BaseService[Goal]):
         data: GoalCreate,
     ) -> Goal:
         """Create a goal for the authenticated user."""
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         goal = Goal(**payload)
         return await self._repo.create(goal)
@@ -49,7 +49,7 @@ class GoalService(BaseService[Goal]):
         goal = await self._repo.get_by_id(goal_id)
         if goal is None or goal.user_id != user_id:
             raise NotFoundError("Goal not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(goal_id, update_dict)
         if obj is None:
             raise NotFoundError("Goal not found")

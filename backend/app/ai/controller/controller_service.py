@@ -445,8 +445,12 @@ class ControllerService:
             return "No prior messages."
         lines: list[str] = []
         for item in history:
-            role = getattr(item, "role", "unknown")
-            content = getattr(item, "content", "")
+            if isinstance(item, dict):
+                role = item.get("role", "unknown")
+                content = item.get("content", "")
+            else:
+                role = getattr(item, "role", "unknown")
+                content = getattr(item, "content", "")
             lines.append(f"{role}: {content[:80]}")
         return "\n".join(lines)
 

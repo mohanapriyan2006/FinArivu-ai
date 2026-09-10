@@ -179,29 +179,68 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       appendMessage(userMsg)
 
       let streamedText = ''
+      const streamMsgId = `ai_stream_${Date.now()}`
       const sse = streamCopilotMessage(sessionId, trimmed, contextHints, token)
 
-      sse.addEventListener('message', (event: any) => {
-        const payload = event?.data ? JSON.parse(event.data) : null
-        if (payload?.event === 'token') {
-          streamedText += payload.data
-        }
-        if (payload?.event === 'done') {
-          sse.close()
-          setIsStreaming(false)
+      const upsertStreamedMessage = () => {
+        setMessages((prev) => {
+          const msg: ChatMessageItemData = {
+            id: streamMsgId,
+            role: 'assistant',
+            content: streamedText,
+            createdAt: new Date().toISOString(),
+          }
+          const idx = prev.findIndex((m) => m.id === streamMsgId)
+          if (idx >= 0) {
+            const next = [...prev]
+            next[idx] = msg
+            return next
+          }
+          return [...prev, msg]
+        })
+      }
+
+      // Backend emits named SSE events (token, agent_start, agent_done, data,
+      // done, error) — not the default 'message' event. The EventSource
+      // connects automatically on construction.
+      sse.addEventListener('token', (event) => {
+        try {
+          const payload = event?.data ? JSON.parse(event.data) : null
+          if (payload?.data) {
+            streamedText += payload.data
+            upsertStreamedMessage()
+          }
+        } catch {
+          // Ignore malformed token payloads.
         }
       })
 
-      sse.addEventListener('error', (event: any) => {
-        const message = event?.message || 'Streaming failed. Please try again.'
+      sse.addEventListener('agent_start', (event) => {
+        try {
+          const payload = event?.data ? JSON.parse(event.data) : null
+          if (payload?.data) setThinkingStep(String(payload.data))
+        } catch {
+          // Non-critical progress event.
+        }
+      })
+
+      sse.addEventListener('done', () => {
+        sse.close()
+        setIsStreaming(false)
+        loadSessions()
+      })
+
+      sse.addEventListener('error', (event) => {
+        const message =
+          'message' in event && event.message
+            ? event.message
+            : 'Streaming failed. Please try again.'
         setError(message)
         setLastFailedText(trimmed)
         setIsStreaming(false)
       })
-
-      ;(sse as any).connect()
     },
-    [appendMessage, isLoading, isStreaming, sessionId, token]
+    [appendMessage, isLoading, isStreaming, sessionId, token, loadSessions]
   )
 
   const retry = useCallback(async () => {

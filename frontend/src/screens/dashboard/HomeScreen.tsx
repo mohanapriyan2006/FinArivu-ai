@@ -302,7 +302,10 @@ export default function HomeScreen() {
             ]}
             onPress={() => {
               if (card.route) {
-                navigation.navigate(card.route as any)
+                navigation.navigate(
+                  card.route as keyof RootStackParamList,
+                  undefined as never
+                )
               }
             }}
           >

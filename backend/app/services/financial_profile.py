@@ -101,10 +101,6 @@ class FinancialProfileService:
         user_id: uuid.UUID,
         data: AboutYouUpdate,
     ) -> dict[str, Any]:
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
-        if "age" in update_dict:
-            update_dict["age"] = update_dict["age"]
-        update_dict["profile_initialized"] = True
         await self._profile_service.update_by_user(user_id, data)
         return {"section": "aboutYou", "status": "saved"}
 
@@ -487,7 +483,7 @@ class FinancialProfileService:
                 a.asset_type == "Fixed Deposit" for a in assets
             ),
             "creditCards": any(
-                l.lability_type == "Credit Card" for l in liabilities
+                l.liability_type == "Credit Card" for l in liabilities
             ),
             "insurance": bool(
                 await self._insurance_repo.list_for_user(user_id)

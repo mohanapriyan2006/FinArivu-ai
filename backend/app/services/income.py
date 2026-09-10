@@ -25,7 +25,7 @@ class IncomeService(BaseService[Income]):
         data: IncomeCreate,
     ) -> Income:
         """Create an income record owned by the authenticated user."""
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         income = Income(**payload)
         return await self._repo.create(income)
@@ -63,7 +63,7 @@ class IncomeService(BaseService[Income]):
         income = await self._repo.get_by_id(income_id)
         if income is None or income.user_id != user_id:
             raise NotFoundError("Income record not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(income_id, update_dict)
         if obj is None:
             raise NotFoundError("Income record not found")

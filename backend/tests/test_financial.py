@@ -34,7 +34,7 @@ async def test_health_score(async_client, auth_headers, test_user):
     response = await async_client.get("/api/v1/financial/health-score", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert "overall_score" in data
+    assert "overallScore" in data
     assert "recommendations" in data
 
 
@@ -57,7 +57,7 @@ async def test_budget_analysis(async_client, auth_headers, test_user):
     response = await async_client.get("/api/v1/financial/budget-analysis", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert "total_spent" in data
+    assert "totalSpent" in data
     assert "recommendations" in data
 
 
@@ -73,7 +73,7 @@ async def test_tax_calculation(async_client, auth_headers, test_user):
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["taxable_income"] == "1150000.00"
+    assert data["taxableIncome"] == "1150000.00"
 
 
 async def test_retirement_projection(async_client, auth_headers, test_user):
@@ -90,8 +90,8 @@ async def test_retirement_projection(async_client, auth_headers, test_user):
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["years_to_retirement"] == 30
-    assert Decimal(data["retirement_corpus"]) > 0
+    assert data["yearsToRetirement"] == 30
+    assert Decimal(data["retirementCorpus"]) > 0
 
 
 async def test_dashboard(async_client, auth_headers, test_user):

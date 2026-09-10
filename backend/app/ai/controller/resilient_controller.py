@@ -53,7 +53,7 @@ class ResilientController:
 
         # Try local Phi-4 first if it is available.
         try:
-            if self._local._config.is_available():  # type: ignore[attr-defined]
+            if self._local.available:
                 response = await asyncio.wait_for(
                     self._local.chat(messages, temperature=0.1, max_tokens=512),
                     timeout=self._timeout,

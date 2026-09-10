@@ -53,7 +53,7 @@ class ProviderRouter:
         logger.info(
             "Provider router using primary=%s fallback_count=%s",
             provider.name,
-            len(provider._fallbacks),
+            len(getattr(provider, "_fallbacks", [])),
         )
 
         # ResilientProvider already handles retries and fallbacks.

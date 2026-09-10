@@ -30,6 +30,7 @@ def _register_providers() -> None:
     """Lazily populate the provider class registry to avoid circular imports."""
     if _PROVIDER_CLASSES:
         return
+    from app.ai.local_llm.phi4_provider import Phi4Provider
     from app.ai.providers.gemini import GeminiProvider
     from app.ai.providers.groq import GroqProvider
     from app.ai.providers.openrouter import OpenRouterProvider
@@ -37,6 +38,7 @@ def _register_providers() -> None:
     _PROVIDER_CLASSES["gemini"] = GeminiProvider
     _PROVIDER_CLASSES["groq"] = GroqProvider
     _PROVIDER_CLASSES["openrouter"] = OpenRouterProvider
+    _PROVIDER_CLASSES["local-phi4"] = Phi4Provider
 
 
 # ── Resilient wrapper ─────────────────────────────────────────────────────
@@ -164,21 +166,33 @@ class ResilientProvider(BaseAIProvider):
 
 # ── Public factory ────────────────────────────────────────────────────────
 
-def get_ai_provider() -> ResilientProvider:
-    """Return a resilient AI provider with fallback chain.
+def _local_provider() -> BaseAIProvider | None:
+    """Return the local Phi-4 provider when it is enabled and available."""
+    cls = _PROVIDER_CLASSES.get("local-phi4")
+    if cls is None:
+        return None
+    try:
+        provider = cls()
+    except Exception:
+        logger.warning("Could not instantiate local-phi4 provider")
+        return None
+    if not getattr(provider, "available", False):
+        return None
+    return provider
 
-    Uses the explicit priority order groq -> gemini -> openrouter, skipping any
-    provider that is not configured or cannot be instantiated.
+
+def get_ai_provider() -> ResilientProvider:
+    """Return a resilient AI provider with a multi-level fallback chain.
+
+    Priority order: configured API providers (groq -> gemini -> openrouter),
+    then the local Phi-4 model as the last-resort fallback. When no API keys
+    are configured, the local model becomes the primary provider.
     """
     _register_providers()
 
-    available = configured_providers()
-    if not available:
-        raise RuntimeError("No AI providers are configured with API keys")
-
-    # Build concrete instances for each configured provider.
+    # Build concrete instances for each configured API provider.
     instances: dict[str, BaseAIProvider] = {}
-    for cfg in available:
+    for cfg in configured_providers():
         cls = _PROVIDER_CLASSES.get(cfg.name)
         if cls is None:
             continue
@@ -187,12 +201,19 @@ def get_ai_provider() -> ResilientProvider:
         except Exception:
             logger.warning("Could not instantiate %s provider", cfg.name)
 
-    if not instances:
-        raise RuntimeError("No AI providers could be instantiated")
-
-    # Primary is the first configured provider in priority order;
-    # the rest become fallbacks in the same order.
     ordered = [instances[name] for name in FALLBACK_ORDER if name in instances]
+
+    # Local LLM is always the final fallback so the chat never hard-fails.
+    local = _local_provider()
+    if local is not None:
+        ordered.append(local)
+
+    if not ordered:
+        raise RuntimeError(
+            "No AI providers available: no API keys configured and local "
+            "LLM is not enabled"
+        )
+
     primary = ordered[0]
     fallbacks = ordered[1:]
 

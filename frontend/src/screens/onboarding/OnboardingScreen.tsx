@@ -231,7 +231,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
         <FadeInUp delay={0}>
           <View style={styles.card} testID="onboarding-illustration">
             <View style={styles.lottieContainer}>
-              {assets && (
+              {assets && assets[0].localUri && (
                 <WebView
                   source={{ uri: assets[0].localUri }}
                   style={styles.lottie}

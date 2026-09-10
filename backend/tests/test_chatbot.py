@@ -10,7 +10,7 @@ async def test_chatbot_financial_response(async_client, auth_headers, test_user)
     assert response.status_code == 200
     data = response.json()["data"]
     assert "emergency" in data["message"].lower() or "savings" in data["message"].lower()
-    assert data["guardrail_triggered"] is False
+    assert data["guardrailTriggered"] is False
 
 
 async def test_chatbot_non_financial_refusal(async_client, auth_headers, test_user):
@@ -21,7 +21,7 @@ async def test_chatbot_non_financial_refusal(async_client, auth_headers, test_us
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["guardrail_triggered"] is True
+    assert data["guardrailTriggered"] is True
 
 
 async def test_chatbot_investment_advice_guard(async_client, auth_headers, test_user):
@@ -32,7 +32,7 @@ async def test_chatbot_investment_advice_guard(async_client, auth_headers, test_
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["guardrail_triggered"] is True
+    assert data["guardrailTriggered"] is True
     assert "advisor" in data["message"].lower()
 
 
@@ -44,4 +44,4 @@ async def test_chatbot_harmful_request(async_client, auth_headers, test_user):
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["guardrail_triggered"] is True
+    assert data["guardrailTriggered"] is True

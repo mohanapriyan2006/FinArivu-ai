@@ -38,6 +38,11 @@ class Phi4Provider(BaseAIProvider):
     def model_name(self) -> str:
         return "Phinance-Phi-4-mini-Q4_K_M"
 
+    @property
+    def available(self) -> bool:
+        """Return True when the local model is enabled and the file exists."""
+        return self._config.is_available()
+
     def _load_model(self) -> Any:
         """Lazy-load the GGUF model and cache it."""
         if self._llama is not None:

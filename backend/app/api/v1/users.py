@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db_session
-from app.dependencies.auth import get_current_user_id
+from app.dependencies.auth import get_current_user_id, get_token_payload
 from app.exceptions import AuthorizationError
 from app.schemas.users import UserCreate, UserResponse, UserUpdate
 from app.services.users import UserService
@@ -18,6 +18,22 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 def get_user_service(session: AsyncSession = Depends(get_db_session)) -> UserService:
     return UserService(session)
+
+
+@router.post("/sync", response_model=dict, summary="Sync JWT user to local database")
+async def sync_user(
+    request: Request,
+    payload: dict = Depends(get_token_payload),
+    session: AsyncSession = Depends(get_db_session),
+) -> dict:
+    """Create or update the local user record from the bearer token payload."""
+    service = UserService(session)
+    user = await service.get_or_create_user(payload)
+    request.state.user_id = user.id
+    return success_response(
+        data=UserResponse.model_validate(user).model_dump(),
+        message="User synced successfully",
+    )
 
 
 @router.get("/me", response_model=dict, summary="Get current authenticated user")

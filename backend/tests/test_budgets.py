@@ -55,7 +55,7 @@ async def test_update_and_delete_budget(async_client, auth_headers, test_user):
         json={"monthly_limit": "12000.00"},
     )
     assert update.status_code == 200
-    assert update.json()["data"]["monthly_limit"] == "12000.00"
+    assert update.json()["data"]["monthlyLimit"] == "12000.00"
 
     delete = await async_client.delete(f"/api/v1/budgets/{budget_id}", headers=auth_headers)
     assert delete.status_code == 200
