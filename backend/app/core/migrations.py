@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from sqlalchemy import text
+from sqlalchemy import inspect, text
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
 from app.core.logger import logger
@@ -12,23 +12,23 @@ async def _ensure_schema(conn: AsyncConnection) -> None:
     await conn.run_sync(Base.metadata.create_all)
 
 
+async def _table_columns(conn: AsyncConnection, table: str) -> set[str]:
+    """Return the column names of a table using dialect-agnostic inspection."""
+    return {
+        col["name"]
+        for col in await conn.run_sync(
+            lambda sync_conn: inspect(sync_conn).get_columns(table)
+        )
+    }
+
+
 async def _migrate_users(conn: AsyncConnection) -> None:
     """Idempotently migrate the users table for local auth.
 
     - Rename clerk_id -> external_id if it still exists.
     - Add password_hash if it is missing.
     """
-    result = await conn.execute(
-        text(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'users'
-              AND column_name IN ('clerk_id', 'password_hash')
-            """
-        )
-    )
-    columns = {row[0] for row in result.all()}
+    columns = await _table_columns(conn, "users")
 
     if "clerk_id" in columns:
         await conn.execute(
@@ -49,19 +49,7 @@ async def _migrate_expense_categories(conn: AsyncConnection) -> None:
     The existing schema may pre-date the full category model, so ensure
     description, icon, color, is_system, and display_order exist.
     """
-    result = await conn.execute(
-        text(
-            """
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = 'expense_categories'
-              AND column_name IN (
-                  'description', 'icon', 'color', 'is_system', 'display_order'
-              )
-            """
-        )
-    )
-    columns = {row[0] for row in result.all()}
+    columns = await _table_columns(conn, "expense_categories")
 
     if "description" not in columns:
         await conn.execute(text("ALTER TABLE expense_categories ADD COLUMN description TEXT;"))
@@ -104,18 +92,7 @@ async def _ensure_columns(
     columns: dict[str, str],
 ) -> None:
     """Idempotently add missing columns to a table."""
-    column_list = ", ".join(f"'{name}'" for name in columns)
-    result = await conn.execute(
-        text(
-            f"""
-            SELECT column_name
-            FROM information_schema.columns
-            WHERE table_name = '{table}'
-              AND column_name IN ({column_list})
-            """
-        )
-    )
-    existing = {row[0] for row in result.all()}
+    existing = await _table_columns(conn, table)
 
     for name, spec in columns.items():
         if name not in existing:

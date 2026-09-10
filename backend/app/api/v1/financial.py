@@ -118,6 +118,6 @@ async def retirement_projection(
     user_id: str = Depends(get_current_user_id),
 ) -> dict:
     """Project retirement expenses and required corpus."""
-    result = FinancialService.project_retirement(payload.model_dump())
+    result = FinancialService.project_retirement(payload.model_dump(by_alias=False))
     request.state.user_id = uuid.UUID(user_id)
     return success_response(data=result.model_dump(), message="Retirement projection computed")

@@ -29,10 +29,9 @@ def test_empty_summary():
     assert pm.summary() == {}
 
 
-def test_save_to_db_noop():
+async def test_save_to_db_noop():
     import uuid
     pm = ProviderManager(session=None)
     pm.record("gemini", "gemini-2.5-flash", latency_ms=200)
     # save_to_db is a no-op, should not raise
-    import asyncio
-    asyncio.run(pm.save_to_db(uuid.uuid4(), "session-1"))
+    await pm.save_to_db(uuid.uuid4(), "session-1")
