@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { Bot, Sparkles, Volume2 } from 'lucide-react-native'
+import { Bot, FileText, Sparkles, Volume2 } from 'lucide-react-native'
 
 let Speech: any = { stop: () => {}, speak: () => {} }
 let isTtsAvailable = false
@@ -46,10 +46,16 @@ export interface SuggestedAction {
   route?: string
 }
 
+export interface ChatMessageAttachment {
+  filename: string
+  mimeType?: string
+}
+
 export interface ChatMessageItemData {
   id: string
   role: 'user' | 'assistant'
   content: string
+  attachments?: ChatMessageAttachment[]
   summary?: string
   responseType?: string
   intent?: string
@@ -80,7 +86,23 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
     return (
       <Animated.View entering={FadeInDown.duration(300)} style={styles.userWrapper}>
         <View style={styles.userBubble}>
-          <Text style={styles.userText}>{item.content}</Text>
+          {item.attachments && item.attachments.length > 0 && (
+            <View style={styles.attachmentList}>
+              {item.attachments.map((att, idx) => (
+                <View key={`att-${idx}`} style={styles.attachmentChip}>
+                  <View style={styles.attachmentIcon}>
+                    <FileText size={16} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {att.filename}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {item.content ? (
+            <Text style={styles.userText}>{item.content}</Text>
+          ) : null}
         </View>
       </Animated.View>
     )
@@ -249,6 +271,36 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 14,
       lineHeight: 20,
       fontWeight: '500',
+    },
+    attachmentList: {
+      gap: 6,
+      marginBottom: 8,
+    },
+    attachmentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      gap: 8,
+    },
+    attachmentIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    attachmentName: {
+      ...Typography.bodySmall,
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+      flexShrink: 1,
     },
     aiDocContainer: {
       alignSelf: 'stretch',

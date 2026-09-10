@@ -6,6 +6,7 @@ import {
   Platform,
   Pressable,
   StyleSheet,
+  Text,
   TextInput,
   View,
 } from 'react-native'
@@ -14,7 +15,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated'
-import { ArrowUp, Mic, Paperclip, X } from 'lucide-react-native'
+import { ArrowUp, FileText, Mic, Paperclip, X } from 'lucide-react-native'
 import * as DocumentPicker from 'expo-document-picker'
 
 // Lazy / safe import for Expo SDK modules that may not be available in Expo Go
@@ -49,6 +50,7 @@ interface CopilotInputProps {
   }) => void
   onRemoveAttachedFile?: () => void
   attachedFileName?: string
+  attachedFileSize?: number
   isExtractingDocument?: boolean
   placeholder?: string
   disabled?: boolean
@@ -61,6 +63,7 @@ export function CopilotInput({
   onFilePicked,
   onRemoveAttachedFile,
   attachedFileName,
+  attachedFileSize,
   isExtractingDocument,
   placeholder = 'Ask your Personal CFO anything...',
   disabled = false,
@@ -82,7 +85,7 @@ export function CopilotInput({
     transform: [{ scale: sendScale.value }],
   }))
 
-  const canSend = value.trim().length > 0 && !disabled
+  const canSend = (value.trim().length > 0 || !!attachedFileName) && !disabled
   const placeholderText = attachedFileName
     ? `Ask about ${attachedFileName}...`
     : placeholder
@@ -150,12 +153,15 @@ export function CopilotInput({
     }
   }, [isListening])
 
+  const formatSize = (bytes?: number) => {
+    if (!bytes) return ''
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
   const handleAttachmentPress = useCallback(async () => {
     if (disabled || isExtractingDocument) return
-    if (attachedFileName) {
-      onRemoveAttachedFile?.()
-      return
-    }
     try {
       const result = await DocumentPicker.getDocumentAsync({
         type: [
@@ -188,21 +194,48 @@ export function CopilotInput({
 
   return (
     <View style={styles.floatingContainer}>
+      {/* ChatGPT-style attachment chip above the input row */}
+      {(attachedFileName || isExtractingDocument) && (
+        <View style={styles.attachmentChip}>
+          <View style={styles.attachmentIcon}>
+            {isExtractingDocument ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <FileText size={18} color={colors.primary} strokeWidth={2.2} />
+            )}
+          </View>
+          <View style={styles.attachmentInfo}>
+            <Text style={styles.attachmentName} numberOfLines={1}>
+              {isExtractingDocument ? 'Reading document...' : attachedFileName}
+            </Text>
+            {!isExtractingDocument && attachedFileSize ? (
+              <Text style={styles.attachmentMeta}>{formatSize(attachedFileSize)}</Text>
+            ) : null}
+          </View>
+          {!isExtractingDocument && (
+            <Pressable
+              style={styles.attachmentRemove}
+              onPress={onRemoveAttachedFile}
+              accessibilityRole="button"
+              accessibilityLabel="Remove attachment"
+              hitSlop={8}
+            >
+              <X size={16} color={colors.textSecondary} strokeWidth={2.4} />
+            </Pressable>
+          )}
+        </View>
+      )}
+
+      <View style={styles.inputRow}>
       {/* Attachment Action Button */}
       <Pressable
         style={styles.actionIconButton}
         onPress={handleAttachmentPress}
-        disabled={disabled}
+        disabled={disabled || isExtractingDocument}
         accessibilityRole="button"
-        accessibilityLabel={attachedFileName ? 'Remove attachment' : 'Add attachment'}
+        accessibilityLabel="Add attachment"
       >
-        {isExtractingDocument ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : attachedFileName ? (
-          <X size={20} color={colors.danger} strokeWidth={2.2} />
-        ) : (
-          <Paperclip size={20} color={colors.textSecondary} strokeWidth={2.2} />
-        )}
+        <Paperclip size={20} color={colors.textSecondary} strokeWidth={2.2} />
       </Pressable>
 
       {/* Main Input Field */}
@@ -249,6 +282,7 @@ export function CopilotInput({
           <ArrowUp size={18} color="#FFFFFF" strokeWidth={2.5} />
         </Pressable>
       </Animated.View>
+      </View>
     </View>
   )
 }
@@ -260,12 +294,10 @@ const makeStyles = (colors: any) =>
       bottom: 80,
       right: 10,
       left: 10,
-      flexDirection: 'row',
-      alignItems: 'center',
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
-      borderRadius: 28,
+      borderRadius: 24,
       paddingHorizontal: 10,
       paddingVertical: 8,
       shadowColor: colors.shadowColor,
@@ -273,7 +305,57 @@ const makeStyles = (colors: any) =>
       shadowOpacity: 0.1,
       shadowRadius: 16,
       elevation: 6,
+    },
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 6,
+    },
+    attachmentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 14,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      marginBottom: 8,
+      marginHorizontal: 4,
+      gap: 10,
+    },
+    attachmentIcon: {
+      width: 34,
+      height: 34,
+      borderRadius: 10,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    attachmentInfo: {
+      flex: 1,
+    },
+    attachmentName: {
+      ...Typography.bodySmall,
+      color: colors.textPrimary,
+      fontSize: 13,
+      fontWeight: '600',
+    },
+    attachmentMeta: {
+      ...Typography.labelSmall,
+      color: colors.textTertiary,
+      fontSize: 11,
+      marginTop: 2,
+    },
+    attachmentRemove: {
+      width: 26,
+      height: 26,
+      borderRadius: 13,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     actionIconButton: {
       width: 36,

@@ -7,6 +7,7 @@ import {
   sendCopilotMessage,
   streamCopilotMessage,
   uploadCopilotDocument,
+  type CopilotAttachment,
   type CopilotChatResponse,
   type CopilotHistoryMessage,
   type CopilotSession,
@@ -15,10 +16,10 @@ import type { ChatMessageItemData } from '@/components/chatbot/DocMessageItem'
 
 const THINKING_STEPS = [
   'Planning analysis...',
-  'Checking budget & transaction data...',
-  'Running Tax Engine calculations...',
-  'Evaluating goal projections...',
-  'Synthesizing Personal CFO response...',
+  'Checking data...',
+  'Running calculations...',
+  'Evaluating...',
+  'Synthesizing response...',
 ]
 
 export interface UseCopilotOptions {
@@ -37,9 +38,9 @@ export interface UseCopilotReturn {
   sessions: CopilotSession[]
   clearMessages: () => void
   newChat: () => void
-  sendMessage: (text: string, contextHints?: string[]) => Promise<void>
+  sendMessage: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => Promise<void>
   extractDocument: (file: { uri: string; name: string; type: string }) => Promise<{ text: string; filename: string }>
-  sendStream: (text: string, contextHints?: string[]) => void
+  sendStream: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => void
   retry: () => Promise<void>
   loadHistory: (skip?: number, limit?: number) => Promise<void>
   loadSessions: () => Promise<void>
@@ -111,9 +112,9 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
   }, [])
 
   const sendMessage = useCallback(
-    async (text: string, contextHints: string[] = []) => {
+    async (text: string, contextHints: string[] = [], attachments: CopilotAttachment[] = []) => {
       const trimmed = text.trim()
-      if (!trimmed || isLoading || isStreaming) return
+      if ((!trimmed && attachments.length === 0) || isLoading || isStreaming) return
 
       setError(null)
       setLastFailedText(null)
@@ -123,12 +124,13 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         id: `user_${Date.now()}`,
         role: 'user',
         content: trimmed,
+        attachments: attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
         createdAt: new Date().toISOString(),
       }
       appendMessage(userMsg)
 
       try {
-        const response = await sendCopilotMessage(sessionId, trimmed, contextHints)
+        const response = await sendCopilotMessage(sessionId, trimmed, contextHints, attachments)
         appendMessage(buildAssistantMessage(response))
         await loadSessions()
       } catch (err) {
@@ -159,13 +161,13 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
   )
 
   const sendStream = useCallback(
-    (text: string, contextHints: string[] = []) => {
+    (text: string, contextHints: string[] = [], attachments: CopilotAttachment[] = []) => {
       if (!token) {
         setError('No authentication token available for streaming.')
         return
       }
       const trimmed = text.trim()
-      if (!trimmed || isLoading || isStreaming) return
+      if ((!trimmed && attachments.length === 0) || isLoading || isStreaming) return
 
       setError(null)
       setIsStreaming(true)
@@ -174,13 +176,14 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         id: `user_${Date.now()}`,
         role: 'user',
         content: trimmed,
+        attachments: attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
         createdAt: new Date().toISOString(),
       }
       appendMessage(userMsg)
 
       let streamedText = ''
       const streamMsgId = `ai_stream_${Date.now()}`
-      const sse = streamCopilotMessage(sessionId, trimmed, contextHints, token)
+      const sse = streamCopilotMessage(sessionId, trimmed, contextHints, token, attachments)
 
       const upsertStreamedMessage = () => {
         setMessages((prev) => {

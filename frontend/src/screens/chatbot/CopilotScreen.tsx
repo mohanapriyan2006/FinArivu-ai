@@ -55,7 +55,12 @@ export default function CopilotScreen({ navigation }: any) {
   } = useCopilot()
 
   const [inputText, setInputText] = useState('')
-  const [attachedFile, setAttachedFile] = useState<{ filename: string; text: string } | null>(null)
+  const [attachedFile, setAttachedFile] = useState<{
+    filename: string
+    text: string
+    size: number
+    mimeType?: string
+  } | null>(null)
   const [isExtractingDocument, setIsExtractingDocument] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [menuVisible, setMenuVisible] = useState(false)
@@ -76,15 +81,20 @@ export default function CopilotScreen({ navigation }: any) {
       const text = (textToSend || inputText).trim()
       if (!text && !attachedFile) return
 
-      let message = text
-      if (attachedFile) {
-        message = `[Attached file: ${attachedFile.filename}]\n\n${attachedFile.text}${text ? `\n\nQuestion: ${text}` : ''}`
-      }
+      const attachments = attachedFile
+        ? [
+            {
+              filename: attachedFile.filename,
+              content: attachedFile.text,
+              mimeType: attachedFile.mimeType,
+            },
+          ]
+        : []
 
       setInputText('')
       setAttachedFile(null)
       Keyboard.dismiss()
-      await sendMessage(message)
+      await sendMessage(text, [], attachments)
       scrollToBottom()
     },
     [inputText, attachedFile, sendMessage, scrollToBottom]
@@ -99,7 +109,12 @@ export default function CopilotScreen({ navigation }: any) {
           name: file.name,
           type: file.mimeType || 'application/octet-stream',
         })
-        setAttachedFile({ filename, text })
+        setAttachedFile({
+          filename,
+          text,
+          size: file.size,
+          mimeType: file.mimeType,
+        })
       } catch (err) {
         Alert.alert(
           'Could not read document',
@@ -423,6 +438,7 @@ export default function CopilotScreen({ navigation }: any) {
               onFilePicked={handleFilePicked}
               onRemoveAttachedFile={handleRemoveAttachedFile}
               attachedFileName={attachedFile?.filename}
+              attachedFileSize={attachedFile?.size}
               isExtractingDocument={isExtractingDocument}
               disabled={isLoading || isStreaming}
             />

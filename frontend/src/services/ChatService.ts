@@ -27,10 +27,17 @@ export const sendChatMessage = async (
 
 // ── AI Copilot (new multi-agent endpoint) ────────────────────────────────
 
+export interface CopilotAttachment {
+  filename: string
+  content: string
+  mimeType?: string
+}
+
 export interface CopilotChatRequest {
   sessionId: string
   message: string
   contextHints?: string[]
+  attachments?: CopilotAttachment[]
 }
 
 export interface CopilotAgentData {
@@ -121,12 +128,18 @@ export interface CopilotHealthResponse {
 export const sendCopilotMessage = async (
   sessionId: string,
   message: string,
-  contextHints: string[] = []
+  contextHints: string[] = [],
+  attachments: CopilotAttachment[] = []
 ): Promise<CopilotChatResponse> => {
   const response = await api.post('/v1/copilot/chat', {
     session_id: sessionId,
     message,
     context_hints: contextHints,
+    attachments: attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      mime_type: a.mimeType || 'text/plain',
+    })),
   })
   return response.data?.data as CopilotChatResponse
 }
@@ -148,13 +161,19 @@ export const streamCopilotMessage = (
   sessionId: string,
   message: string,
   contextHints: string[] = [],
-  token: string
+  token: string,
+  attachments: CopilotAttachment[] = []
 ): SSE<CopilotStreamEvent> => {
   const url = `${api.defaults.baseURL}/v1/copilot/chat/stream`
   const body = JSON.stringify({
     session_id: sessionId,
     message,
     context_hints: contextHints,
+    attachments: attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      mime_type: a.mimeType || 'text/plain',
+    })),
   })
 
   const sse = new SSE<CopilotStreamEvent>(url, {

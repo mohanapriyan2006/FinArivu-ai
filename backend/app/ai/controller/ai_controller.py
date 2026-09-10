@@ -18,6 +18,7 @@ from app.ai.orchestrator.response_builder import ResponseBuilder
 from app.ai.planner.planner import Planner
 from app.ai.providers.factory import get_ai_provider
 from app.ai.schemas import (
+    CopilotAttachment,
     CopilotChatRequest,
     CopilotChatResponse,
     CopilotHealthResponse,
@@ -57,10 +58,12 @@ class AIController:
         session_id = request.session_id
         message = request.message.strip()
 
-        if not message:
+        if not message and not request.attachments:
             return CopilotChatResponse(
                 message="I didn't receive a message. How can I help with your finances today?",
             )
+        if not message:
+            message = "Please analyse the attached document."
 
         sanitised_message = self._guardrail_service.mask_pii(message)
         guard_result = self._guardrail.check(sanitised_message)
@@ -75,11 +78,15 @@ class AIController:
                 user_id, session_id, sanitised_message, "investment_advice",
             )
 
-        # 3. Persist user message
-        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
+        # 3. Persist user message (with attachment marker for readable history)
+        await self._memory.save_message(
+            user_id, session_id, "user",
+            self._display_message(sanitised_message, request.attachments),
+        )
 
         service = ControllerService(self._session)
-        return await service.chat(user_id, session_id, sanitised_message)
+        ai_message = self._apply_attachments(sanitised_message, request.attachments)
+        return await service.chat(user_id, session_id, ai_message)
 
     async def get_history(
         self,
@@ -126,13 +133,15 @@ class AIController:
         session_id = request.session_id
         message = request.message.strip()
 
-        if not message:
+        if not message and not request.attachments:
             yield StreamEvent(
                 event_type=StreamEventType.ERROR,
                 data="No message provided.",
             )
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
+        if not message:
+            message = "Please analyse the attached document."
 
         sanitised_message = self._guardrail_service.mask_pii(message)
 
@@ -149,10 +158,40 @@ class AIController:
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
 
-        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
+        await self._memory.save_message(
+            user_id, session_id, "user",
+            self._display_message(sanitised_message, request.attachments),
+        )
         service = ControllerService(self._session)
-        async for event in service.chat_stream(user_id, session_id, sanitised_message):
+        ai_message = self._apply_attachments(sanitised_message, request.attachments)
+        async for event in service.chat_stream(user_id, session_id, ai_message):
             yield event
+
+    @staticmethod
+    def _apply_attachments(
+        message: str,
+        attachments: list[CopilotAttachment],
+    ) -> str:
+        """Append attached documents as structured blocks for the AI."""
+        if not attachments:
+            return message
+        blocks = "\n\n".join(
+            f'<document filename="{att.filename}" type="{att.mime_type}">\n'
+            f"{att.content}\n</document>"
+            for att in attachments
+        )
+        return f"{message}\n\n{blocks}"
+
+    @staticmethod
+    def _display_message(
+        message: str,
+        attachments: list[CopilotAttachment],
+    ) -> str:
+        """User-facing message persisted to history (no raw document text)."""
+        if not attachments:
+            return message
+        names = ", ".join(att.filename for att in attachments)
+        return f"{message}\n[Attached: {names}]"
 
     async def _blocked_response(
         self,
