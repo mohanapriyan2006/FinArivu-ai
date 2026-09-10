@@ -50,6 +50,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
       StyleSheet.create({
         content: {
           flex: 1,
+          paddingTop: 24,
         },
         title: {
           fontFamily: Typography.fontFamily,
@@ -144,8 +145,6 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             testID="login-sign-in-button"
           />
         </View>
-
-        <SocialAuthRow onSocialPress={onSocialPress} />
 
         <AuthPrompt
           message="Don't have an account?"

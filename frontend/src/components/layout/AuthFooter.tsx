@@ -45,17 +45,6 @@ export function AuthFooter({ testID }: AuthFooterProps) {
 
   return (
     <View style={styles.container} testID={testID}>
-      <View style={styles.links}>
-        <Pressable style={styles.linkPressable} accessibilityRole="link">
-          <Text style={styles.link}>Privacy Policy</Text>
-        </Pressable>
-        <Pressable style={styles.linkPressable} accessibilityRole="link">
-          <Text style={styles.link}>Terms of Service</Text>
-        </Pressable>
-        <Pressable style={styles.linkPressable} accessibilityRole="link">
-          <Text style={styles.link}>Security Disclosure</Text>
-        </Pressable>
-      </View>
       <Text style={styles.copyright}>© 2024 FinArivu AI. Secure & Encrypted.</Text>
     </View>
   )
