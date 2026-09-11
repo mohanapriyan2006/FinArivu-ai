@@ -84,6 +84,9 @@ async def login(
     if not user or not user.password_hash or not verify_password(data.password, user.password_hash):
         raise AuthenticationError("Invalid email or password")
 
+    if not user.is_active:
+        raise AuthenticationError("Account is deactivated")
+
     user.last_login_at = datetime.now(timezone.utc)
     await session.flush()
 
@@ -108,6 +111,7 @@ async def login(
 )
 async def refresh(
     authorization: str | None = Header(None, alias="Authorization"),
+    session: AsyncSession = Depends(get_db_session),
 ) -> dict:
     """Exchange a valid refresh token for a new access token."""
     if not authorization:
@@ -116,6 +120,11 @@ async def refresh(
     payload = verify_token(authorization)
     if payload.get("type") != "refresh":
         raise AuthenticationError("Invalid token type")
+
+    service = UserService(session)
+    user = await service._repo.get_by_external_id(payload["sub"])
+    if not user or not user.is_active:
+        raise AuthenticationError("User no longer exists or is deactivated")
 
     access_token = create_access_token(payload["sub"], payload["email"])
     return success_response(
