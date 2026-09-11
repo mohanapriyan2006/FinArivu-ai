@@ -27,10 +27,17 @@ export const sendChatMessage = async (
 
 // ── AI Copilot (new multi-agent endpoint) ────────────────────────────────
 
+export interface CopilotAttachment {
+  filename: string
+  content: string
+  mimeType?: string
+}
+
 export interface CopilotChatRequest {
   sessionId: string
   message: string
   contextHints?: string[]
+  attachments?: CopilotAttachment[]
 }
 
 export interface CopilotAgentData {
@@ -121,12 +128,18 @@ export interface CopilotHealthResponse {
 export const sendCopilotMessage = async (
   sessionId: string,
   message: string,
-  contextHints: string[] = []
+  contextHints: string[] = [],
+  attachments: CopilotAttachment[] = []
 ): Promise<CopilotChatResponse> => {
   const response = await api.post('/v1/copilot/chat', {
     session_id: sessionId,
     message,
     context_hints: contextHints,
+    attachments: attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      mime_type: a.mimeType || 'text/plain',
+    })),
   })
   return response.data?.data as CopilotChatResponse
 }
@@ -137,20 +150,33 @@ export const sendCopilotMessage = async (
  * Returns an SSE instance from react-native-sse. Callers should attach
  * event listeners for 'message' and 'error' events and then `connect()`.
  */
+export type CopilotStreamEvent =
+  | 'token'
+  | 'agent_start'
+  | 'agent_done'
+  | 'data'
+  | 'done'
+
 export const streamCopilotMessage = (
   sessionId: string,
   message: string,
   contextHints: string[] = [],
-  token: string
-): SSE => {
+  token: string,
+  attachments: CopilotAttachment[] = []
+): SSE<CopilotStreamEvent> => {
   const url = `${api.defaults.baseURL}/v1/copilot/chat/stream`
   const body = JSON.stringify({
     session_id: sessionId,
     message,
     context_hints: contextHints,
+    attachments: attachments.map((a) => ({
+      filename: a.filename,
+      content: a.content,
+      mime_type: a.mimeType || 'text/plain',
+    })),
   })
 
-  const sse = new SSE(url, {
+  const sse = new SSE<CopilotStreamEvent>(url, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${token}`,
@@ -196,7 +222,14 @@ export const getCopilotHistory = async (
   const response = await api.get('/v1/copilot/history', {
     params: { session_id: sessionId, skip, limit },
   })
-  return response.data?.data as CopilotHistoryMessage[]
+  const raw = (response.data?.data || []) as Record<string, unknown>[]
+  return raw.map((m) => ({
+    id: String(m.id ?? ''),
+    role: String(m.role ?? 'assistant'),
+    content: String(m.content ?? ''),
+    intent: (m.intent as string | null) ?? null,
+    createdAt: (m.created_at as string | null) ?? null,
+  }))
 }
 
 /**
@@ -206,13 +239,13 @@ export const getCopilotSessions = async (limit = 50): Promise<CopilotSession[]> 
   const response = await api.get('/v1/copilot/sessions', {
     params: { limit },
   })
-  const raw = (response.data?.data || []) as any[]
+  const raw = (response.data?.data || []) as Record<string, unknown>[]
   return raw.map((s) => ({
-    sessionId: s.session_id,
-    title: s.title,
-    createdAt: s.created_at,
-    updatedAt: s.updated_at,
-    messageCount: s.message_count,
+    sessionId: String(s.session_id ?? ''),
+    title: String(s.title ?? 'New chat'),
+    createdAt: (s.created_at as string | null) ?? null,
+    updatedAt: (s.updated_at as string | null) ?? null,
+    messageCount: Number(s.message_count ?? 0),
   }))
 }
 
@@ -239,4 +272,33 @@ export const renameCopilotSession = async (
  */
 export const deleteCopilotSession = async (sessionId: string): Promise<void> => {
   await api.delete(`/v1/copilot/sessions/${sessionId}`)
+}
+
+export interface CopilotDocumentUpload {
+  uri: string
+  name: string
+  type: string
+}
+
+export interface CopilotDocumentUploadResponse {
+  text: string
+  filename: string
+}
+
+/**
+ * Upload a document and receive extracted text from the backend.
+ */
+export const uploadCopilotDocument = async (
+  file: CopilotDocumentUpload
+): Promise<CopilotDocumentUploadResponse> => {
+  const formData = new FormData()
+  formData.append('file', file as any)
+
+  const response = await api.post('/v1/chat/upload', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  })
+
+  return response.data?.data as CopilotDocumentUploadResponse
 }

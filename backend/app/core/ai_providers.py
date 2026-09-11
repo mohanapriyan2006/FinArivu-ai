@@ -29,6 +29,11 @@ class ProviderConfig:
         """Return the model to use for this provider."""
         return self.default_model
 
+    @property
+    def enabled(self) -> bool:
+        """Return True when this provider has an API key configured."""
+        return bool(self.api_key)
+
 
 GROQ = ProviderConfig(
     name="groq",

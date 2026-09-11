@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import date, timedelta
 from decimal import Decimal
@@ -47,30 +46,23 @@ class InsightsService:
         """Return the full dynamic insights payload for a user."""
         today = date.today()
 
-        # Fetch core aggregates in parallel.
-        health_task = self._financial.calculate_health_score(user_id)
-        dashboard_task = self._financial.get_dashboard(user_id)
-        budget_task = self._financial.analyze_budget(user_id)
-        goals_task = self._financial.project_goals(user_id)
-        completion_task = self._profile.get_completion(user_id)
-
-        health, dashboard, budget_analysis, goal_projections, completion = await asyncio.gather(
-            health_task,
-            dashboard_task,
-            budget_task,
-            goals_task,
-            completion_task,
-        )
+        # Fetch core aggregates sequentially — a single AsyncSession does not
+        # support concurrent operations (asyncpg raises InterfaceError).
+        health = await self._financial.calculate_health_score(user_id)
+        dashboard = await self._financial.get_dashboard(user_id)
+        budget_analysis = await self._financial.analyze_budget(user_id)
+        goal_projections = await self._financial.project_goals(user_id)
+        completion = await self._profile.get_completion(user_id)
 
         # Weekly windows.
         week_ago = today - timedelta(days=7)
         two_weeks_ago = today - timedelta(days=14)
 
-        weekly_expenses, prior_weekly_expenses, weekly_income = await asyncio.gather(
-            self._sum_expenses(user_id, week_ago, today),
-            self._sum_expenses(user_id, two_weeks_ago, week_ago - timedelta(days=1)),
-            self._sum_income(user_id, week_ago, today),
+        weekly_expenses = await self._sum_expenses(user_id, week_ago, today)
+        prior_weekly_expenses = await self._sum_expenses(
+            user_id, two_weeks_ago, week_ago - timedelta(days=1)
         )
+        weekly_income = await self._sum_income(user_id, week_ago, today)
 
         # Missing data prompts.
         budget_exists = await self._budget_repo.exists(user_id=user_id)

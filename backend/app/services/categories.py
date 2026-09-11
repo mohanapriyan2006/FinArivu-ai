@@ -22,7 +22,7 @@ class ExpenseCategoryService(BaseService[ExpenseCategory]):
         """Create a category with duplicate name check."""
         if await self._repo.get_by_name(data.name):
             raise ConflictError("Category name already exists")
-        category = ExpenseCategory(**data.model_dump(exclude_unset=True))
+        category = ExpenseCategory(**data.model_dump(exclude_unset=True, by_alias=False))
         return await self._repo.create(category)
 
     async def update(self, id: uuid.UUID, data: ExpenseCategoryUpdate) -> ExpenseCategory:
@@ -30,7 +30,7 @@ class ExpenseCategoryService(BaseService[ExpenseCategory]):
         existing = await self.get(id)
         if existing.is_system and data.name and data.name != existing.name:
             raise ConflictError("Cannot rename system categories")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(id, update_dict)
         if obj is None:
             raise NotFoundError("Category not found")

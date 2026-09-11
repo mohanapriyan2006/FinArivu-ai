@@ -71,36 +71,35 @@ class Orchestrator:
             "session_id": state["session_id"],
         }
 
-        tasks: list[asyncio.Task[AgentResult]] = []
+        # Agents share a single AsyncSession, which does not support
+        # concurrent operations — run them sequentially instead of via
+        # asyncio.create_task (asyncpg raises InterfaceError otherwise).
+        planned: list[tuple[str, Any, int]] = []
         for step in plan.steps:
             cls = self._registry.get(step.agent_name)
             if cls is None:
                 logger.warning("Agent %s not found in registry", step.agent_name)
                 continue
+            planned.append((step.agent_name, cls(self._session), step.timeout_seconds))
 
-            agent = cls(self._session)
-            coro = self._execute_with_retry(
-                agent, user_id, agent_context, step.timeout_seconds,
-            )
-            tasks.append(asyncio.create_task(coro))
-
-        if not tasks:
+        if not planned:
             # Fallback to education agent if nothing is planned.
             cls = self._registry.get("EducationAgent")
             if cls is not None:
-                agent = cls(self._session)
-                tasks.append(asyncio.create_task(agent.safe_execute(user_id, agent_context)))
+                planned.append(("EducationAgent", cls(self._session), 30))
 
         results: list[AgentResult] = []
-        for task in tasks:
+        for agent_name, agent, timeout in planned:
             try:
-                result = await task
+                result = await self._execute_with_retry(
+                    agent, user_id, agent_context, timeout,
+                )
                 results.append(result)
             except Exception as exc:
-                logger.exception("Agent failed: %s", exc)
+                logger.exception("Agent %s failed: %s", agent_name, exc)
                 results.append(
                     AgentResult(
-                        agent_name="unknown",
+                        agent_name=agent_name,
                         error=str(exc),
                         summary="Agent failed to complete.",
                         confidence=0.0,

@@ -9,7 +9,7 @@ class ChatMessage(BaseSchema):
     """Incoming chat message from a user."""
 
     session_id: str = Field(..., min_length=1, max_length=255)
-    message: str = Field(..., min_length=1, max_length=2000)
+    message: str = Field(..., min_length=1, max_length=100000)
 
 
 class ChatResponse(BaseSchema):

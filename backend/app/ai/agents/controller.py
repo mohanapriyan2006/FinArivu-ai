@@ -6,7 +6,6 @@ agents based on the planner's output, then merges all results.
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from typing import Any, TypedDict
 
@@ -86,12 +85,11 @@ class AgentController:
             # Fallback: always have at least the education agent.
             agents.append(EducationAgent(self._session))
 
-        # Fan-out: run all agents concurrently.
-        tasks = [
-            agent.safe_execute(user_id, context)
-            for agent in agents
-        ]
-        results: list[AgentResult] = list(await asyncio.gather(*tasks))
+        # Run agents sequentially — they share a single AsyncSession which
+        # does not support concurrent operations (asyncpg InterfaceError).
+        results: list[AgentResult] = []
+        for agent in agents:
+            results.append(await agent.safe_execute(user_id, context))
 
         logger.info(
             "Agent controller completed: %d agent(s), %d error(s)",

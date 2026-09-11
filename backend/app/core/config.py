@@ -60,6 +60,26 @@ class Settings(BaseSettings):
     ai_retry_count: int = Field(default=3, alias="AI_RETRY_COUNT")
     ai_streaming_enabled: bool = Field(default=True, alias="AI_STREAMING_ENABLED")
 
+    # Local Phi-4 Controller/Validator
+    local_llm_enabled: bool = Field(default=False, alias="LOCAL_LLM_ENABLED")
+    local_llm_model_path: str = Field(default="", alias="LOCAL_LLM_MODEL_PATH")
+    local_llm_n_gpu_layers: int = Field(default=-1, alias="LOCAL_LLM_N_GPU_LAYERS")
+    local_llm_n_ctx: int = Field(default=4096, alias="LOCAL_LLM_N_CTX")
+    local_llm_n_batch: int = Field(default=512, alias="LOCAL_LLM_N_BATCH")
+    local_llm_threads: int = Field(default=6, alias="LOCAL_LLM_THREADS")
+    local_llm_timeout_seconds: int = Field(default=120, alias="LOCAL_LLM_TIMEOUT_SECONDS")
+    local_llm_flash_attn: bool = Field(default=True, alias="LOCAL_LLM_FLASH_ATTN")
+    local_llm_offload_kqv: bool = Field(default=True, alias="LOCAL_LLM_OFFLOAD_KQV")
+
+    # AI pipeline timeouts
+    ai_controller_timeout_seconds: int = Field(default=90, alias="AI_CONTROLLER_TIMEOUT_SECONDS")
+    ai_agent_timeout_seconds: int = Field(default=30, alias="AI_AGENT_TIMEOUT_SECONDS")
+    ai_response_timeout_seconds: int = Field(default=60, alias="AI_RESPONSE_TIMEOUT_SECONDS")
+    ai_validator_timeout_seconds: int = Field(default=120, alias="AI_VALIDATOR_TIMEOUT_SECONDS")
+    ai_verifier_timeout_seconds: int = Field(default=60, alias="AI_VERIFIER_TIMEOUT_SECONDS")
+    ai_max_repair_attempts: int = Field(default=2, alias="AI_MAX_REPAIR_ATTEMPTS")
+    ai_enable_api_verifier: bool = Field(default=True, alias="AI_ENABLE_API_VERIFIER")
+
     # Provider routing per task type
     ai_provider_fast: str = Field(default="groq", alias="AI_PROVIDER_FAST")
     ai_provider_reasoning: str = Field(default="gemini", alias="AI_PROVIDER_REASONING")

@@ -101,10 +101,6 @@ class FinancialProfileService:
         user_id: uuid.UUID,
         data: AboutYouUpdate,
     ) -> dict[str, Any]:
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
-        if "age" in update_dict:
-            update_dict["age"] = update_dict["age"]
-        update_dict["profile_initialized"] = True
         await self._profile_service.update_by_user(user_id, data)
         return {"section": "aboutYou", "status": "saved"}
 
@@ -388,9 +384,9 @@ class FinancialProfileService:
         insurance = await self._insurance_repo.list_for_user(user_id)
         tax = await self._tax_repo.get_by_user_id(user_id)
 
-        cash_assets = [a for a in assets if a.asset_type == "Cash"]
+        cash_assets = [a for a in assets if a.asset_type in {"Cash", "Bank"}]
         investment_assets = [
-            a for a in assets if a.asset_type not in {"Cash", "Fixed Deposit"}
+            a for a in assets if a.asset_type not in {"Cash", "Bank", "Fixed Deposit"}
         ]
         fixed_deposits = [a for a in assets if a.asset_type == "Fixed Deposit"]
         loans = [l for l in liabilities if l.liability_type != "Credit Card"]
@@ -450,11 +446,10 @@ class FinancialProfileService:
 
         assets = await self._asset_repo.list_for_user(user_id)
         savings_complete = any(
-            a.asset_type == "Cash" and a.savings_bucket is not None
-            for a in assets
+            a.asset_type in {"Cash", "Bank"} for a in assets
         )
         investment_complete = any(
-            a.asset_type not in {"Cash", "Fixed Deposit"} for a in assets
+            a.asset_type not in {"Cash", "Bank", "Fixed Deposit"} for a in assets
         )
 
         liabilities = await self._liability_repo.list_for_user(user_id)
@@ -487,7 +482,7 @@ class FinancialProfileService:
                 a.asset_type == "Fixed Deposit" for a in assets
             ),
             "creditCards": any(
-                l.lability_type == "Credit Card" for l in liabilities
+                l.liability_type == "Credit Card" for l in liabilities
             ),
             "insurance": bool(
                 await self._insurance_repo.list_for_user(user_id)
@@ -580,7 +575,9 @@ class FinancialProfileService:
             "goal": Decimal("0"),
         }
         for asset in assets:
-            bucket = asset.savings_bucket or "general"
+            bucket = asset.savings_bucket or (
+                "emergency" if asset.is_emergency_fund else "general"
+            )
             totals[bucket] = totals.get(bucket, Decimal("0")) + asset.value
         return {
             "emergency_fund": float(totals["emergency"]),

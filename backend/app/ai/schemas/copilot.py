@@ -58,6 +58,18 @@ class ResponseStyle(StrEnum):
 
 # ── Request schemas ───────────────────────────────────────────────────────
 
+class CopilotAttachment(BaseSchema):
+    """A document attached to a chat message.
+
+    ``content`` holds the extracted plain text of the document; the AI
+    pipeline receives it as a document block separate from the user message.
+    """
+
+    filename: str = Field(..., min_length=1, max_length=255)
+    content: str = Field(..., min_length=1, max_length=200000)
+    mime_type: str = Field(default="text/plain", max_length=100)
+
+
 class CopilotChatRequest(BaseSchema):
     """Incoming copilot chat message from the client."""
 
@@ -69,11 +81,16 @@ class CopilotChatRequest(BaseSchema):
     }
 
     session_id: str = Field(..., min_length=1, max_length=255)
-    message: str = Field(..., min_length=1, max_length=2000)
+    message: str = Field(default="", max_length=100000)
     context_hints: list[str] = Field(
         default_factory=list,
         max_length=10,
         description="Optional hints from the client about the current screen/context.",
+    )
+    attachments: list[CopilotAttachment] = Field(
+        default_factory=list,
+        max_length=5,
+        description="Documents attached to this message (extracted text).",
     )
 
 

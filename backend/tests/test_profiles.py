@@ -7,7 +7,7 @@ async def test_get_my_profile(async_client, auth_headers):
     response = await async_client.get("/api/v1/profiles/me", headers=auth_headers)
     assert response.status_code == 200
     data = response.json()["data"]
-    assert "user_id" in data
+    assert "userId" in data
 
 
 async def test_update_my_profile(async_client, auth_headers):
@@ -18,7 +18,7 @@ async def test_update_my_profile(async_client, auth_headers):
     )
     assert response.status_code == 200
     data = response.json()["data"]
-    assert data["full_name"] == "Test User"
+    assert data["fullName"] == "Test User"
 
 
 async def test_get_profile_by_id(async_client, auth_headers):

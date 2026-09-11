@@ -8,6 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.context.builder import ContextBuilder
 from app.ai.context.context_requirements import get_required_domains
+from app.ai.controller.controller_service import ControllerService
 from app.ai.guardrails.guardrail import Guardrail
 from app.ai.guardrails.guardrail_service import GuardrailService
 from app.ai.intent.classifier import IntentClassifier
@@ -17,6 +18,7 @@ from app.ai.orchestrator.response_builder import ResponseBuilder
 from app.ai.planner.planner import Planner
 from app.ai.providers.factory import get_ai_provider
 from app.ai.schemas import (
+    CopilotAttachment,
     CopilotChatRequest,
     CopilotChatResponse,
     CopilotHealthResponse,
@@ -56,10 +58,12 @@ class AIController:
         session_id = request.session_id
         message = request.message.strip()
 
-        if not message:
+        if not message and not request.attachments:
             return CopilotChatResponse(
                 message="I didn't receive a message. How can I help with your finances today?",
             )
+        if not message:
+            message = "Please analyse the attached document."
 
         sanitised_message = self._guardrail_service.mask_pii(message)
         guard_result = self._guardrail.check(sanitised_message)
@@ -74,87 +78,15 @@ class AIController:
                 user_id, session_id, sanitised_message, "investment_advice",
             )
 
-        # 3. Persist user message
-        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
-
-        # 4. Classify intent
-        intent_result = self._intent.classify(sanitised_message)
-
-        # 5. Create execution plan
-        execution_plan = self._planner.plan(intent_result)
-
-        # 6. Build only the financial context required by the planned agents
-        agent_names = [step.agent_name for step in execution_plan.steps]
-        required_domains = get_required_domains(agent_names)
-        financial_context = await self._context_builder.build(
-            user_id, session_id, required_domains
+        # 3. Persist user message (with attachment marker for readable history)
+        await self._memory.save_message(
+            user_id, session_id, "user",
+            self._display_message(sanitised_message, request.attachments),
         )
 
-        # 7. Execute agents
-        agent_results = await self._orchestrator.execute(
-            user_id,
-            session_id,
-            execution_plan,
-            financial_context,
-            sanitised_message,
-            intent_result.entities,
-        )
-
-        # 8. Build final explanation with artifacts, recommendations, metadata
-        provider = get_ai_provider()
-        self._response_builder = ResponseBuilder(provider)
-        planner_output = self._to_planner_output(execution_plan)
-
-        build = await self._response_builder.build_full(
-            sanitised_message,
-            planner_output,
-            agent_results,
-            start,
-            financial_context,
-        )
-
-        # Mask any PII that might have been echoed before persistence or response.
-        safe_response = self._guardrail_service.mask_pii(build.message)
-
-        # 10. Persist assistant message with full metadata
-        latency = int((time.perf_counter() - start) * 1000)
-        msg = await self._memory.save_message(
-            user_id,
-            session_id,
-            "assistant",
-            safe_response,
-            intent=execution_plan.intent.value,
-            provider=build.ai_response.provider_name if build.ai_response else None,
-            model=build.ai_response.model if build.ai_response else None,
-            tokens_input=build.ai_response.tokens_input if build.ai_response else 0,
-            tokens_output=build.ai_response.tokens_output if build.ai_response else 0,
-            latency_ms=latency,
-            agent_chain={
-                "agents": [r.agent_name for r in agent_results if not r.error],
-                "intent": execution_plan.intent.value,
-            },
-        )
-
-        # 11. Return structured response
-        return CopilotChatResponse(
-            message_id=msg.id,
-            message=safe_response,
-            response_type=build.response_type,
-            summary=build.summary,
-            intent=self._map_intent(execution_plan.intent.value),
-            agents_used=build.metadata.agents_used,
-            data=build.merged_data,
-            artifacts=build.artifacts,
-            recommendations=build.recommendations,
-            follow_up_questions=build.follow_up_questions,
-            suggested_actions=build.suggested_actions,
-            metadata=build.metadata,
-            provider=build.ai_response.provider_name if build.ai_response else None,
-            model=build.ai_response.model if build.ai_response else None,
-            tokens_input=build.ai_response.tokens_input if build.ai_response else 0,
-            tokens_output=build.ai_response.tokens_output if build.ai_response else 0,
-            guardrail_triggered=False,
-        )
+        service = ControllerService(self._session)
+        ai_message = self._apply_attachments(sanitised_message, request.attachments)
+        return await service.chat(user_id, session_id, ai_message)
 
     async def get_history(
         self,
@@ -201,13 +133,15 @@ class AIController:
         session_id = request.session_id
         message = request.message.strip()
 
-        if not message:
+        if not message and not request.attachments:
             yield StreamEvent(
                 event_type=StreamEventType.ERROR,
                 data="No message provided.",
             )
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
+        if not message:
+            message = "Please analyse the attached document."
 
         sanitised_message = self._guardrail_service.mask_pii(message)
 
@@ -224,33 +158,40 @@ class AIController:
             yield StreamEvent(event_type=StreamEventType.DONE)
             return
 
-        # 2. Classify, plan, build required context, execute
-        await self._memory.save_message(user_id, session_id, "user", sanitised_message)
-        intent_result = self._intent.classify(sanitised_message)
-        execution_plan = self._planner.plan(intent_result)
-        agent_names = [step.agent_name for step in execution_plan.steps]
-        required_domains = get_required_domains(agent_names)
-        financial_context = await self._context_builder.build(
-            user_id, session_id, required_domains
+        await self._memory.save_message(
+            user_id, session_id, "user",
+            self._display_message(sanitised_message, request.attachments),
         )
-        agent_results = await self._orchestrator.execute(
-            user_id,
-            session_id,
-            execution_plan,
-            financial_context,
-            sanitised_message,
-            intent_result.entities,
-        )
-
-        # 3. Stream explanation tokens
-        provider = get_ai_provider()
-        self._response_builder = ResponseBuilder(provider)
-        planner_output = self._to_planner_output(execution_plan)
-
-        async for event in self._response_builder.build_stream(
-            sanitised_message, planner_output, agent_results, financial_context,
-        ):
+        service = ControllerService(self._session)
+        ai_message = self._apply_attachments(sanitised_message, request.attachments)
+        async for event in service.chat_stream(user_id, session_id, ai_message):
             yield event
+
+    @staticmethod
+    def _apply_attachments(
+        message: str,
+        attachments: list[CopilotAttachment],
+    ) -> str:
+        """Append attached documents as structured blocks for the AI."""
+        if not attachments:
+            return message
+        blocks = "\n\n".join(
+            f'<document filename="{att.filename}" type="{att.mime_type}">\n'
+            f"{att.content}\n</document>"
+            for att in attachments
+        )
+        return f"{message}\n\n{blocks}"
+
+    @staticmethod
+    def _display_message(
+        message: str,
+        attachments: list[CopilotAttachment],
+    ) -> str:
+        """User-facing message persisted to history (no raw document text)."""
+        if not attachments:
+            return message
+        names = ", ".join(att.filename for att in attachments)
+        return f"{message}\n[Attached: {names}]"
 
     async def _blocked_response(
         self,

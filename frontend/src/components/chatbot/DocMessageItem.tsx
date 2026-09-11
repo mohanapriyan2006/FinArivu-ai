@@ -1,7 +1,17 @@
-import React, { useMemo } from 'react'
+import React, { useMemo, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
-import { Bot, Sparkles } from 'lucide-react-native'
+import { Bot, FileText, Sparkles, Volume2 } from 'lucide-react-native'
+
+let Speech: any = { stop: () => {}, speak: () => {} }
+let isTtsAvailable = false
+
+try {
+  Speech = require('expo-speech')
+  isTtsAvailable = true
+} catch (e) {
+  console.warn('expo-speech is not available in this runtime:', e)
+}
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ThemeColors, Typography } from '@/theme'
@@ -36,10 +46,16 @@ export interface SuggestedAction {
   route?: string
 }
 
+export interface ChatMessageAttachment {
+  filename: string
+  mimeType?: string
+}
+
 export interface ChatMessageItemData {
   id: string
   role: 'user' | 'assistant'
   content: string
+  attachments?: ChatMessageAttachment[]
   summary?: string
   responseType?: string
   intent?: string
@@ -63,13 +79,30 @@ interface DocMessageItemProps {
 export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMessageItemProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
+  const [isSpeaking, setIsSpeaking] = useState(false)
 
   // ── USER MESSAGE BUBBLE (Right-aligned, 16px radius, max 80%) ──────
   if (item.role === 'user') {
     return (
       <Animated.View entering={FadeInDown.duration(300)} style={styles.userWrapper}>
         <View style={styles.userBubble}>
-          <Text style={styles.userText}>{item.content}</Text>
+          {item.attachments && item.attachments.length > 0 && (
+            <View style={styles.attachmentList}>
+              {item.attachments.map((att, idx) => (
+                <View key={`att-${idx}`} style={styles.attachmentChip}>
+                  <View style={styles.attachmentIcon}>
+                    <FileText size={16} color={colors.primary} strokeWidth={2.2} />
+                  </View>
+                  <Text style={styles.attachmentName} numberOfLines={1}>
+                    {att.filename}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
+          {item.content ? (
+            <Text style={styles.userText}>{item.content}</Text>
+          ) : null}
         </View>
       </Animated.View>
     )
@@ -85,6 +118,25 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
     } else if (onSelectFollowUp) {
       onSelectFollowUp((action.payload?.question as string) || action.label)
     }
+  }
+
+  const handleSpeak = () => {
+    if (!isTtsAvailable) return
+    if (isSpeaking) {
+      Speech.stop()
+      setIsSpeaking(false)
+      return
+    }
+
+    Speech.stop()
+    setIsSpeaking(true)
+    Speech.speak(item.content, {
+      language: 'en',
+      onStart: () => setIsSpeaking(true),
+      onDone: () => setIsSpeaking(false),
+      onStopped: () => setIsSpeaking(false),
+      onError: () => setIsSpeaking(false),
+    })
   }
 
   const renderArtifact = (artifact: ChatArtifact, index: number) => {
@@ -164,6 +216,25 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
         {item.disclaimer ? (
           <Text style={styles.disclaimerText}>{item.disclaimer}</Text>
         ) : null}
+
+        {/* Text-to-speech control */}
+        <View style={styles.speakerRow}>
+          <Pressable
+            onPress={handleSpeak}
+            style={[
+              styles.speakerButton,
+              isSpeaking && styles.speakerButtonActive,
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel={isSpeaking ? 'Stop reading' : 'Read aloud'}
+          >
+            <Volume2
+              size={16}
+              color={isSpeaking ? colors.primary : colors.textSecondary}
+              strokeWidth={2.2}
+            />
+          </Pressable>
+        </View>
       </View>
 
       {/* Follow-up Chips at bottom */}
@@ -201,10 +272,39 @@ const makeStyles = (colors: ThemeColors) =>
       lineHeight: 20,
       fontWeight: '500',
     },
+    attachmentList: {
+      gap: 6,
+      marginBottom: 8,
+    },
+    attachmentChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: 10,
+      paddingHorizontal: 10,
+      paddingVertical: 8,
+      gap: 8,
+    },
+    attachmentIcon: {
+      width: 28,
+      height: 28,
+      borderRadius: 8,
+      backgroundColor: colors.primarySoft,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    attachmentName: {
+      ...Typography.bodySmall,
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+      flexShrink: 1,
+    },
     aiDocContainer: {
       alignSelf: 'stretch',
       marginVertical: 10,
-      paddingHorizontal: 16,
     },
     aiHeaderRow: {
       flexDirection: 'row',
@@ -305,5 +405,24 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 11,
       marginTop: 8,
       fontStyle: 'italic',
+    },
+    speakerRow: {
+      marginTop: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    speakerButton: {
+      width: 28,
+      height: 28,
+      borderRadius: 14,
+      backgroundColor: colors.background,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    speakerButtonActive: {
+      backgroundColor: colors.primarySoft,
+      borderColor: colors.primary,
     },
   })

@@ -42,6 +42,7 @@ export default function CopilotScreen({ navigation }: any) {
     thinkingStep,
     isOnline,
     sendMessage,
+    extractDocument,
     loadHistory,
     clearMessages,
     newChat,
@@ -54,6 +55,13 @@ export default function CopilotScreen({ navigation }: any) {
   } = useCopilot()
 
   const [inputText, setInputText] = useState('')
+  const [attachedFile, setAttachedFile] = useState<{
+    filename: string
+    text: string
+    size: number
+    mimeType?: string
+  } | null>(null)
+  const [isExtractingDocument, setIsExtractingDocument] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [menuVisible, setMenuVisible] = useState(false)
   const [historyVisible, setHistoryVisible] = useState(false)
@@ -71,15 +79,55 @@ export default function CopilotScreen({ navigation }: any) {
   const handleSendMessage = useCallback(
     async (textToSend?: string) => {
       const text = (textToSend || inputText).trim()
-      if (!text) return
+      if (!text && !attachedFile) return
+
+      const attachments = attachedFile
+        ? [
+            {
+              filename: attachedFile.filename,
+              content: attachedFile.text,
+              mimeType: attachedFile.mimeType,
+            },
+          ]
+        : []
 
       setInputText('')
+      setAttachedFile(null)
       Keyboard.dismiss()
-      await sendMessage(text)
+      await sendMessage(text, [], attachments)
       scrollToBottom()
     },
-    [inputText, sendMessage, scrollToBottom]
+    [inputText, attachedFile, sendMessage, scrollToBottom]
   )
+
+  const handleFilePicked = useCallback(
+    async (file: { uri: string; name: string; size: number; mimeType?: string }) => {
+      setIsExtractingDocument(true)
+      try {
+        const { text, filename } = await extractDocument({
+          uri: file.uri,
+          name: file.name,
+          type: file.mimeType || 'application/octet-stream',
+        })
+        setAttachedFile({
+          filename,
+          text,
+          size: file.size,
+          mimeType: file.mimeType,
+        })
+      } catch (err) {
+        Alert.alert(
+          'Could not read document',
+          err instanceof Error ? err.message : 'Failed to extract text from the document.'
+        )
+      } finally {
+        setIsExtractingDocument(false)
+      }
+    },
+    [extractDocument]
+  )
+
+  const handleRemoveAttachedFile = useCallback(() => setAttachedFile(null), [])
 
   useEffect(() => {
     getToken().then((token) => {
@@ -387,6 +435,11 @@ export default function CopilotScreen({ navigation }: any) {
               value={inputText}
               onChangeText={setInputText}
               onSend={() => handleSendMessage()}
+              onFilePicked={handleFilePicked}
+              onRemoveAttachedFile={handleRemoveAttachedFile}
+              attachedFileName={attachedFile?.filename}
+              attachedFileSize={attachedFile?.size}
+              isExtractingDocument={isExtractingDocument}
               disabled={isLoading || isStreaming}
             />
           </View>

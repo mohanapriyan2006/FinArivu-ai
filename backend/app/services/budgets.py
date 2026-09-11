@@ -34,7 +34,7 @@ class BudgetService(BaseService[Budget]):
         if existing is not None:
             raise ConflictError("Budget already exists for this category")
 
-        payload = data.model_dump(exclude_unset=True)
+        payload = data.model_dump(exclude_unset=True, by_alias=False)
         payload["user_id"] = user_id
         budget = Budget(**payload)
         return await self._repo.create(budget)
@@ -58,7 +58,7 @@ class BudgetService(BaseService[Budget]):
         budget = await self._repo.get_by_id(budget_id)
         if budget is None or budget.user_id != user_id:
             raise NotFoundError("Budget not found")
-        update_dict = data.model_dump(exclude_unset=True, exclude_none=True)
+        update_dict = data.model_dump(exclude_unset=True, exclude_none=True, by_alias=False)
         obj = await self._repo.update(budget_id, update_dict)
         if obj is None:
             raise NotFoundError("Budget not found")

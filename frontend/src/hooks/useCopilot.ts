@@ -6,6 +6,8 @@ import {
   renameCopilotSession,
   sendCopilotMessage,
   streamCopilotMessage,
+  uploadCopilotDocument,
+  type CopilotAttachment,
   type CopilotChatResponse,
   type CopilotHistoryMessage,
   type CopilotSession,
@@ -14,10 +16,10 @@ import type { ChatMessageItemData } from '@/components/chatbot/DocMessageItem'
 
 const THINKING_STEPS = [
   'Planning analysis...',
-  'Checking budget & transaction data...',
-  'Running Tax Engine calculations...',
-  'Evaluating goal projections...',
-  'Synthesizing Personal CFO response...',
+  'Checking data...',
+  'Running calculations...',
+  'Evaluating...',
+  'Synthesizing response...',
 ]
 
 export interface UseCopilotOptions {
@@ -36,8 +38,9 @@ export interface UseCopilotReturn {
   sessions: CopilotSession[]
   clearMessages: () => void
   newChat: () => void
-  sendMessage: (text: string, contextHints?: string[]) => Promise<void>
-  sendStream: (text: string, contextHints?: string[]) => void
+  sendMessage: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => Promise<void>
+  extractDocument: (file: { uri: string; name: string; type: string }) => Promise<{ text: string; filename: string }>
+  sendStream: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => void
   retry: () => Promise<void>
   loadHistory: (skip?: number, limit?: number) => Promise<void>
   loadSessions: () => Promise<void>
@@ -109,9 +112,9 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
   }, [])
 
   const sendMessage = useCallback(
-    async (text: string, contextHints: string[] = []) => {
+    async (text: string, contextHints: string[] = [], attachments: CopilotAttachment[] = []) => {
       const trimmed = text.trim()
-      if (!trimmed || isLoading || isStreaming) return
+      if ((!trimmed && attachments.length === 0) || isLoading || isStreaming) return
 
       setError(null)
       setLastFailedText(null)
@@ -121,12 +124,13 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         id: `user_${Date.now()}`,
         role: 'user',
         content: trimmed,
+        attachments: attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
         createdAt: new Date().toISOString(),
       }
       appendMessage(userMsg)
 
       try {
-        const response = await sendCopilotMessage(sessionId, trimmed, contextHints)
+        const response = await sendCopilotMessage(sessionId, trimmed, contextHints, attachments)
         appendMessage(buildAssistantMessage(response))
         await loadSessions()
       } catch (err) {
@@ -148,14 +152,22 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     [appendMessage, buildAssistantMessage, isLoading, isStreaming, sessionId, loadSessions]
   )
 
+  const extractDocument = useCallback(
+    async (file: { uri: string; name: string; type: string }) => {
+      const { text, filename } = await uploadCopilotDocument(file)
+      return { text, filename }
+    },
+    []
+  )
+
   const sendStream = useCallback(
-    (text: string, contextHints: string[] = []) => {
+    (text: string, contextHints: string[] = [], attachments: CopilotAttachment[] = []) => {
       if (!token) {
         setError('No authentication token available for streaming.')
         return
       }
       const trimmed = text.trim()
-      if (!trimmed || isLoading || isStreaming) return
+      if ((!trimmed && attachments.length === 0) || isLoading || isStreaming) return
 
       setError(null)
       setIsStreaming(true)
@@ -164,34 +176,74 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
         id: `user_${Date.now()}`,
         role: 'user',
         content: trimmed,
+        attachments: attachments.map((a) => ({ filename: a.filename, mimeType: a.mimeType })),
         createdAt: new Date().toISOString(),
       }
       appendMessage(userMsg)
 
       let streamedText = ''
-      const sse = streamCopilotMessage(sessionId, trimmed, contextHints, token)
+      const streamMsgId = `ai_stream_${Date.now()}`
+      const sse = streamCopilotMessage(sessionId, trimmed, contextHints, token, attachments)
 
-      sse.addEventListener('message', (event: any) => {
-        const payload = event?.data ? JSON.parse(event.data) : null
-        if (payload?.event === 'token') {
-          streamedText += payload.data
-        }
-        if (payload?.event === 'done') {
-          sse.close()
-          setIsStreaming(false)
+      const upsertStreamedMessage = () => {
+        setMessages((prev) => {
+          const msg: ChatMessageItemData = {
+            id: streamMsgId,
+            role: 'assistant',
+            content: streamedText,
+            createdAt: new Date().toISOString(),
+          }
+          const idx = prev.findIndex((m) => m.id === streamMsgId)
+          if (idx >= 0) {
+            const next = [...prev]
+            next[idx] = msg
+            return next
+          }
+          return [...prev, msg]
+        })
+      }
+
+      // Backend emits named SSE events (token, agent_start, agent_done, data,
+      // done, error) — not the default 'message' event. The EventSource
+      // connects automatically on construction.
+      sse.addEventListener('token', (event) => {
+        try {
+          const payload = event?.data ? JSON.parse(event.data) : null
+          if (payload?.data) {
+            streamedText += payload.data
+            upsertStreamedMessage()
+          }
+        } catch {
+          // Ignore malformed token payloads.
         }
       })
 
-      sse.addEventListener('error', (event: any) => {
-        const message = event?.message || 'Streaming failed. Please try again.'
+      sse.addEventListener('agent_start', (event) => {
+        try {
+          const payload = event?.data ? JSON.parse(event.data) : null
+          if (payload?.data) setThinkingStep(String(payload.data))
+        } catch {
+          // Non-critical progress event.
+        }
+      })
+
+      sse.addEventListener('done', () => {
+        sse.close()
+        setIsStreaming(false)
+        loadSessions()
+      })
+
+      sse.addEventListener('error', (event) => {
+        const message =
+          'message' in event && event.message
+            ? event.message
+            : 'Streaming failed. Please try again.'
         setError(message)
         setLastFailedText(trimmed)
         setIsStreaming(false)
       })
-
-      ;(sse as any).connect()
     },
-    [appendMessage, isLoading, isStreaming, sessionId, token]
+    [appendMessage, isLoading, isStreaming, sessionId, token, loadSessions]
   )
 
   const retry = useCallback(async () => {
@@ -305,6 +357,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     clearMessages,
     newChat,
     sendMessage,
+    extractDocument,
     sendStream,
     retry,
     loadHistory,

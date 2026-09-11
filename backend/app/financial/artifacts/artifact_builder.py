@@ -27,9 +27,7 @@ class ArtifactBuilder:
             "CashFlowAgent": "cashflow_card",
             "ReportAgent": "report_card",
         }
-        artifact_type = mapping.get(agent_name)
-        if artifact_type is None:
-            return None
+        artifact_type = mapping.get(agent_name, "generic_card")
         title = agent_name.replace("Agent", "")
         return Artifact(type=artifact_type, title=title, content=data)
 

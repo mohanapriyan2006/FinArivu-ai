@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Zap, ChevronRight } from 'lucide-react-native'
+import { WebView } from 'react-native-webview'
+import { useAssets } from 'expo-asset'
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -25,6 +27,7 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const [activeIndex, setActiveIndex] = useState(0)
+  const [assets] = useAssets([require('../../../assets/animations/finance1.svg')])
 
   const styles = useMemo(
     () =>
@@ -66,6 +69,21 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
           shadowOpacity: 0.06,
           shadowRadius: 12,
           elevation: 4,
+        },
+        lottieContainer: {
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 180,
+          marginTop: 8,
+          backgroundColor: colors.primarySoft,
+          borderRadius: 16,
+          borderWidth: 2,
+          borderColor: colors.primary,
+          overflow: 'hidden',
+        },
+        lottie: {
+          width: 180,
+          height: 180,
         },
         chartRow: {
           flexDirection: 'row',
@@ -194,7 +212,6 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
     navigation.navigate('Auth')
   }
 
-  const skeletonWidths = ['85%', '65%', '75%']
 
   return (
     <View style={styles.container} testID="onboarding-screen">
@@ -213,25 +230,18 @@ export default function OnboardingScreen({ navigation }: OnboardingScreenProps) 
       <View style={styles.content}>
         <FadeInUp delay={0}>
           <View style={styles.card} testID="onboarding-illustration">
-            <View style={styles.chartRow}>
-              <View style={styles.barsContainer}>
-                <View style={[styles.bar, { height: '40%', backgroundColor: `${colors.primary}4D` }]} />
-                <View style={[styles.bar, { height: '65%', backgroundColor: `${colors.primary}99` }]} />
-                <View style={[styles.bar, { height: '85%', backgroundColor: colors.primary }]} />
-                <View style={[styles.bar, { height: '55%', backgroundColor: colors.primaryDark }]} />
-              </View>
-
-              <View style={styles.aiPanel}>
-                <AIGlow testID="onboarding-ai-glow">
-                  <View style={styles.aiPill} />
-                </AIGlow>
-              </View>
-            </View>
-
-            <View style={styles.skeletons}>
-              {skeletonWidths.map((width, index) => (
-                <View key={index} style={[styles.skeleton, { width: width as `${number}%` }]} />
-              ))}
+            <View style={styles.lottieContainer}>
+              {assets && assets[0].localUri && (
+                <WebView
+                  source={{ uri: assets[0].localUri }}
+                  style={styles.lottie}
+                  scrollEnabled={false}
+                  bounces={false}
+                  originWhitelist={['*']}
+                  allowFileAccess
+                  backgroundColor="transparent"
+                />
+              )}
             </View>
 
             <AIGlow testID="onboarding-badge-glow">
