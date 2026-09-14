@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { ChevronRight, Plus, type LucideIcon } from 'lucide-react-native'
 
-import { ProgressBar } from '@/components/insights/Common'
+import { CARD_SHADOW, ProgressBar } from '@/components/insights/Common'
 import { ScalePress } from '@/components/animation/ScalePress'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
@@ -145,21 +145,22 @@ const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 20,
       padding: 16,
       borderWidth: 1,
       borderColor: colors.border,
       marginHorizontal: 20,
       marginBottom: 12,
+      ...CARD_SHADOW,
     },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     iconBox: {
-      width: 44,
-      height: 44,
-      borderRadius: 12,
+      width: 46,
+      height: 46,
+      borderRadius: 15,
       alignItems: 'center',
       justifyContent: 'center',
       marginRight: 14,

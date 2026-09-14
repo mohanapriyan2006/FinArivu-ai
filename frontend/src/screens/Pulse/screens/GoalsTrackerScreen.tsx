@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Goal, GoalInput } from '@/services/GoalService'
+import type { Goal } from '@/services/GoalService'
 import { useGoals } from '@/hooks/useGoals'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 import type { StackNavigationProp } from '@react-navigation/stack'
@@ -50,7 +50,7 @@ export default function GoalsTrackerScreen() {
   const navigation = useNavigation<NavigationProp>()
 
   return (
-    <TrackerScreen<Goal, GoalInput>
+    <TrackerScreen<Goal>
       title="Goals"
       useData={useGoals}
       renderSummary={(data) => <Summary data={data} />}
@@ -64,8 +64,6 @@ export default function GoalsTrackerScreen() {
           trailing={`₹${formatInrNumber(item.currentAmount)}`}
         />
       )}
-      buildInput={() => ({} as GoalInput)}
-      fields={[]}
       addLabel="+ Create Goal"
       emptyIcon={Target}
       emptyTitle="No financial goals yet"

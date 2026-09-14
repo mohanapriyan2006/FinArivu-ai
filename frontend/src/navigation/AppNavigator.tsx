@@ -17,7 +17,6 @@ import GoalsTrackerScreen from '@/screens/Pulse/screens/GoalsTrackerScreen'
 import LoanTrackerScreen from '@/screens/Pulse/screens/LoanTrackerScreen'
 import CreditCardTrackerScreen from '@/screens/Pulse/screens/CreditCardTrackerScreen'
 import InsuranceTrackerScreen from '@/screens/Pulse/screens/InsuranceTrackerScreen'
-import AddInvestmentScreen from '@/screens/Pulse/screens/AddInvestmentScreen'
 import PulseSectionListScreen from '@/screens/Pulse/PulseSectionListScreen'
 import PulseSectionCreateScreen from '@/screens/Pulse/PulseSectionCreateScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
@@ -43,7 +42,6 @@ export type RootStackParamList = {
   LoanTracker: undefined
   CreditCardTracker: undefined
   InsuranceTracker: undefined
-  AddInvestment: undefined
   PulseSectionList: { section: string }
   PulseSectionCreate: { section: string; record?: Record<string, unknown> }
   FinancialHealth: undefined
@@ -93,7 +91,6 @@ export default function AppNavigator() {
           <Stack.Screen name="LoanTracker" component={LoanTrackerScreen} />
           <Stack.Screen name="CreditCardTracker" component={CreditCardTrackerScreen} />
           <Stack.Screen name="InsuranceTracker" component={InsuranceTrackerScreen} />
-          <Stack.Screen name="AddInvestment" component={AddInvestmentScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
           <Stack.Screen
             name="QuickAddExpense"

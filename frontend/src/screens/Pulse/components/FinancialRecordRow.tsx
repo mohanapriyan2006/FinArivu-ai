@@ -3,6 +3,7 @@ import { ChevronRight } from 'lucide-react-native'
 import type { LucideIcon } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
+import { CARD_SHADOW } from '@/components/insights/Common'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 
@@ -64,18 +65,19 @@ const makeStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       paddingVertical: 14,
-      paddingHorizontal: 20,
+      paddingHorizontal: 16,
       backgroundColor: colors.surface,
-      borderRadius: 16,
+      borderRadius: 20,
       marginHorizontal: 20,
       marginBottom: 10,
       borderWidth: 1,
       borderColor: colors.border,
+      ...CARD_SHADOW,
     },
     iconCircle: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: 42,
+      height: 42,
+      borderRadius: 14,
       justifyContent: 'center',
       alignItems: 'center',
       marginRight: 14,

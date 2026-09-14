@@ -1,13 +1,16 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 import { Banknote } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Liability, LiabilityInput } from '@/services/LiabilityService'
+import type { Liability } from '@/services/LiabilityService'
 import { useLoans } from '@/hooks/useLoans'
+import type { RootStackParamList } from '@/navigation/AppNavigator'
 
 import { TrackerScreen } from '../components/TrackerScreen'
 import { FinancialRecordRow } from '../components/FinancialRecordRow'
@@ -37,9 +40,10 @@ function Summary({ data }: { data: Liability[] }) {
 
 export default function LoanTrackerScreen() {
   const { colors } = useTheme()
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
 
   return (
-    <TrackerScreen<Liability, LiabilityInput>
+    <TrackerScreen<Liability>
       title="Loans & EMIs"
       useData={useLoans}
       renderSummary={(data) => <Summary data={data} />}
@@ -53,21 +57,8 @@ export default function LoanTrackerScreen() {
           trailing={`₹${formatInrNumber(item.amount)}`}
         />
       )}
-      fields={[
-        { key: 'name', label: 'Loan name', placeholder: 'Home Loan' },
-        { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric' },
-        { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric' },
-        { key: 'interestRate', label: 'Interest rate (%)', placeholder: '8.5', keyboard: 'numeric' },
-        { key: 'liabilityType', label: 'Loan type', placeholder: 'Personal Loan', autoCapitalize: 'words' },
-      ]}
-      buildInput={(values) => ({
-        name: values.name,
-        amount: Number(values.amount || '0'),
-        emi: values.emi ? Number(values.emi) : undefined,
-        interestRate: values.interestRate ? Number(values.interestRate) : undefined,
-        liabilityType: values.liabilityType || 'Personal Loan',
-      })}
       addLabel="+ Add Loan"
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'loans' })}
       emptyIcon={Banknote}
       emptyTitle="No loans added"
       emptyMessage="Track your outstanding loans and EMIs in one place."

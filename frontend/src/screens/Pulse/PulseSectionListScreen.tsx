@@ -13,22 +13,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useFocusEffect, useNavigation, useRoute } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 import Animated, { FadeInUp } from 'react-native-reanimated'
-import {
-  Banknote,
-  Calculator,
-  ChevronLeft,
-  CreditCard,
-  Landmark,
-  Pencil,
-  Plus,
-  Receipt,
-  Shield,
-  Target,
-  Trash2,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react-native'
+import { ChevronLeft, Pencil, Plus, Trash2 } from 'lucide-react-native'
 
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
@@ -44,6 +29,14 @@ import type { ThemeColors } from '@/theme'
 import { formatInrNumber } from '@/utils/formatInr'
 import type { FinancialProfile } from '@/types/financialProfile'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
+import {
+  FIXED_TYPES,
+  SAVINGS_TYPES,
+  getSectionSpec,
+  resolveSectionBackground,
+  resolveSectionColor,
+  type SectionSpec,
+} from './sectionConfig'
 
 type SectionNavigationProp = StackNavigationProp<RootStackParamList>
 
@@ -56,137 +49,6 @@ type SectionRecord = {
   iconColor: string
   iconBackground: string
   raw: Record<string, unknown>
-}
-
-type ColorKey = 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
-type BackgroundKey = 'primaryBackground' | 'successBackground' | 'accentBackground' | 'dangerBackground' | 'surface'
-
-interface SectionSpec {
-  title: string
-  icon: LucideIcon
-  color: ColorKey
-  background: BackgroundKey
-  emptyTitle: string
-  emptyMessage: string
-}
-
-const SAVINGS_TYPES = new Set(['Bank', 'Cash', 'Savings Account', 'Current Account', 'Emergency Fund'])
-const FIXED_TYPES = new Set(['Fixed Deposit', 'FD'])
-
-const SECTIONS: Record<string, SectionSpec> = {
-  income: {
-    title: 'Income',
-    icon: Banknote,
-    color: 'success',
-    background: 'successBackground',
-    emptyTitle: 'No income added yet',
-    emptyMessage: 'Add your salary and other income sources.',
-  },
-  expenses: {
-    title: 'Expenses',
-    icon: Receipt,
-    color: 'danger',
-    background: 'dangerBackground',
-    emptyTitle: 'No expenses added yet',
-    emptyMessage: 'Track your daily spending here.',
-  },
-  savings: {
-    title: 'Savings',
-    icon: Wallet,
-    color: 'success',
-    background: 'successBackground',
-    emptyTitle: 'No savings added yet',
-    emptyMessage: 'Add your bank accounts and emergency funds.',
-  },
-  investments: {
-    title: 'Investments',
-    icon: TrendingUp,
-    color: 'primary',
-    background: 'primaryBackground',
-    emptyTitle: 'No investments added yet',
-    emptyMessage: 'Add mutual funds, stocks, PPF, gold and more.',
-  },
-  fixed_deposits: {
-    title: 'Fixed Deposits',
-    icon: Landmark,
-    color: 'primary',
-    background: 'primaryBackground',
-    emptyTitle: 'No fixed deposits added yet',
-    emptyMessage: 'Track your FDs and their maturity.',
-  },
-  loans: {
-    title: 'Loans & EMIs',
-    icon: Banknote,
-    color: 'danger',
-    background: 'dangerBackground',
-    emptyTitle: 'No loans added yet',
-    emptyMessage: 'Track your outstanding loans and EMIs.',
-  },
-  credit_cards: {
-    title: 'Credit Cards',
-    icon: CreditCard,
-    color: 'secondary',
-    background: 'primaryBackground',
-    emptyTitle: 'No credit cards added yet',
-    emptyMessage: 'Track your cards, limits and spends.',
-  },
-  insurance: {
-    title: 'Insurance',
-    icon: Shield,
-    color: 'success',
-    background: 'successBackground',
-    emptyTitle: 'No insurance policies added yet',
-    emptyMessage: 'Add your health and life insurance policies.',
-  },
-  tax: {
-    title: 'Tax',
-    icon: Calculator,
-    color: 'primary',
-    background: 'primaryBackground',
-    emptyTitle: 'No tax details added yet',
-    emptyMessage: 'Add your tax regime and deductions.',
-  },
-  goals: {
-    title: 'Goals',
-    icon: Target,
-    color: 'warning',
-    background: 'accentBackground',
-    emptyTitle: 'No goals added yet',
-    emptyMessage: 'Set a goal and get an AI savings plan.',
-  },
-}
-
-function resolveColor(key: ColorKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primary':
-      return colors.primary
-    case 'secondary':
-      return colors.secondary
-    case 'success':
-      return colors.success
-    case 'warning':
-      return colors.warning
-    case 'danger':
-      return colors.danger
-    default:
-      return colors.primary
-  }
-}
-
-function resolveBackground(key: BackgroundKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primaryBackground':
-      return colors.primaryBackground
-    case 'successBackground':
-      return colors.successBackground
-    case 'accentBackground':
-      return colors.accentBackground
-    case 'dangerBackground':
-      return colors.dangerBackground
-    case 'surface':
-    default:
-      return colors.surface
-  }
 }
 
 function formatDate(iso: string): string {
@@ -202,8 +64,8 @@ function normalizeIncome(items: Income[], colors: ThemeColors, spec: SectionSpec
     subtitle: formatDate(item.incomeDate),
     amount: `₹${formatInrNumber(item.amount)}`,
     meta: item.notes ?? undefined,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
   }))
 }
@@ -214,8 +76,8 @@ function normalizeExpenses(items: Expense[], colors: ThemeColors, spec: SectionS
     title: item.description ?? 'Expense',
     subtitle: formatDate(item.expenseDate),
     amount: `₹${formatInrNumber(item.amount)}`,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
   }))
 }
@@ -231,8 +93,8 @@ function normalizeAssets(
     subtitle: item.assetType,
     amount: `₹${formatInrNumber(item.value)}`,
     meta: item.interestRate !== undefined && item.interestRate !== null ? `${item.interestRate}%` : undefined,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
   }))
 }
@@ -248,8 +110,8 @@ function normalizeLiabilities(
     subtitle: item.liabilityType,
     amount: `₹${formatInrNumber(item.amount)}`,
     meta: item.emi ? `EMI ₹${formatInrNumber(item.emi)}` : undefined,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
   }))
 }
@@ -261,8 +123,8 @@ function normalizeGoals(items: Goal[], colors: ThemeColors, spec: SectionSpec): 
     subtitle: item.goalType,
     amount: `₹${formatInrNumber(item.targetAmount)}`,
     meta: item.currentAmount ? `Saved ₹${formatInrNumber(item.currentAmount)}` : undefined,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
   }))
 }
@@ -277,8 +139,8 @@ function normalizeInsurance(
     title: `${p.type ?? 'Policy'} Insurance`,
     subtitle: p.coverage ? `Coverage ₹${formatInrNumber(p.coverage)}` : '',
     amount: p.annualPremium ? `₹${formatInrNumber(p.annualPremium)}/yr` : undefined,
-    iconColor: resolveColor(spec.color, colors),
-    iconBackground: resolveBackground(spec.background, colors),
+    iconColor: resolveSectionColor(spec.color, colors),
+    iconBackground: resolveSectionBackground(spec.background, colors),
     raw: p as unknown as Record<string, unknown>,
   }))
 }
@@ -299,8 +161,8 @@ function normalizeTax(
             Object.values(tax.deductions).reduce((a, b) => a + (b ?? 0), 0)
           )}`
         : undefined,
-      iconColor: resolveColor(spec.color, colors),
-      iconBackground: resolveBackground(spec.background, colors),
+      iconColor: resolveSectionColor(spec.color, colors),
+      iconBackground: resolveSectionBackground(spec.background, colors),
       raw: tax as unknown as Record<string, unknown>,
     },
   ]
@@ -371,14 +233,7 @@ export default function PulseSectionListScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const section = route.params.section
-  const spec = SECTIONS[section] ?? {
-    title: section,
-    icon: Banknote,
-    color: 'primary' as ColorKey,
-    background: 'primaryBackground' as BackgroundKey,
-    emptyTitle: `No ${section} added yet`,
-    emptyMessage: 'Add your first record.',
-  }
+  const spec = getSectionSpec(section)
   const Icon = spec.icon
 
   const [records, setRecords] = useState<SectionRecord[]>([])
@@ -470,13 +325,13 @@ export default function PulseSectionListScreen() {
     [deleteRecord]
   )
 
-  const iconColor = resolveColor(spec.color, colors)
-  const iconBg = resolveBackground(spec.background, colors)
+  const iconColor = resolveSectionColor(spec.color, colors)
+  const iconBg = resolveSectionBackground(spec.background, colors)
 
   const renderItem = ({ item, index }: { item: SectionRecord; index: number }) => (
     <Animated.View
       entering={FadeInUp.delay(index * 40).springify()}
-      style={[styles.card, { backgroundColor: colors.surface }, index % 2 === 1 ? { backgroundColor: colors.background } : null]}
+      style={[styles.card, { backgroundColor: colors.surface }]}
     >
       <View style={styles.cardRow}>
         <View style={[styles.iconCircle, { backgroundColor: iconBg }]}>

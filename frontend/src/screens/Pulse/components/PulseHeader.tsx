@@ -67,7 +67,11 @@ const makeStyles = (colors: ThemeColors) =>
     bellButton: {
       width: 44,
       height: 44,
+      borderRadius: 22,
       alignItems: 'center',
       justifyContent: 'center',
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
     },
   })

@@ -15,28 +15,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 import Animated, { FadeInUp } from 'react-native-reanimated'
-import {
-  Banknote,
-  Calculator,
-  ChevronLeft,
-  CreditCard,
-  Landmark,
-  Plus,
-  Receipt,
-  Rocket,
-  Shield,
-  Target,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react-native'
+import { ChevronLeft, Rocket } from 'lucide-react-native'
 
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { CARD_SHADOW } from '@/components/insights/Common'
 import { AssetService, type AssetInput } from '@/services/AssetService'
-import { CategoryService, type Category } from '@/services/CategoryService'
+import { CategoryService } from '@/services/CategoryService'
 import { ExpenseService, type ExpenseInput } from '@/services/ExpenseService'
 import { GoalService, type GoalInput } from '@/services/GoalService'
 import { IncomeService, type IncomeInput } from '@/services/IncomeService'
@@ -44,188 +30,17 @@ import { LiabilityService, type LiabilityInput } from '@/services/LiabilityServi
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
+import {
+  getSectionSpec,
+  resolveSectionBackground,
+  resolveSectionColor,
+} from './sectionConfig'
 
 type SectionNavigationProp = StackNavigationProp<RootStackParamList>
-
-type ColorKey = 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
-type BackgroundKey = 'primaryBackground' | 'successBackground' | 'accentBackground' | 'dangerBackground' | 'surface'
-
-interface SectionSpec {
-  title: string
-  icon: LucideIcon
-  color: ColorKey
-  background: BackgroundKey
-  fields: CreateField[]
-}
-
-interface CreateField {
-  key: string
-  label: string
-  placeholder?: string
-  keyboard?: 'default' | 'numeric'
-  options?: string[]
-}
 
 type CategoryOption = { id: string; name: string }
 
 const today = () => new Date().toISOString().split('T')[0]
-
-const SECTIONS: Record<string, SectionSpec> = {
-  income: {
-    title: 'Income',
-    icon: Banknote,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'source', label: 'Source', placeholder: 'Salary' },
-      { key: 'amount', label: 'Amount', placeholder: '50000', keyboard: 'numeric' },
-      { key: 'incomeDate', label: 'Date', placeholder: today() },
-      { key: 'notes', label: 'Notes (optional)', placeholder: 'Monthly salary' },
-    ],
-  },
-  expenses: {
-    title: 'Expense',
-    icon: Receipt,
-    color: 'danger',
-    background: 'dangerBackground',
-    fields: [
-      { key: 'description', label: 'Description', placeholder: 'Grocery shopping' },
-      { key: 'amount', label: 'Amount', placeholder: '1200', keyboard: 'numeric' },
-      { key: 'expenseDate', label: 'Date', placeholder: today() },
-      { key: 'categoryId', label: 'Category' },
-    ],
-  },
-  savings: {
-    title: 'Savings',
-    icon: Wallet,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'name', label: 'Account name', placeholder: 'Emergency Fund' },
-      { key: 'assetType', label: 'Account type', placeholder: 'Bank / Cash' },
-      { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric' },
-    ],
-  },
-  investments: {
-    title: 'Investment',
-    icon: TrendingUp,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund' },
-      { key: 'assetType', label: 'Investment type', placeholder: 'Mutual Fund / Stock' },
-      { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric' },
-    ],
-  },
-  fixed_deposits: {
-    title: 'Fixed Deposit',
-    icon: Landmark,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'FD name', placeholder: 'SBI Fixed Deposit' },
-      { key: 'value', label: 'Value', placeholder: '100000', keyboard: 'numeric' },
-      { key: 'interestRate', label: 'Interest rate (%)', placeholder: '7.5', keyboard: 'numeric' },
-      { key: 'maturityDate', label: 'Maturity date', placeholder: '2030-12-31' },
-    ],
-  },
-  loans: {
-    title: 'Loan',
-    icon: Banknote,
-    color: 'danger',
-    background: 'dangerBackground',
-    fields: [
-      { key: 'name', label: 'Loan name', placeholder: 'Home Loan' },
-      { key: 'liabilityType', label: 'Loan type', placeholder: 'Personal / Home' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric' },
-    ],
-  },
-  credit_cards: {
-    title: 'Credit Card',
-    icon: CreditCard,
-    color: 'secondary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric' },
-      { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric' },
-      { key: 'monthlySpend', label: 'Monthly spend (optional)', placeholder: '30000', keyboard: 'numeric' },
-    ],
-  },
-  insurance: {
-    title: 'Insurance Policy',
-    icon: Shield,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'type', label: 'Policy type', options: ['health', 'life'] },
-      { key: 'coverage', label: 'Coverage amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'annualPremium', label: 'Annual premium', placeholder: '15000', keyboard: 'numeric' },
-    ],
-  },
-  tax: {
-    title: 'Tax Details',
-    icon: Calculator,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'annualIncome', label: 'Annual income', placeholder: '1200000', keyboard: 'numeric' },
-      { key: 'taxRegime', label: 'Tax regime', options: ['old', 'new', 'not-sure'] },
-      { key: 'deduction_80c', label: '80C deduction', placeholder: '150000', keyboard: 'numeric' },
-      { key: 'deduction_80d', label: '80D deduction', placeholder: '25000', keyboard: 'numeric' },
-      { key: 'homeLoanInterest', label: 'Home loan interest', placeholder: '0', keyboard: 'numeric' },
-      { key: 'nps', label: 'NPS deduction', placeholder: '0', keyboard: 'numeric' },
-      { key: 'other', label: 'Other deductions', placeholder: '0', keyboard: 'numeric' },
-    ],
-  },
-  goals: {
-    title: 'Goal',
-    icon: Target,
-    color: 'warning',
-    background: 'accentBackground',
-    fields: [
-      { key: 'goalName', label: 'Goal name', placeholder: 'Dream Home' },
-      { key: 'goalType', label: 'Goal type', placeholder: 'home / travel / education' },
-      { key: 'targetAmount', label: 'Target amount', placeholder: '2000000', keyboard: 'numeric' },
-      { key: 'currentAmount', label: 'Already saved (optional)', placeholder: '0', keyboard: 'numeric' },
-      { key: 'targetDate', label: 'Target date', placeholder: today() },
-    ],
-  },
-}
-
-function resolveColor(key: ColorKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primary':
-      return colors.primary
-    case 'secondary':
-      return colors.secondary
-    case 'success':
-      return colors.success
-    case 'warning':
-      return colors.warning
-    case 'danger':
-      return colors.danger
-    default:
-      return colors.primary
-  }
-}
-
-function resolveBackground(key: BackgroundKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primaryBackground':
-      return colors.primaryBackground
-    case 'successBackground':
-      return colors.successBackground
-    case 'accentBackground':
-      return colors.accentBackground
-    case 'dangerBackground':
-      return colors.dangerBackground
-    case 'surface':
-    default:
-      return colors.surface
-  }
-}
 
 function stringValue(value: unknown): string {
   if (value === undefined || value === null) return ''
@@ -266,13 +81,7 @@ export default function PulseSectionCreateScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const { section, record } = route.params
-  const spec = SECTIONS[section] ?? {
-    title: section,
-    icon: Plus,
-    color: 'primary' as ColorKey,
-    background: 'primaryBackground' as BackgroundKey,
-    fields: [{ key: 'name', label: 'Name' }],
-  }
+  const spec = getSectionSpec(section)
   const isEdit = record !== undefined && Object.keys(record).length > 0
 
   const [values, setValues] = useState<Record<string, string>>({})
@@ -436,8 +245,8 @@ export default function PulseSectionCreateScreen() {
     }
   }, [section, values, record, isEdit, getToken, profile, saveSection, categories, navigation])
 
-  const iconColor = resolveColor(spec.color, colors)
-  const iconBg = resolveBackground(spec.background, colors)
+  const iconColor = resolveSectionColor(spec.color, colors)
+  const iconBg = resolveSectionBackground(spec.background, colors)
   const Icon = spec.icon
 
   return (
@@ -459,7 +268,9 @@ export default function PulseSectionCreateScreen() {
               <Pressable onPress={() => navigation.goBack()} style={styles.iconButton} accessibilityRole="button">
                 <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
               </Pressable>
-              <Text style={styles.headerTitle}>{isEdit ? 'Edit' : 'Add'} {spec.title}</Text>
+              <Text style={[styles.headerTitle, { color: colors.textHero }]}>
+                {isEdit ? 'Edit' : 'Add'} {spec.title}
+              </Text>
               <View style={styles.iconButton} />
             </View>
           </Animated.View>
@@ -614,9 +425,8 @@ const makeStyles = (colors: ThemeColors) =>
     },
     headerTitle: {
       fontFamily: Typography.fontFamily,
-      fontSize: 20,
+      fontSize: Typography.sizes.h2,
       fontWeight: Typography.fontWeights.bold,
-      color: colors.primary,
     },
     heroCard: {
       borderRadius: 24,
@@ -701,6 +511,11 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       marginTop: 8,
       marginBottom: 24,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 4,
     },
     ctaIcon: {
       marginRight: 8,

@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import {
+  ActivityIndicator,
+  Alert,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -33,11 +35,13 @@ import {
   Sparkles,
 } from 'lucide-react-native'
 
+import { useAuthContext } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 import { CARD_SHADOW } from '@/components/insights/Common'
 import { CategorySelectButton } from '@/components/goals/CategorySelectButton'
+import { GoalService } from '@/services/GoalService'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 
 const CATEGORIES = [
@@ -126,6 +130,7 @@ export default function CreateGoalScreen() {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
+  const { getToken } = useAuthContext()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const [selectedCategoryId, setSelectedCategoryId] = useState('home')
@@ -133,6 +138,7 @@ export default function CreateGoalScreen() {
   const [amount, setAmount] = useState('20,00,000')
   const [selectedIndex, setSelectedIndex] = useState(5)
   const [trackWidth, setTrackWidth] = useState(0)
+  const [isSaving, setIsSaving] = useState(false)
 
   const selectedCategory = useMemo(
     () => CATEGORIES.find((c) => c.id === selectedCategoryId) ?? CATEGORIES[0],
@@ -188,6 +194,38 @@ export default function CreateGoalScreen() {
   const handleBack = () => {
     if (navigation.canGoBack()) {
       navigation.goBack()
+    }
+  }
+
+  const handleCreate = async () => {
+    if (isSaving) return
+    const name = goalName.trim()
+    if (!name) {
+      Alert.alert('Missing name', 'Please enter a goal name.')
+      return
+    }
+    if (targetValue <= 0) {
+      Alert.alert('Missing amount', 'Please enter a target amount.')
+      return
+    }
+    setIsSaving(true)
+    try {
+      const token = await getToken()
+      await GoalService.create(
+        {
+          goalName: name,
+          goalType: selectedCategory.id,
+          targetAmount: targetValue,
+          targetDate: `${selectedYear}-03-31`,
+          status: 'active',
+        },
+        token
+      )
+      navigation.goBack()
+    } catch (err) {
+      Alert.alert('Could not save', err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setIsSaving(false)
     }
   }
 
@@ -396,17 +434,24 @@ export default function CreateGoalScreen() {
 
           <Animated.View entering={FadeInUp.delay(650).springify()}>
             <Pressable
-              onPress={() => navigation.goBack()}
+              onPress={handleCreate}
+              disabled={isSaving}
               style={styles.ctaButton}
               accessibilityRole="button"
             >
-              <Rocket
-                size={18}
-                color="#FFFFFF"
-                strokeWidth={2}
-                style={styles.ctaIcon}
-              />
-              <Text style={styles.ctaText}>Create Goal</Text>
+              {isSaving ? (
+                <ActivityIndicator color={colors.surface} />
+              ) : (
+                <>
+                  <Rocket
+                    size={18}
+                    color={colors.surface}
+                    strokeWidth={2}
+                    style={styles.ctaIcon}
+                  />
+                  <Text style={styles.ctaText}>Create Goal</Text>
+                </>
+              )}
             </Pressable>
           </Animated.View>
         </ScrollView>
