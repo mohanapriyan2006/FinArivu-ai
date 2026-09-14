@@ -83,7 +83,11 @@ class ControllerService:
             )
 
         financial_context = await self._build_context(user_id, session_id, plan, user_context)
-        if financial_context.data_missing and plan.response_mode == "clarification":
+        if (
+            financial_context.data_missing
+            and plan.response_mode == "clarification"
+            and plan.missing_information
+        ):
             return await self._clarification_response(
                 user_id, session_id, plan, start,
             )
@@ -192,7 +196,11 @@ class ControllerService:
         )
         financial_context = await self._build_context(user_id, session_id, plan, user_context)
 
-        if financial_context.data_missing and plan.response_mode == "clarification":
+        if (
+            financial_context.data_missing
+            and plan.response_mode == "clarification"
+            and plan.missing_information
+        ):
             text = plan.to_clarification_message()
             yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
             yield StreamEvent(event_type=StreamEventType.DONE)
@@ -298,6 +306,14 @@ class ControllerService:
             financial_context,
         )
 
+        # Tag responses built on partial data so the user knows some
+        # details were unavailable.
+        if financial_context.data_missing:
+            build.message = self._tag_partial_data(
+                build.message, financial_context.data_missing,
+            )
+            build.summary = build.message
+
         if not plan.requires_verification:
             return build
 
@@ -321,20 +337,28 @@ class ControllerService:
             if api_check.status == "PASS":
                 return build
 
-        # If validation failed, build a safe limitation response.
-        safe_message = self._safe_limitation_message(validation)
-        build = BuildResult(
-            message=safe_message,
-            summary=safe_message,
-            merged_data=build.merged_data,
-            ai_response=build.ai_response,
-            artifacts=[],
-            recommendations=[],
-            follow_up_questions=[],
-            suggested_actions=[],
-            metadata=build.metadata,
-            response_type=ResponseType.CLARIFICATION,
-        )
+        # Validation failed. If verified data exists and the response
+        # contradicts it, keep the safe refusal. Otherwise fall back to
+        # the generated answer tagged as general guidance.
+        if validation.numerical_errors and financial_context.data_available:
+            safe_message = self._safe_limitation_message(validation)
+            build = BuildResult(
+                message=safe_message,
+                summary=safe_message,
+                merged_data=build.merged_data,
+                ai_response=build.ai_response,
+                artifacts=[],
+                recommendations=[],
+                follow_up_questions=[],
+                suggested_actions=[],
+                metadata=build.metadata,
+                response_type=ResponseType.CLARIFICATION,
+            )
+            return build
+
+        build.message = self._tag_general_guidance(build.message)
+        build.summary = build.message
+        build.response_type = ResponseType.EDUCATIONAL
         return build
 
     async def _blocked_response(
@@ -404,6 +428,23 @@ class ControllerService:
             "I can only assist with personal finance topics for Indian "
             "salaried professionals. Could you ask about budgeting, saving, "
             "taxes, loans, or retirement planning?"
+        )
+
+    @staticmethod
+    def _tag_partial_data(message: str, missing: list[str]) -> str:
+        """Tag a response that was built without some financial domains."""
+        domains = ", ".join(missing[:4])
+        return (
+            f"_Based on partial data — {domains} not available._\n\n"
+            f"{message}"
+        )
+
+    @staticmethod
+    def _tag_general_guidance(message: str) -> str:
+        """Tag a response that could not be verified against user data."""
+        return (
+            "_General guidance — not verified against your financial data._\n\n"
+            f"{message}"
         )
 
     @staticmethod

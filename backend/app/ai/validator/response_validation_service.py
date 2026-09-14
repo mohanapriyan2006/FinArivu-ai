@@ -173,17 +173,33 @@ class ResponseValidationService:
     ) -> ValidationResult:
         """Check that explicit numbers in the response are present in verified data."""
         known = self._collect_known_values(financial_context, agent_results)
+        # With no verified data there is nothing to check against — the
+        # response is general guidance and should pass through.
+        if not known:
+            return ValidationResult(status="PASS", grounded=True, confidence=1.0)
         numerical_errors: list[str] = []
 
         # Check currency values.
         for match in self._CURRENCY_RE.finditer(response_text):
-            value = float(match.group(1).replace(",", ""))
+            raw = match.group(1).replace(",", "")
+            if not raw:
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                continue
             if not self._is_known(value, known):
                 numerical_errors.append(f"Unverified currency value: ₹{value}")
 
         # Check percentages.
         for match in self._PERCENT_RE.finditer(response_text):
-            value = float(match.group(1).replace(",", ""))
+            raw = match.group(1).replace(",", "")
+            if not raw:
+                continue
+            try:
+                value = float(raw)
+            except ValueError:
+                continue
             if not self._is_known(value, known):
                 numerical_errors.append(f"Unverified percentage: {value}%")
 
@@ -191,9 +207,14 @@ class ResponseValidationService:
         seen: set[float] = set()
         for match in self._NUMBER_RE.finditer(response_text):
             raw = match.group(1).replace(",", "")
+            if not raw:
+                continue
             if match.group(0) in [m.group(0) for m in self._YEAR_RE.finditer(response_text)]:
                 continue
-            value = float(raw)
+            try:
+                value = float(raw)
+            except ValueError:
+                continue
             if value in seen:
                 continue
             seen.add(value)

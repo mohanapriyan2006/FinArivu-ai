@@ -18,13 +18,13 @@ curl https://api.groq.com/openai/v1/chat/completions -s \
 
 ### models
 
-| Rank | Model | Strengths | Limits (RPM / TPM / TPD) | Why Good for Finance |
-| --- | --- | --- | --- | --- |
-| 1 | **llama-3.1-8b-instant** | Fast, balanced reasoning | 30 RPM / 6K TPM / 500K TPD | Handles structured financial queries, portfolio summaries, and quick analytics with high daily token allowance. |
-| 2 | **meta-llama/llama-prompt-guard-2-22m** | Guardrails + reasoning | 30 RPM / 15K TPM / 500K TPD | Strong token throughput, useful for compliance-heavy financial text generation. |
-| 3 | **openai/gpt-oss-120b** | Larger reasoning capacity | 30 RPM / 8K TPM / 200K TPD | Good for deeper financial analysis, but lower daily token cap than Llama-3.1. |
-| 4 | **qwen/qwen3.6-27b** | Balanced mid-size model | 30 RPM / 8K TPM / 200K TPD | Solid for financial forecasting and structured outputs, though capped lower than Llama-3.1. |
-| 5 | **groq/compound-mini** | Lightweight, efficient | 30 RPM / 70K TPM | Best for small, frequent financial queries (e.g., stock lookups, ratios) without hitting token caps. |
+| Rank | Model ID | RPM | RPD | TPM | TPD | Why It’s Top |
+| --- | --- | --- | --- | --- | --- | --- |
+| **1** | **groq/compound** | 30 | 250 | **70K** | – | Highest token throughput per minute (70K TPM). Best for heavy analytics, finance, or batch workloads. |
+| **2** | **groq/compound-mini** | 30 | 250 | **70K** | – | Same throughput as compound, lighter variant for efficiency. |
+| **3** | **meta-llama/llama-prompt-guard-2-22m / 86m** | 30 | **14.4K** | 15K | **500K** | Extremely high daily request and token caps. Ideal for continuous monitoring or dashboards. |
+| **4** | **openai/gpt-oss-120b / 20b / safeguard-20b** | 30 | 1K | 8K | 200K | Balanced per-minute token rate with solid daily token allowance. |
+| **5** | **qwen/qwen3.6-27b / qwen3.8-27b** | 30 | 1K | 8K | 200K | Similar to GPT-OSS models, strong structured outputs and reasoning. |
 
 ----
 
@@ -44,13 +44,13 @@ curl -X POST "https://generativelanguage.googleapis.com/v1beta/interactions" \
 
 ### models
 
-| Rank | Model ID | Strengths | Why Good for Finance |
+| Rank | Model | Type | Why It’s Best |
 | --- | --- | --- | --- |
-| 1 | **gemini-3.5-flash** | Most intelligent model for sustained frontier performance on agentic and coding tasks | Excellent for financial analysis, portfolio simulations, and backend automation. |
-| 2 | **gemini-3.1-flash-lite** | Frontier-class performance at fraction of cost | Cost-efficient, ideal for high-volume financial queries and dashboards. |
-| 3 | **gemini-2.5-flash** | Best price-performance for low-latency, high-volume reasoning | Great for financial reporting, risk scoring, and batch analytics. |
-| 4 | **gemini-2.5-flash-lite** | Fastest and most budget-friendly multimodal model | Useful for lightweight financial assistants and frequent queries. |
-| 5 | **gemini-2.5-pro** | Advanced reasoning and coding capabilities | Best for complex financial modeling, forecasting, and compliance-heavy tasks. |
+| **1** | **Gemini 3.8 Flash** (``gemini-3.8-flash``) | Stable | Most intelligent Flash model, optimized for **long-horizon software engineering, autonomous agents, and enterprise workflows**. Best overall for production. |
+| **2** | **Gemini 3.7 Flash** (``gemini-3.7-flash``) | Stable | Previous-gen but still strong for **complex coding and agentic workflows**. Reliable multi-step execution. |
+| **3** | **Gemini 3.6 Flash** (``gemini-3.6-flash``) | Stable | Balanced speed + multimodal capabilities. Great for **general agentic and everyday tasks**. |
+| **4** | **Gemini 3.1 Pro** (``gemini-3.1-pro-preview``) | Preview | Advanced intelligence with **complex problem-solving and vibe coding**. Strong candidate for experimental high-level reasoning. |
+| **5** | **Gemini Omni Flash** (``gemini-omni-1.1-flash``) | Preview | Cutting-edge **video generation and editing** with native audio. Best for creative media workflows. |
 
 -----
 

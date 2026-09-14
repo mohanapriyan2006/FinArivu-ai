@@ -19,11 +19,14 @@ class Phi4Provider(BaseAIProvider):
     so that the main async event loop is not blocked during inference.
     """
 
+    _warned_unavailable: bool = False
+
     def __init__(self, config: Phi4Config | None = None) -> None:
         self._config = config or Phi4Config.from_settings()
         self._llama: Any | None = None
         self._lock = asyncio.Lock()
-        if not self._config.is_available():
+        if not self._config.is_available() and not Phi4Provider._warned_unavailable:
+            Phi4Provider._warned_unavailable = True
             logger.warning(
                 "Local Phi-4 not available: enabled=%s, path=%s",
                 self._config.is_available(),

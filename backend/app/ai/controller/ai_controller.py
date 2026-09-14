@@ -167,8 +167,21 @@ class AIController:
         async for event in service.chat_stream(user_id, session_id, ai_message):
             yield event
 
-    @staticmethod
+    _MAX_ATTACHMENT_CHARS = 12000
+
+    @classmethod
+    def _truncate_attachment(cls, content: str) -> str:
+        """Keep the head and tail of a long document so the prompt stays small."""
+        limit = cls._MAX_ATTACHMENT_CHARS
+        if len(content) <= limit:
+            return content
+        head = content[: int(limit * 0.7)]
+        tail = content[-int(limit * 0.3):]
+        return f"{head}\n...[truncated {len(content) - limit} chars]...\n{tail}"
+
+    @classmethod
     def _apply_attachments(
+        cls,
         message: str,
         attachments: list[CopilotAttachment],
     ) -> str:
@@ -177,7 +190,7 @@ class AIController:
             return message
         blocks = "\n\n".join(
             f'<document filename="{att.filename}" type="{att.mime_type}">\n'
-            f"{att.content}\n</document>"
+            f"{cls._truncate_attachment(att.content)}\n</document>"
             for att in attachments
         )
         return f"{message}\n\n{blocks}"

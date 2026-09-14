@@ -8,14 +8,6 @@ Usage::
 
 from __future__ import annotations
 
-import openai
-from tenacity import (
-    AsyncRetrying,
-    retry_if_exception,
-    stop_after_attempt,
-    wait_exponential,
-)
-
 from app.ai.providers.base import AIProviderResponse, BaseAIProvider
 from app.core.ai_providers import FALLBACK_ORDER, configured_providers
 from app.core.logger import logger
@@ -66,22 +58,6 @@ class ResilientProvider(BaseAIProvider):
     def model_name(self) -> str:
         return self._primary.model_name
 
-    @staticmethod
-    def _is_retryable(exc: Exception) -> bool:
-        """Return True for transient issues we should retry or fall back on."""
-        status = getattr(exc, "status_code", None)
-        if isinstance(status, int) and (status == 429 or status >= 500):
-            return True
-        for cls in (
-            getattr(openai, "APIConnectionError", None),
-            getattr(openai, "APITimeoutError", None),
-        ):
-            if cls and isinstance(exc, cls):
-                return True
-        if isinstance(exc, (ConnectionError, TimeoutError)):
-            return True
-        return False
-
     async def chat(
         self,
         messages: list[dict[str, str]],
@@ -95,19 +71,12 @@ class ResilientProvider(BaseAIProvider):
 
         for provider in providers:
             try:
-                async for attempt in AsyncRetrying(
-                    stop=stop_after_attempt(2),
-                    wait=wait_exponential(multiplier=0.5, min=0.5, max=4),
-                    retry=retry_if_exception(self._is_retryable),
-                    reraise=True,
-                ):
-                    with attempt:
-                        return await provider.chat(
-                            messages,
-                            temperature=temperature,
-                            max_tokens=max_tokens,
-                            response_format=response_format,
-                        )
+                return await provider.chat(
+                    messages,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    response_format=response_format,
+                )
             except Exception as exc:
                 logger.warning(
                     "Provider %s (model=%s) failed, trying fallback: %s",

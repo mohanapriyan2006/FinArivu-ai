@@ -52,6 +52,8 @@ class GuardrailEngine:
         # Greetings and meta are allowed through as "general" intent.
         "hello", "hi", "hey", "namaste", "thanks", "thank you",
         "help", "what can you do", "who are you",
+        # Generic guidance requests inside a finance app are in scope.
+        "tip", "tips", "advice", "guidance", "suggest", "recommend",
     ]
 
     INVESTMENT_ADVICE_PATTERNS: ClassVar[list[str]] = [

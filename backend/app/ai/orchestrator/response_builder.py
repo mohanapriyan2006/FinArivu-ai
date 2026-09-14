@@ -432,16 +432,25 @@ class ResponseBuilder:
                 merged[r.agent_name] = r.data
         return merged
 
-    @staticmethod
-    def _format_summaries(results: list[AgentResult]) -> str:
-        """Format agent summaries as a bullet list for the LLM."""
+    _MAX_AGENT_DATA_CHARS = 6000
+
+    @classmethod
+    def _format_summaries(cls, results: list[AgentResult]) -> str:
+        """Format agent summaries as a bullet list for the LLM.
+
+        Agent JSON payloads are included only while they fit within a total
+        character budget so the explanation prompt never blows the context
+        window; summaries themselves are always kept.
+        """
         lines = []
+        budget = cls._MAX_AGENT_DATA_CHARS
         for r in results:
             if r.summary:
                 lines.append(f"• [{r.agent_name}] {r.summary}")
             if r.data:
                 # Include a compact JSON snippet for the LLM.
                 compact = json.dumps(r.data, default=str, indent=None)
-                if len(compact) < 2000:
+                if len(compact) < 2000 and len(compact) <= budget:
                     lines.append(f"  Data: {compact}")
+                    budget -= len(compact)
         return "\n".join(lines) or "No engine data available."
