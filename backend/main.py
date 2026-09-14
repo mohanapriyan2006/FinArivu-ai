@@ -5,12 +5,14 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.v1.router import api_router
 from app.core.config import settings
 from app.core.database import engine
 from app.core.logger import logger
 from app.core.migrations import apply_migrations
+from app.seed.categories import seed_expense_categories
 from app.exceptions.handlers import add_exception_handlers
 from app.middleware.audit import AuditMiddleware
 from app.middleware.rate_limit import setup_rate_limiting
@@ -26,6 +28,15 @@ async def lifespan(app: FastAPI) -> None:
         extra={"environment": settings.environment},
     )
     await apply_migrations(engine)
+    async with AsyncSession(engine) as session:
+        try:
+            seeded = await seed_expense_categories(session)
+            await session.commit()
+            if seeded:
+                logger.info("Seeded expense categories", extra={"count": seeded})
+        except Exception:
+            await session.rollback()
+            logger.exception("Failed to seed expense categories")
     yield
     await engine.dispose()
     logger.info("FinArivu API shutdown")

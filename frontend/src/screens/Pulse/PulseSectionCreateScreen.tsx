@@ -95,6 +95,7 @@ export default function PulseSectionCreateScreen() {
   const [values, setValues] = useState<Record<string, string>>({})
   const [categories, setCategories] = useState<CategoryOption[]>([])
   const [categoriesLoading, setCategoriesLoading] = useState(false)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
@@ -121,26 +122,29 @@ export default function PulseSectionCreateScreen() {
     setErrors({})
   }, [record, section, spec.fields])
 
+  const loadCategories = useCallback(async () => {
+    setCategoriesLoading(true)
+    setCategoriesError(null)
+    try {
+      const token = await getToken()
+      const list = await CategoryService.list(token)
+      setCategories(list.map((c) => ({ id: c.id, name: c.name })))
+    } catch (err) {
+      setCategories([])
+      setCategoriesError(
+        err instanceof Error && err.message
+          ? `Couldn't load categories: ${err.message}`
+          : "Couldn't load categories. Check your connection and try again."
+      )
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }, [getToken])
+
   useEffect(() => {
     if (section !== 'expenses') return
-    let cancelled = false
-    async function loadCategories() {
-      setCategoriesLoading(true)
-      try {
-        const token = await getToken()
-        const list = await CategoryService.list(token)
-        if (!cancelled) setCategories(list.map((c) => ({ id: c.id, name: c.name })))
-      } catch {
-        if (!cancelled) setCategories([])
-      } finally {
-        if (!cancelled) setCategoriesLoading(false)
-      }
-    }
     loadCategories()
-    return () => {
-      cancelled = true
-    }
-  }, [section, getToken])
+  }, [section, loadCategories])
 
   const updateValue = useCallback((key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }))
@@ -370,6 +374,19 @@ export default function PulseSectionCreateScreen() {
                     <View style={styles.optionsRow}>
                       {categoriesLoading ? (
                         <ActivityIndicator color={colors.primary} />
+                      ) : categoriesError ? (
+                        <View style={styles.retryRow}>
+                          <Text style={[styles.fieldHelper, { color: colors.danger, flex: 1, marginBottom: 0 }]}>
+                            {categoriesError}
+                          </Text>
+                          <Pressable
+                            onPress={loadCategories}
+                            style={[styles.option, { borderColor: colors.primary }]}
+                            accessibilityRole="button"
+                          >
+                            <Text style={[styles.optionText, { color: colors.primary }]}>Retry</Text>
+                          </Pressable>
+                        </View>
                       ) : categories.length === 0 ? (
                         <Text style={styles.fieldHelper}>
                           No categories found. Pull to refresh on the expenses screen, then try again.
@@ -610,6 +627,11 @@ const makeStyles = (colors: ThemeColors) =>
       paddingHorizontal: 14,
       paddingVertical: 8,
       borderRadius: 12,
+    },
+    retryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
     },
     errorText: {
       fontFamily: Typography.fontFamily,
