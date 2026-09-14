@@ -29,10 +29,13 @@ export function WeeklySummary({ metrics, testID }: WeeklySummaryProps) {
               style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}
               accessibilityLabel={`${metric.label}: ${metric.value}`}
             >
-              <Icon size={18} color={colors.primary} strokeWidth={2} />
+              <View style={[styles.iconChip, { backgroundColor: colors.primaryBackground }]}>
+                <Icon size={18} color={colors.primary} strokeWidth={2} />
+              </View>
               <Text
-                style={[styles.value, { color: colors.textPrimary }]}
+                style={[styles.value, { color: colors.textHero }]}
                 numberOfLines={1}
+                adjustsFontSizeToFit
               >
                 {metric.value}
               </Text>
@@ -80,10 +83,17 @@ const makeStyles = (colors: ThemeColors) =>
       shadowRadius: 12,
       elevation: 3,
     },
+    iconChip: {
+      width: 36,
+      height: 36,
+      borderRadius: 12,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     value: {
       fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes['2xl'],
-      fontWeight: Typography.fontWeights.bold,
+      fontSize: Typography.sizes.xl,
+      fontWeight: Typography.fontWeights.extraBold,
       marginTop: 12,
       marginBottom: 4,
     },
