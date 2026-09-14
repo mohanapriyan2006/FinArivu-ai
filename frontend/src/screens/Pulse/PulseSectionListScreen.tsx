@@ -63,7 +63,7 @@ function normalizeIncome(items: Income[], colors: ThemeColors, spec: SectionSpec
     title: item.source,
     subtitle: formatDate(item.incomeDate),
     amount: `₹${formatInrNumber(item.amount)}`,
-    meta: item.notes ?? undefined,
+    meta: item.description ?? undefined,
     iconColor: resolveSectionColor(spec.color, colors),
     iconBackground: resolveSectionBackground(spec.background, colors),
     raw: item as unknown as unknown as Record<string, unknown>,
@@ -120,7 +120,7 @@ function normalizeGoals(items: Goal[], colors: ThemeColors, spec: SectionSpec): 
   return items.map((item) => ({
     id: item.id,
     title: item.goalName,
-    subtitle: item.goalType,
+    subtitle: item.targetDate ? `Target ${formatDate(item.targetDate)}` : item.status,
     amount: `₹${formatInrNumber(item.targetAmount)}`,
     meta: item.currentAmount ? `Saved ₹${formatInrNumber(item.currentAmount)}` : undefined,
     iconColor: resolveSectionColor(spec.color, colors),

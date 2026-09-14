@@ -534,15 +534,15 @@ export function buildPulseState(input: PulseViewModelInput): PulseState {
 }
 
 export const QUICK_ACTIONS: PulseQuickAction[] = [
-  { id: 'add-expense', label: 'Expense', icon: Plus, route: 'QuickAddExpense' },
-  { id: 'add-goal', label: 'Goal', icon: Target, route: 'CreateGoal' },
+  { id: 'add-expense', label: 'Expense', icon: Plus, route: 'PulseSectionCreate', params: { section: 'expenses' } },
+  { id: 'add-goal', label: 'Goal', icon: Target, route: 'PulseSectionCreate', params: { section: 'goals' } },
   { id: 'add-investment', label: 'Investment', icon: TrendingUp, route: 'PulseSectionCreate', params: { section: 'investments' } },
   { id: 'more', label: 'More', icon: MoreHorizontal, route: '__more__' },
 ]
 
 export const MORE_ACTIONS: PulseQuickAction[] = [
-  { id: 'more-expense', label: 'Expense', icon: Receipt, route: 'QuickAddExpense' },
-  { id: 'more-goal', label: 'Goal', icon: Target, route: 'CreateGoal' },
+  { id: 'more-expense', label: 'Expense', icon: Receipt, route: 'PulseSectionCreate', params: { section: 'expenses' } },
+  { id: 'more-goal', label: 'Goal', icon: Target, route: 'PulseSectionCreate', params: { section: 'goals' } },
   { id: 'more-investment', label: 'Investment', icon: TrendingUp, route: 'PulseSectionCreate', params: { section: 'investments' } },
   { id: 'more-loan', label: 'Loan', icon: Banknote, route: 'PulseSectionCreate', params: { section: 'loans' } },
   { id: 'more-savings', label: 'Savings', icon: Wallet, route: 'PulseSectionCreate', params: { section: 'savings' } },

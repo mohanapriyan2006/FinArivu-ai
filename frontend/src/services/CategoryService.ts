@@ -8,9 +8,10 @@ export interface Category {
 
 export const CategoryService = {
   async list(token: string | null): Promise<Category[]> {
-    const response = await api.get('/v1/categories', {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-    return response.data?.data || []
+    const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {}
+    const response = await api.get('/v1/categories', config)
+    const payload = response.data?.data
+    const items = payload?.items ?? payload
+    return Array.isArray(items) ? items : []
   },
 }

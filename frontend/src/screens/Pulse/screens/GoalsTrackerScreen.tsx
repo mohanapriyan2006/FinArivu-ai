@@ -69,7 +69,7 @@ export default function GoalsTrackerScreen() {
       emptyTitle="No financial goals yet"
       emptyMessage="Create a goal and track your progress over time."
       itemKey={(item) => item.id}
-      onAdd={() => navigation.navigate('CreateGoal')}
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'goals' })}
       testID="goals-tracker"
     />
   )

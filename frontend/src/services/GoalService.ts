@@ -4,7 +4,6 @@ export interface Goal {
   id: string
   userId: string
   goalName: string
-  goalType: string
   targetAmount: number
   currentAmount: number
   targetDate: string
@@ -15,7 +14,6 @@ export interface Goal {
 
 export interface GoalInput {
   goalName: string
-  goalType: string
   targetAmount: number
   currentAmount?: number
   targetDate: string

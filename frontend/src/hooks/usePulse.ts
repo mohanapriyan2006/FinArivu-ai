@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useFocusEffect } from '@react-navigation/native'
 
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
@@ -99,6 +100,19 @@ export function usePulse(): UsePulseResult {
   useEffect(() => {
     fetchData()
   }, [fetchData])
+
+  // Refetch when the screen regains focus (e.g. after creating a record in a
+  // pushed modal/screen) so new data shows up without a manual refresh.
+  const skipFirstFocus = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFirstFocus.current) {
+        skipFirstFocus.current = false
+        return
+      }
+      fetchData()
+    }, [fetchData])
+  )
 
   const goals = useMemo<PulseGoalSource[]>(() => {
     if (serviceGoals.length > 0) {

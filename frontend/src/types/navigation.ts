@@ -4,9 +4,7 @@ export type RootStackParamList = {
   Auth: undefined
   Main: undefined
   FinancialProfileSetup: { startStep?: string } | undefined
-  CreateGoal: undefined
   Notifications: undefined
-  QuickAddExpense: undefined
   WeeklyReport: undefined
   ExpenseTracker: undefined
   BudgetTracker: undefined

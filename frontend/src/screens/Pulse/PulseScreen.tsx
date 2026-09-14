@@ -67,7 +67,7 @@ export default function PulseScreen() {
   }
 
   const handleViewGoals = () => {
-    navigation.navigate('FinancialProfileSetup', { startStep: 'goals' })
+    navigation.navigate('GoalsTracker')
   }
 
   if (isLoading && !error) {

@@ -6,7 +6,7 @@ export interface Income {
   source: string
   amount: number
   incomeDate: string
-  notes: string | null
+  description: string | null
   createdAt: string
   updatedAt: string
 }
@@ -15,7 +15,7 @@ export interface IncomeInput {
   source: string
   amount: number
   incomeDate: string
-  notes?: string
+  description?: string
 }
 
 export const IncomeService = {

@@ -74,7 +74,7 @@ export default function ExpenseTrackerScreen() {
       emptyTitle="No expenses yet"
       emptyMessage="Start tracking your spending to understand where your money goes."
       itemKey={(item) => item.id}
-      onAdd={() => navigation.navigate('QuickAddExpense')}
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'expenses' })}
       testID="expense-tracker"
     />
   )

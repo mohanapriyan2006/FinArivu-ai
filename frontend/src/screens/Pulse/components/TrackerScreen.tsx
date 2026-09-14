@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import {
   FlatList,
   RefreshControl,
@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
 import type { LucideIcon } from 'lucide-react-native'
 
 import { ScalePress } from '@/components/animation/ScalePress'
@@ -50,6 +51,18 @@ export function TrackerScreen<T, TInput = never>({
   const { colors } = useTheme()
   const styles = makeStyles(colors)
   const { data, isLoading, error, refresh } = useData()
+
+  // Refetch on focus so records added via the create screen show up.
+  const skipFirstFocus = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFirstFocus.current) {
+        skipFirstFocus.current = false
+        return
+      }
+      refresh()
+    }, [refresh])
+  )
 
   if (isLoading && !error && data.length === 0) {
     return (

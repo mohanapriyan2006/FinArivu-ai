@@ -27,7 +27,14 @@ export interface SectionField {
   label: string
   placeholder?: string
   keyboard?: 'default' | 'numeric'
+  /** Selectable chip options — values must match backend enums exactly */
   options?: string[]
+  /** Show a ₹ prefix inside the input */
+  currency?: boolean
+  /** Quick-pick date chips, e.g. Today / Yesterday / +1y */
+  datePresets?: 'recent' | 'years'
+  required?: boolean
+  helper?: string
 }
 
 export interface SectionSpec {
@@ -42,6 +49,12 @@ export interface SectionSpec {
 }
 
 const today = () => new Date().toISOString().split('T')[0]
+
+/** Backend enum values — keep in sync with app/constants */
+export const ASSET_TYPE_OPTIONS = ['Bank', 'Cash'] as const
+export const INVESTMENT_TYPE_OPTIONS = ['Mutual Fund', 'Stock', 'PPF', 'EPF', 'NPS', 'Gold', 'Property', 'Crypto', 'Other'] as const
+export const LOAN_TYPE_OPTIONS = ['Home Loan', 'Car Loan', 'Personal Loan', 'Education Loan', 'Medical Loan', 'Other'] as const
+export const INCOME_SOURCE_OPTIONS = ['Salary', 'Freelance', 'Business', 'Investment', 'Rent', 'Interest', 'Dividend', 'Bonus', 'Gift', 'Other'] as const
 
 export const SAVINGS_TYPES = new Set([
   'Bank',
@@ -66,10 +79,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No income added yet',
     emptyMessage: 'Add your salary and other income sources.',
     fields: [
-      { key: 'source', label: 'Source', placeholder: 'Salary' },
-      { key: 'amount', label: 'Amount', placeholder: '50000', keyboard: 'numeric' },
-      { key: 'incomeDate', label: 'Date', placeholder: today() },
-      { key: 'notes', label: 'Notes (optional)', placeholder: 'Monthly salary' },
+      { key: 'source', label: 'Source', options: [...INCOME_SOURCE_OPTIONS], required: true },
+      { key: 'amount', label: 'Amount', placeholder: '50000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'incomeDate', label: 'Date', placeholder: today(), datePresets: 'recent', required: true },
+      { key: 'description', label: 'Notes (optional)', placeholder: 'Monthly salary' },
     ],
   },
   expenses: {
@@ -80,10 +93,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No expenses added yet',
     emptyMessage: 'Track your daily spending here.',
     fields: [
+      { key: 'amount', label: 'Amount', placeholder: '1200', keyboard: 'numeric', currency: true, required: true },
+      { key: 'categoryId', label: 'Category', required: true, helper: 'Pick where this expense belongs' },
       { key: 'description', label: 'Description', placeholder: 'Grocery shopping' },
-      { key: 'amount', label: 'Amount', placeholder: '1200', keyboard: 'numeric' },
-      { key: 'expenseDate', label: 'Date', placeholder: today() },
-      { key: 'categoryId', label: 'Category' },
+      { key: 'expenseDate', label: 'Date', placeholder: today(), datePresets: 'recent', required: true },
     ],
   },
   savings: {
@@ -94,9 +107,9 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No savings added yet',
     emptyMessage: 'Add your bank accounts and emergency funds.',
     fields: [
-      { key: 'name', label: 'Account name', placeholder: 'Emergency Fund' },
-      { key: 'assetType', label: 'Account type', placeholder: 'Bank / Cash' },
-      { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric' },
+      { key: 'name', label: 'Account name', placeholder: 'Emergency Fund', required: true },
+      { key: 'assetType', label: 'Account type', options: [...ASSET_TYPE_OPTIONS], required: true },
+      { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric', currency: true, required: true },
     ],
   },
   investments: {
@@ -107,9 +120,9 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No investments added yet',
     emptyMessage: 'Add mutual funds, stocks, PPF, gold and more.',
     fields: [
-      { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund' },
-      { key: 'assetType', label: 'Investment type', placeholder: 'Mutual Fund / Stock' },
-      { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric' },
+      { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund', required: true },
+      { key: 'assetType', label: 'Investment type', options: [...INVESTMENT_TYPE_OPTIONS], required: true },
+      { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric', currency: true, required: true },
     ],
   },
   fixed_deposits: {
@@ -120,10 +133,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No fixed deposits added yet',
     emptyMessage: 'Track your FDs and their maturity.',
     fields: [
-      { key: 'name', label: 'FD name', placeholder: 'SBI Fixed Deposit' },
-      { key: 'value', label: 'Value', placeholder: '100000', keyboard: 'numeric' },
+      { key: 'name', label: 'FD name', placeholder: 'SBI Fixed Deposit', required: true },
+      { key: 'value', label: 'Value', placeholder: '100000', keyboard: 'numeric', currency: true, required: true },
       { key: 'interestRate', label: 'Interest rate (%)', placeholder: '7.5', keyboard: 'numeric' },
-      { key: 'maturityDate', label: 'Maturity date', placeholder: '2030-12-31' },
+      { key: 'maturityDate', label: 'Maturity date', placeholder: '2030-12-31', datePresets: 'years' },
     ],
   },
   loans: {
@@ -134,10 +147,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No loans added yet',
     emptyMessage: 'Track your outstanding loans and EMIs.',
     fields: [
-      { key: 'name', label: 'Loan name', placeholder: 'Home Loan' },
-      { key: 'liabilityType', label: 'Loan type', placeholder: 'Personal / Home' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric' },
+      { key: 'name', label: 'Loan name', placeholder: 'Home Loan', required: true },
+      { key: 'liabilityType', label: 'Loan type', options: [...LOAN_TYPE_OPTIONS], required: true },
+      { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric', currency: true },
     ],
   },
   credit_cards: {
@@ -148,10 +161,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No credit cards added yet',
     emptyMessage: 'Track your cards, limits and spends.',
     fields: [
-      { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric' },
-      { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric' },
-      { key: 'monthlySpend', label: 'Monthly spend (optional)', placeholder: '30000', keyboard: 'numeric' },
+      { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia', required: true },
+      { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric', currency: true },
+      { key: 'monthlySpend', label: 'Monthly spend (optional)', placeholder: '30000', keyboard: 'numeric', currency: true },
     ],
   },
   insurance: {
@@ -162,9 +175,9 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No insurance policies added yet',
     emptyMessage: 'Add your health and life insurance policies.',
     fields: [
-      { key: 'type', label: 'Policy type', options: ['health', 'life'] },
-      { key: 'coverage', label: 'Coverage amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'annualPremium', label: 'Annual premium', placeholder: '15000', keyboard: 'numeric' },
+      { key: 'type', label: 'Policy type', options: ['health', 'life'], required: true },
+      { key: 'coverage', label: 'Coverage amount', placeholder: '500000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'annualPremium', label: 'Annual premium', placeholder: '15000', keyboard: 'numeric', currency: true },
     ],
   },
   tax: {
@@ -175,13 +188,13 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No tax details added yet',
     emptyMessage: 'Add your tax regime and deductions.',
     fields: [
-      { key: 'annualIncome', label: 'Annual income', placeholder: '1200000', keyboard: 'numeric' },
-      { key: 'taxRegime', label: 'Tax regime', options: ['old', 'new', 'not-sure'] },
-      { key: 'deduction_80c', label: '80C deduction', placeholder: '150000', keyboard: 'numeric' },
-      { key: 'deduction_80d', label: '80D deduction', placeholder: '25000', keyboard: 'numeric' },
-      { key: 'homeLoanInterest', label: 'Home loan interest', placeholder: '0', keyboard: 'numeric' },
-      { key: 'nps', label: 'NPS deduction', placeholder: '0', keyboard: 'numeric' },
-      { key: 'other', label: 'Other deductions', placeholder: '0', keyboard: 'numeric' },
+      { key: 'annualIncome', label: 'Annual income', placeholder: '1200000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'taxRegime', label: 'Tax regime', options: ['old', 'new', 'not-sure'], required: true },
+      { key: 'deduction_80c', label: '80C deduction', placeholder: '150000', keyboard: 'numeric', currency: true },
+      { key: 'deduction_80d', label: '80D deduction', placeholder: '25000', keyboard: 'numeric', currency: true },
+      { key: 'homeLoanInterest', label: 'Home loan interest', placeholder: '0', keyboard: 'numeric', currency: true },
+      { key: 'nps', label: 'NPS deduction', placeholder: '0', keyboard: 'numeric', currency: true },
+      { key: 'other', label: 'Other deductions', placeholder: '0', keyboard: 'numeric', currency: true },
     ],
   },
   goals: {
@@ -192,11 +205,10 @@ export const SECTIONS: Record<string, SectionSpec> = {
     emptyTitle: 'No goals added yet',
     emptyMessage: 'Set a goal and get an AI savings plan.',
     fields: [
-      { key: 'goalName', label: 'Goal name', placeholder: 'Dream Home' },
-      { key: 'goalType', label: 'Goal type', placeholder: 'home / travel / education' },
-      { key: 'targetAmount', label: 'Target amount', placeholder: '2000000', keyboard: 'numeric' },
-      { key: 'currentAmount', label: 'Already saved (optional)', placeholder: '0', keyboard: 'numeric' },
-      { key: 'targetDate', label: 'Target date', placeholder: today() },
+      { key: 'goalName', label: 'Goal name', placeholder: 'Dream Home', required: true },
+      { key: 'targetAmount', label: 'Target amount', placeholder: '2000000', keyboard: 'numeric', currency: true, required: true },
+      { key: 'currentAmount', label: 'Already saved (optional)', placeholder: '0', keyboard: 'numeric', currency: true },
+      { key: 'targetDate', label: 'Target date', placeholder: today(), datePresets: 'years', required: true, helper: 'Pick a target year' },
     ],
   },
 }

@@ -42,6 +42,27 @@ type CategoryOption = { id: string; name: string }
 
 const today = () => new Date().toISOString().split('T')[0]
 
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d.toISOString().split('T')[0]
+}
+
+function isoYearEnd(yearsAhead: number): string {
+  return `${new Date().getFullYear() + yearsAhead}-12-31`
+}
+
+const RECENT_DATE_PRESETS: { label: string; value: string }[] = [
+  { label: 'Today', value: today() },
+  { label: 'Yesterday', value: isoDaysAgo(1) },
+  { label: '2 days ago', value: isoDaysAgo(2) },
+]
+
+const YEAR_DATE_PRESETS: { label: string; value: string }[] = [1, 2, 3, 5, 10].map((y) => ({
+  label: `+${y}y`,
+  value: isoYearEnd(y),
+}))
+
 function stringValue(value: unknown): string {
   if (value === undefined || value === null) return ''
   if (typeof value === 'string') return value
@@ -56,19 +77,6 @@ function numberValue(value: string): number {
 function toNumOrUndefined(value: string): number | undefined {
   const n = Number(value)
   return value === '' || Number.isNaN(n) ? undefined : n
-}
-
-function inferGoalType(name: string): string {
-  const lower = name.toLowerCase()
-  if (lower.includes('home') || lower.includes('house')) return 'home'
-  if (lower.includes('car') || lower.includes('vehicle')) return 'vehicle'
-  if (lower.includes('travel') || lower.includes('vacation')) return 'travel'
-  if (lower.includes('education') || lower.includes('study')) return 'education'
-  if (lower.includes('emergency')) return 'emergency'
-  if (lower.includes('retirement')) return 'retirement'
-  if (lower.includes('marriage') || lower.includes('wedding')) return 'marriage'
-  if (lower.includes('wealth')) return 'wealth'
-  return 'other'
 }
 
 export default function PulseSectionCreateScreen() {
@@ -86,7 +94,9 @@ export default function PulseSectionCreateScreen() {
 
   const [values, setValues] = useState<Record<string, string>>({})
   const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const initial: Record<string, string> = {}
@@ -107,22 +117,23 @@ export default function PulseSectionCreateScreen() {
         }
       }
     }
-    if (section === 'goals' && initial.goalType === '' && initial.goalName !== '') {
-      initial.goalType = inferGoalType(initial.goalName)
-    }
     setValues(initial)
+    setErrors({})
   }, [record, section, spec.fields])
 
   useEffect(() => {
     if (section !== 'expenses') return
     let cancelled = false
     async function loadCategories() {
+      setCategoriesLoading(true)
       try {
         const token = await getToken()
         const list = await CategoryService.list(token)
         if (!cancelled) setCategories(list.map((c) => ({ id: c.id, name: c.name })))
       } catch {
         if (!cancelled) setCategories([])
+      } finally {
+        if (!cancelled) setCategoriesLoading(false)
       }
     }
     loadCategories()
@@ -133,9 +144,31 @@ export default function PulseSectionCreateScreen() {
 
   const updateValue = useCallback((key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }, [])
 
+  const validate = useCallback((): boolean => {
+    const next: Record<string, string> = {}
+    for (const field of spec.fields) {
+      if (!field.required) continue
+      const v = (values[field.key] ?? '').trim()
+      if (!v) {
+        next[field.key] = `${field.label} is required`
+      } else if (field.keyboard === 'numeric' && numberValue(v) <= 0) {
+        next[field.key] = `Enter a valid ${field.label.toLowerCase()}`
+      }
+    }
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }, [spec.fields, values])
+
   const handleSave = useCallback(async () => {
+    if (!validate()) return
     setIsSaving(true)
     try {
       const token = await getToken()
@@ -170,7 +203,7 @@ export default function PulseSectionCreateScreen() {
           source: values.source ?? '',
           amount: numberValue(values.amount ?? '0'),
           incomeDate: values.incomeDate ?? today(),
-          notes: values.notes ?? '',
+          description: values.description ?? '',
         }
         if (isEdit && record?.id) {
           await IncomeService.update(record.id as string, input, token)
@@ -225,11 +258,10 @@ export default function PulseSectionCreateScreen() {
       } else if (section === 'goals') {
         const input: GoalInput = {
           goalName: values.goalName ?? '',
-          goalType: (values.goalType as string) ?? 'other',
           targetAmount: numberValue(values.targetAmount ?? '0'),
           currentAmount: toNumOrUndefined(values.currentAmount ?? ''),
           targetDate: values.targetDate ?? today(),
-          status: 'active',
+          status: 'Active',
         }
         if (isEdit && record?.id) {
           await GoalService.update(record.id as string, input, token)
@@ -243,7 +275,7 @@ export default function PulseSectionCreateScreen() {
     } finally {
       setIsSaving(false)
     }
-  }, [section, values, record, isEdit, getToken, profile, saveSection, categories, navigation])
+  }, [section, values, record, isEdit, getToken, profile, saveSection, categories, navigation, validate])
 
   const iconColor = resolveSectionColor(spec.color, colors)
   const iconBg = resolveSectionBackground(spec.background, colors)
@@ -287,57 +319,31 @@ export default function PulseSectionCreateScreen() {
             </View>
           </Animated.View>
 
-          {spec.fields.map((field, index) => (
-            <Animated.View key={field.key} entering={FadeInUp.delay(100 + index * 50).springify()}>
-              <View style={[styles.fieldCard, { backgroundColor: colors.surface }]}>
-                <Text style={styles.fieldLabel}>{field.label}</Text>
-                {field.options ? (
-                  <View style={styles.optionsRow}>
-                    {field.options.map((option) => {
-                      const selected = values[field.key] === option
-                      return (
-                        <Pressable
-                          key={option}
-                          onPress={() => updateValue(field.key, option)}
-                          style={[
-                            styles.option,
-                            {
-                              backgroundColor: selected ? colors.primary : colors.background,
-                              borderColor: selected ? colors.primary : colors.border,
-                            },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                        >
-                          <Text
-                            style={[
-                              styles.optionText,
-                              { color: selected ? colors.surface : colors.textPrimary },
-                            ]}
-                          >
-                            {option.charAt(0).toUpperCase() + option.slice(1)}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
+          {spec.fields.map((field, index) => {
+            const error = errors[field.key]
+            const hasError = Boolean(error)
+            return (
+              <Animated.View key={field.key} entering={FadeInUp.delay(100 + index * 50).springify()}>
+                <View
+                  style={[
+                    styles.fieldCard,
+                    { backgroundColor: colors.surface },
+                    hasError ? { borderColor: colors.danger } : null,
+                  ]}
+                >
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>{field.label}</Text>
+                    {field.required ? <Text style={[styles.requiredMark, { color: colors.danger }]}>*</Text> : null}
                   </View>
-                ) : field.key === 'categoryId' ? (
-                  <View style={styles.optionsRow}>
-                    {categories.length === 0 ? (
-                      <TextInput
-                        style={[styles.input, { backgroundColor: colors.background }]}
-                        value={values[field.key] ?? ''}
-                        onChangeText={(text) => updateValue(field.key, text)}
-                        placeholder="Category ID"
-                        placeholderTextColor={colors.textTertiary}
-                      />
-                    ) : (
-                      categories.map((cat) => {
-                        const selected = values[field.key] === cat.id
+                  {field.helper ? <Text style={styles.fieldHelper}>{field.helper}</Text> : null}
+                  {field.options ? (
+                    <View style={styles.optionsRow}>
+                      {field.options.map((option) => {
+                        const selected = values[field.key] === option
                         return (
                           <Pressable
-                            key={cat.id}
-                            onPress={() => updateValue(field.key, cat.id)}
+                            key={option}
+                            onPress={() => updateValue(field.key, option)}
                             style={[
                               styles.option,
                               {
@@ -354,27 +360,112 @@ export default function PulseSectionCreateScreen() {
                                 { color: selected ? colors.surface : colors.textPrimary },
                               ]}
                             >
-                              {cat.name}
+                              {option.charAt(0).toUpperCase() + option.slice(1)}
                             </Text>
                           </Pressable>
                         )
-                      })
-                    )}
-                  </View>
-                ) : (
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.background }]}
-                    value={values[field.key] ?? ''}
-                    onChangeText={(text) => updateValue(field.key, text)}
-                    placeholder={field.placeholder ?? field.label}
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType={field.keyboard ?? 'default'}
-                    accessibilityLabel={field.label}
-                  />
-                )}
-              </View>
-            </Animated.View>
-          ))}
+                      })}
+                    </View>
+                  ) : field.key === 'categoryId' ? (
+                    <View style={styles.optionsRow}>
+                      {categoriesLoading ? (
+                        <ActivityIndicator color={colors.primary} />
+                      ) : categories.length === 0 ? (
+                        <Text style={styles.fieldHelper}>
+                          No categories found. Pull to refresh on the expenses screen, then try again.
+                        </Text>
+                      ) : (
+                        categories.map((cat) => {
+                          const selected = values[field.key] === cat.id
+                          return (
+                            <Pressable
+                              key={cat.id}
+                              onPress={() => updateValue(field.key, cat.id)}
+                              style={[
+                                styles.option,
+                                {
+                                  backgroundColor: selected ? colors.primary : colors.background,
+                                  borderColor: selected ? colors.primary : colors.border,
+                                },
+                              ]}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected }}
+                            >
+                              <Text
+                                style={[
+                                  styles.optionText,
+                                  { color: selected ? colors.surface : colors.textPrimary },
+                                ]}
+                              >
+                                {cat.name}
+                              </Text>
+                            </Pressable>
+                          )
+                        })
+                      )}
+                    </View>
+                  ) : (
+                    <>
+                      <View
+                        style={[
+                          styles.inputRow,
+                          { backgroundColor: colors.background, borderColor: hasError ? colors.danger : colors.border },
+                        ]}
+                      >
+                        {field.currency ? (
+                          <Text style={[styles.currencyPrefix, { color: colors.textSecondary }]}>₹</Text>
+                        ) : null}
+                        <TextInput
+                          style={styles.inputFlex}
+                          value={values[field.key] ?? ''}
+                          onChangeText={(text) => updateValue(field.key, text)}
+                          placeholder={field.placeholder ?? field.label}
+                          placeholderTextColor={colors.textTertiary}
+                          keyboardType={field.keyboard ?? 'default'}
+                          accessibilityLabel={field.label}
+                        />
+                      </View>
+                      {field.datePresets ? (
+                        <View style={[styles.optionsRow, { marginTop: 10 }]}>
+                          {(field.datePresets === 'recent' ? RECENT_DATE_PRESETS : YEAR_DATE_PRESETS).map(
+                            (preset) => {
+                              const selected = values[field.key] === preset.value
+                              return (
+                                <Pressable
+                                  key={preset.label}
+                                  onPress={() => updateValue(field.key, preset.value)}
+                                  style={[
+                                    styles.option,
+                                    styles.dateChip,
+                                    {
+                                      backgroundColor: selected ? colors.primary : colors.background,
+                                      borderColor: selected ? colors.primary : colors.border,
+                                    },
+                                  ]}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.optionText,
+                                      { color: selected ? colors.surface : colors.textSecondary },
+                                    ]}
+                                  >
+                                    {preset.label}
+                                  </Text>
+                                </Pressable>
+                              )
+                            }
+                          )}
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                  {hasError ? <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text> : null}
+                </View>
+              </Animated.View>
+            )
+          })}
 
           <Animated.View entering={FadeInUp.delay(100 + spec.fields.length * 50).springify()}>
             <Pressable
@@ -467,6 +558,11 @@ const makeStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
       ...CARD_SHADOW,
     },
+    fieldLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
     fieldLabel: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.xs,
@@ -474,18 +570,52 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 1,
+    },
+    requiredMark: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.bold,
+      marginLeft: 4,
+    },
+    fieldHelper: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.regular,
+      color: colors.textSecondary,
       marginBottom: 10,
     },
-    input: {
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
       borderRadius: 16,
       paddingHorizontal: 16,
+      marginTop: 6,
+    },
+    currencyPrefix: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.lg,
+      fontWeight: Typography.fontWeights.bold,
+      marginRight: 8,
+    },
+    inputFlex: {
+      flex: 1,
       paddingVertical: 14,
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.base,
       fontWeight: Typography.fontWeights.semibold,
       color: colors.textPrimary,
+    },
+    dateChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+    errorText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.semibold,
+      marginTop: 8,
     },
     optionsRow: {
       flexDirection: 'row',
