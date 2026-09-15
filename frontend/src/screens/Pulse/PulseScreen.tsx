@@ -136,13 +136,13 @@ export default function PulseScreen() {
           </View>
         ) : (
           <>
-            {state.attention.length > 0 ? (
+            {/* {state.attention.length > 0 ? (
               <PulseNeedsAttention
                 items={state.attention}
                 onPress={handleAttentionPress}
                 testID="pulse-needs-attention"
               />
-            ) : null}
+            ) : null} */}
 
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>My Finances</Text>
