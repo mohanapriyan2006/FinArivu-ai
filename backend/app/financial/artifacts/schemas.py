@@ -35,6 +35,9 @@ class ArtifactType(str, Enum):
     TIMELINE_CARD = "timeline_card"
     WEEKLY_REPORT_CARD = "weekly_report_card"
     MONTHLY_REPORT_CARD = "monthly_report_card"
+    ACTION_PREVIEW_CARD = "action_preview_card"
+    ACTION_RESULT_CARD = "action_result_card"
+    ACTION_HISTORY_CARD = "action_history_card"
 
 
 class Artifact(BaseSchema):

@@ -17,6 +17,22 @@ from app.ai.schemas.copilot import FollowUpQuestion, SuggestedAction
 from app.ai.schemas.orchestration import IntentEnum
 
 
+def _is_valid_api_action(action: SuggestedAction) -> bool:
+    """Gate agent-contributed API_ACTION suggestions through the registry."""
+    from app.actions.action_types import ActionOperation
+
+    payload = action.payload or {}
+    operation = payload.get("operation")
+    arguments = payload.get("arguments")
+    if not isinstance(operation, str) or not isinstance(arguments, dict):
+        return False
+    try:
+        ActionOperation(operation)
+    except ValueError:
+        return False
+    return True
+
+
 # Canonical navigation targets the frontend can resolve to real screens.
 # Kept in sync with ``src/navigation/actionRoutes.ts``.
 NAVIGATION_TARGETS: dict[str, str] = {
@@ -118,8 +134,11 @@ class ActionDecisionEngine:
                 except Exception:
                     continue
                 if action.type == ActionType.API_ACTION:
-                    # API actions are never executable in Phase 0.
-                    action.enabled = False
+                    # Phase 1: API actions open a server-validated preview —
+                    # only registered operations with a dict payload are
+                    # allowed through; anything else is dropped.
+                    if not _is_valid_api_action(action):
+                        continue
                 if action.type == ActionType.NAVIGATE and (
                     action.route not in NAVIGATION_TARGETS
                 ):

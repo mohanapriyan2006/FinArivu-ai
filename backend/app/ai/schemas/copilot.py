@@ -46,6 +46,8 @@ class ResponseType(StrEnum):
     ACTIONABLE_ANALYSIS = "actionable_analysis"
     EDUCATIONAL = "educational"
     CLARIFICATION = "clarification"
+    ACTION_PREVIEW = "action_preview"
+    ACTION_RESULT = "action_result"
 
 
 class ResponseStyle(StrEnum):
@@ -62,8 +64,9 @@ class ActionType(StrEnum):
 
     ``CHAT_FOLLOWUP`` re-sends the label/payload question as a user message.
     ``NAVIGATE`` deep-links to an app screen resolved from ``route``.
-    ``API_ACTION`` is a typed placeholder for future executable actions —
-    the frontend must never execute it autonomously in Phase 0.
+    ``API_ACTION`` carries a typed executable operation — the client sends it
+    to ``/v1/copilot/actions/preview`` and the user must confirm before any
+    mutation happens.
     """
 
     CHAT_FOLLOWUP = "CHAT_FOLLOWUP"
@@ -247,6 +250,10 @@ class CopilotChatResponse(BaseSchema):
         "and is not financial, investment, tax, or legal advice."
     )
     guardrail_triggered: bool = False
+    # Populated when the pipeline produced a validated action preview —
+    # the frontend renders an ActionPreviewCard and the user confirms via
+    # POST /v1/copilot/actions/execute.
+    action_preview: dict[str, Any] | None = None
     provider: str | None = None
     model: str | None = None
     tokens_input: int = 0

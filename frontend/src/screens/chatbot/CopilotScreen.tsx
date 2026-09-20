@@ -16,7 +16,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
-import { Clock, History, Pencil, Plus, Trash2, X } from 'lucide-react-native'
+import { ClipboardList, Clock, History, Pencil, Plus, Trash2, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
@@ -28,6 +28,7 @@ import { DocMessageItem } from '@/components/chatbot/DocMessageItem'
 import type { ChatMessageItemData, SuggestedAction } from '@/types/copilot'
 import { CopilotInput } from '@/components/chatbot/CopilotInput'
 import { ThinkingAnimation } from '@/components/chatbot/ThinkingAnimation'
+import { ActionHistorySheet } from '@/components/actions/ActionHistorySheet'
 import { navigateToAction } from '@/navigation/actionRoutes'
 import type { RootStackParamList } from '@/types/navigation'
 
@@ -56,6 +57,10 @@ export default function CopilotScreen() {
     loadSession,
     renameSession,
     deleteSession,
+    runApiAction,
+    confirmActionPreview,
+    cancelActionPreview,
+    undoExecutedAction,
   } = useCopilot()
 
   const [inputText, setInputText] = useState('')
@@ -69,6 +74,7 @@ export default function CopilotScreen() {
   const [refreshing, setRefreshing] = useState(false)
   const [menuVisible, setMenuVisible] = useState(false)
   const [historyVisible, setHistoryVisible] = useState(false)
+  const [actionHistoryVisible, setActionHistoryVisible] = useState(false)
   const [renameSessionId, setRenameSessionId] = useState<string | null>(null)
   const [renameTitle, setRenameTitle] = useState('')
 
@@ -177,6 +183,11 @@ export default function CopilotScreen() {
     setHistoryVisible(true)
   }, [])
 
+  const handleOpenActionHistory = useCallback(() => {
+    setMenuVisible(false)
+    setActionHistoryVisible(true)
+  }, [])
+
   const handleDeleteSession = useCallback(
     (targetSessionId: string) => {
       Alert.alert(
@@ -244,10 +255,14 @@ export default function CopilotScreen() {
       }
       if (action.type === 'NAVIGATE') {
         navigateToAction(navigation, action)
+        return
       }
-      // API_ACTION is never executed — Phase 0 keeps the copilot read-only.
+      if (action.type === 'API_ACTION') {
+        // Opens a server-validated preview — confirmation is explicit.
+        void runApiAction(action)
+      }
     },
-    [handleSendMessage, navigation]
+    [handleSendMessage, navigation, runApiAction]
   )
 
   const renderItem = useCallback(
@@ -256,9 +271,12 @@ export default function CopilotScreen() {
         item={item}
         onSelectFollowUp={(chipText) => handleSendMessage(chipText)}
         onSelectAction={handleAction}
+        onConfirmAction={confirmActionPreview}
+        onCancelAction={cancelActionPreview}
+        onUndoAction={undoExecutedAction}
       />
     ),
-    [handleAction, handleSendMessage]
+    [handleAction, handleSendMessage, confirmActionPreview, cancelActionPreview, undoExecutedAction]
   )
 
   return (
@@ -289,6 +307,10 @@ export default function CopilotScreen() {
               <Pressable style={styles.menuItem} onPress={handleOpenHistory}>
                 <History size={18} color={colors.textPrimary} strokeWidth={2} />
                 <Text style={styles.menuItemText}>History</Text>
+              </Pressable>
+              <Pressable style={styles.menuItem} onPress={handleOpenActionHistory}>
+                <ClipboardList size={18} color={colors.textPrimary} strokeWidth={2} />
+                <Text style={styles.menuItemText}>Action history</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -363,6 +385,11 @@ export default function CopilotScreen() {
             )}
           </SafeAreaView>
         </Modal>
+
+        <ActionHistorySheet
+          visible={actionHistoryVisible}
+          onClose={() => setActionHistoryVisible(false)}
+        />
 
         <Modal
           visible={renameSessionId !== null}

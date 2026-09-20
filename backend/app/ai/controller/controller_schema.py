@@ -66,6 +66,9 @@ class ControllerPlan(BaseModel):
     safety_action: str = "allow"
     response_style: str = "educational"
     entities: dict[str, Any] = Field(default_factory=dict)
+    # Structured action proposal emitted when the user asks to change a
+    # financial record. Validated by the action layer — never executed here.
+    proposed_action: dict[str, Any] | None = None
 
     @field_validator(
         "risk_level",

@@ -12,7 +12,18 @@ import {
   type CopilotHistoryMessage,
   type CopilotSession,
 } from '@/services/ChatService'
-import type { ChatMessageItemData } from '@/types/copilot'
+import {
+  actionRequestFromPayload,
+  cancelAction,
+  executeAction,
+  previewAction,
+  undoAction,
+} from '@/services/ActionService'
+import type {
+  ActionPreview,
+  ActionResult,
+} from '@/types/actions'
+import type { ChatMessageItemData, SuggestedAction } from '@/types/copilot'
 
 const THINKING_STEPS = [
   'Planning analysis...',
@@ -41,6 +52,14 @@ export interface UseCopilotReturn {
   sendMessage: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => Promise<void>
   extractDocument: (file: { uri: string; name: string; type: string }) => Promise<{ text: string; filename: string }>
   sendStream: (text: string, contextHints?: string[], attachments?: CopilotAttachment[]) => void
+  /** Open a server-validated preview for an API_ACTION chip. */
+  runApiAction: (action: SuggestedAction) => Promise<void>
+  /** Confirm a previewed action — POST /actions/execute. */
+  confirmActionPreview: (messageId: string, preview: ActionPreview) => Promise<void>
+  /** Cancel a pending preview — POST /actions/{id}/cancel. */
+  cancelActionPreview: (messageId: string, preview: ActionPreview) => Promise<void>
+  /** Undo an executed action — POST /actions/{id}/undo. */
+  undoExecutedAction: (result: ActionResult) => Promise<void>
   retry: () => Promise<void>
   loadHistory: (skip?: number, limit?: number) => Promise<void>
   loadSessions: () => Promise<void>
@@ -99,6 +118,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     suggestedActions: response.suggestedActions,
     disclaimer: response.disclaimer,
     guardrailTriggered: response.guardrailTriggered,
+    actionPreview: response.actionPreview ?? undefined,
     createdAt: new Date().toISOString(),
   }), [])
 
@@ -247,6 +267,147 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     [appendMessage, isLoading, isStreaming, sessionId, token, loadSessions]
   )
 
+  const updateMessage = useCallback(
+    (id: string, patch: Partial<ChatMessageItemData>) => {
+      setMessages((prev) =>
+        prev.map((m) => (m.id === id ? { ...m, ...patch } : m)),
+      )
+    },
+    [],
+  )
+
+  const runApiAction = useCallback(
+    async (action: SuggestedAction) => {
+      const request = actionRequestFromPayload(action.payload, sessionId)
+      if (!request) {
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content: "I couldn't understand that action request.",
+          createdAt: new Date().toISOString(),
+        })
+        return
+      }
+      appendMessage({
+        id: `ai_${Date.now()}`,
+        role: 'assistant',
+        content: `Preparing "${action.label}"…`,
+        createdAt: new Date().toISOString(),
+      })
+      try {
+        const preview = await previewAction(request)
+        if (preview.status === 'AWAITING_CONFIRMATION') {
+          appendMessage({
+            id: `ai_${Date.now()}`,
+            role: 'assistant',
+            content: 'Review the preview below, then confirm or cancel.',
+            actionPreview: preview,
+            responseType: 'action_preview',
+            createdAt: new Date().toISOString(),
+          })
+        } else {
+          appendMessage({
+            id: `ai_${Date.now()}`,
+            role: 'assistant',
+            content:
+              preview.clarificationQuestion ||
+              'I need a bit more detail to make that change.',
+            responseType: 'clarification',
+            createdAt: new Date().toISOString(),
+          })
+        }
+      } catch (err) {
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content:
+            err instanceof Error
+              ? err.message
+              : 'I could not prepare that action right now.',
+          createdAt: new Date().toISOString(),
+        })
+      }
+    },
+    [appendMessage, sessionId],
+  )
+
+  const confirmActionPreview = useCallback(
+    async (messageId: string, preview: ActionPreview) => {
+      if (!preview.executionId) return
+      try {
+        const result = await executeAction(preview.executionId, sessionId)
+        updateMessage(messageId, { actionPreviewResolved: 'EXECUTED' })
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content: result.message || 'Done — the change was applied.',
+          actionResult: result,
+          responseType: 'action_result',
+          createdAt: new Date().toISOString(),
+        })
+      } catch (err) {
+        updateMessage(messageId, { actionPreviewResolved: 'FAILED' })
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content:
+            err instanceof Error
+              ? err.message
+              : 'The action could not be completed.',
+          createdAt: new Date().toISOString(),
+        })
+      }
+    },
+    [appendMessage, sessionId, updateMessage],
+  )
+
+  const cancelActionPreview = useCallback(
+    async (messageId: string, preview: ActionPreview) => {
+      if (preview.executionId) {
+        try {
+          await cancelAction(preview.executionId)
+        } catch {
+          // The preview expires server-side regardless.
+        }
+      }
+      updateMessage(messageId, { actionPreviewResolved: 'CANCELLED' })
+      appendMessage({
+        id: `ai_${Date.now()}`,
+        role: 'assistant',
+        content: 'Cancelled — nothing was changed.',
+        createdAt: new Date().toISOString(),
+      })
+    },
+    [appendMessage, updateMessage],
+  )
+
+  const undoExecutedAction = useCallback(
+    async (result: ActionResult) => {
+      try {
+        const undone = await undoAction(result.executionId)
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content: undone.message || 'Undone — the change was reverted.',
+          actionResult: undone,
+          responseType: 'action_result',
+          createdAt: new Date().toISOString(),
+        })
+      } catch (err) {
+        appendMessage({
+          id: `ai_${Date.now()}`,
+          role: 'assistant',
+          content:
+            err instanceof Error
+              ? err.message
+              : 'The change could not be undone.',
+          createdAt: new Date().toISOString(),
+        })
+      }
+    },
+    [appendMessage],
+  )
+
   const retry = useCallback(async () => {
     if (lastFailedText) {
       await sendMessage(lastFailedText)
@@ -368,6 +529,10 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     sendMessage,
     extractDocument,
     sendStream,
+    runApiAction,
+    confirmActionPreview,
+    cancelActionPreview,
+    undoExecutedAction,
     retry,
     loadHistory,
     loadSessions,

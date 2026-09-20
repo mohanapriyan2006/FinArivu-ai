@@ -32,6 +32,9 @@ import {
   TaxArtifactCard,
   type ArtifactPayload,
 } from './ArtifactCards'
+import { ActionPreviewCard } from '@/components/actions/ActionPreviewCard'
+import { ActionResultCard } from '@/components/actions/ActionResultCard'
+import type { ActionPreview, ActionResult } from '@/types/actions'
 import { FollowUpChips } from './FollowUpChips'
 import { MarkdownMessage } from './MarkdownMessage'
 
@@ -47,9 +50,19 @@ interface DocMessageItemProps {
   item: ChatMessageItemData
   onSelectFollowUp: (chipText: string) => void
   onSelectAction?: (action: SuggestedAction) => void
+  onConfirmAction?: (messageId: string, preview: ActionPreview) => void
+  onCancelAction?: (messageId: string, preview: ActionPreview) => void
+  onUndoAction?: (result: ActionResult) => void
 }
 
-export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMessageItemProps) {
+export function DocMessageItem({
+  item,
+  onSelectFollowUp,
+  onSelectAction,
+  onConfirmAction,
+  onCancelAction,
+  onUndoAction,
+}: DocMessageItemProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
   const [isSpeaking, setIsSpeaking] = useState(false)
@@ -139,6 +152,32 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
         return <InsightArtifactCard key={`art-${index}`} data={content} title={artifact.title} />
       case 'report_card':
         return <ReportArtifactCard key={`art-${index}`} data={content} />
+      case 'action_preview_card': {
+        // The canonical preview renders from item.actionPreview — the
+        // artifact duplicates it for history, so skip it here.
+        if (item.actionPreview) return null
+        const preview = content as unknown as ActionPreview
+        return (
+          <ActionPreviewCard
+            key={`art-${index}`}
+            preview={preview}
+            resolvedStatus={item.actionPreviewResolved}
+            onConfirm={(p) => onConfirmAction?.(item.id, p)}
+            onCancel={(p) => onCancelAction?.(item.id, p)}
+          />
+        )
+      }
+      case 'action_result_card': {
+        if (item.actionResult) return null
+        const result = content as unknown as ActionResult
+        return (
+          <ActionResultCard
+            key={`art-${index}`}
+            result={result}
+            onUndo={onUndoAction}
+          />
+        )
+      }
       default:
         return (
           <View key={`art-${index}`} style={styles.artifactCard}>
@@ -168,6 +207,21 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
       {/* Main Explanation Block */}
       <View style={styles.docBody}>
         <MarkdownMessage content={item.content} />
+
+        {/* Confirmed action preview (NL flow or API_ACTION chip). */}
+        {item.actionPreview && (
+          <ActionPreviewCard
+            preview={item.actionPreview}
+            resolvedStatus={item.actionPreviewResolved}
+            onConfirm={(p) => onConfirmAction?.(item.id, p)}
+            onCancel={(p) => onCancelAction?.(item.id, p)}
+          />
+        )}
+
+        {/* Action result (post-execution / undo). */}
+        {item.actionResult && (
+          <ActionResultCard result={item.actionResult} onUndo={onUndoAction} />
+        )}
 
         {/* Render artifacts from backend only */}
         {item.artifacts && item.artifacts.length > 0 && (

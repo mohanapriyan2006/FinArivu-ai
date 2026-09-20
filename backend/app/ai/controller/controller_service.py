@@ -3,12 +3,18 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 import uuid
 from typing import AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.actions.action_types import ActionPreviewStatus
+from app.actions.errors import ActionError
+from app.actions.extractor import extract_action
+from app.actions.schemas import ActionProposal, ActionPreviewResponse
+from app.actions.service import ActionService
 from app.ai.context.builder import ContextBuilder
 from app.ai.context.context_requirements import (
     get_required_domains,
@@ -82,6 +88,17 @@ class ControllerService:
             return await self._clarification_response(
                 user_id, session_id, plan, start,
             )
+
+        # ── Action requests: proposal → validated preview → confirmation ──
+        # The LLM/extractor only proposes; the action layer validates and the
+        # user confirms before anything mutates.
+        proposal = self._action_proposal(plan, user_message)
+        if proposal is not None:
+            action_response = await self._action_preview_response(
+                user_id, session_id, proposal, plan, start,
+            )
+            if action_response is not None:
+                return action_response
 
         financial_context = await self._build_context(user_id, session_id, plan, user_context)
         if (
@@ -189,6 +206,30 @@ class ControllerService:
             await self._memory.save_message(user_id, session_id, "assistant", text)
             return
 
+        # ── Action requests: emit the preview card payload, then DONE ──
+        proposal = self._action_proposal(plan, user_message)
+        if proposal is not None:
+            preview = await self._run_action_preview(user_id, session_id, proposal)
+            if preview is not None:
+                text, event_payload = preview
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Action preview ready",
+                    agent_name="ActionService",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="action_preview",
+                    agent_chain=event_payload.get("actionPreview") or {},
+                )
+                return
+
         yield StreamEvent(
             event_type=StreamEventType.AGENT_START,
             data="Building financial context",
@@ -269,6 +310,139 @@ class ControllerService:
                 "agents": [r.agent_name for r in agent_results if not r.error],
                 "intent": execution_plan.intent.value,
             },
+        )
+
+    # ── Action proposal handling ──────────────────────────────────────────
+
+    @staticmethod
+    def _action_proposal(
+        plan: ControllerPlan, user_message: str
+    ) -> ActionProposal | None:
+        """Return a structured action proposal for this message, if any.
+
+        Preference order: the controller's structured ``proposed_action``,
+        then the deterministic rule-based extractor. Attachment content is
+        stripped first so document text can never drive an executable action.
+        """
+        if plan.safety_action != "allow":
+            return None
+
+        raw = plan.proposed_action
+        if isinstance(raw, dict) and raw.get("operation"):
+            try:
+                proposal = ActionProposal.model_validate(raw)
+                if proposal.operation:
+                    return proposal
+            except Exception:
+                logger.warning("Controller emitted invalid proposed_action; ignored")
+
+        # Deterministic fallback — document blocks are excluded so uploaded
+        # files cannot trigger mutations on their own.
+        clean = re.sub(r"<document.*?</document>", "", user_message, flags=re.DOTALL)
+        return extract_action(clean)
+
+    async def _run_action_preview(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        proposal: ActionProposal,
+    ) -> tuple[str, dict] | None:
+        """Validate the proposal and build a preview payload.
+
+        Returns ``(message_text, event_payload)`` or ``None`` when the
+        proposal is unsupported and the normal agent pipeline should run.
+        """
+        service = ActionService(self._session)
+        try:
+            preview = await service.preview(
+                user_id, proposal, session_id=session_id,
+            )
+        except ActionError as exc:
+            # Controlled failure — surface the safe message, never internals.
+            text = exc.message
+            return text, {"actionError": {"code": exc.code.value, "message": text}}
+
+        if preview.status == ActionPreviewStatus.NOT_SUPPORTED:
+            return None
+
+        if preview.status == ActionPreviewStatus.NEEDS_INPUT:
+            text = preview.clarification_question or (
+                "I need a bit more detail to make that change."
+            )
+            return text, {"missingFields": preview.missing_fields}
+
+        return self._preview_text_and_payload(preview)
+
+    @staticmethod
+    def _preview_text_and_payload(
+        preview: ActionPreviewResponse,
+    ) -> tuple[str, dict]:
+        """Compose the preview message text and structured payload."""
+        from app.financial.artifacts.schemas import Artifact, ArtifactType
+
+        after = preview.after or {}
+        pieces = [f"I can {preview.title.lower()} — {preview.entity_name}."]
+        highlights = [
+            f"{key}: {value}" for key, value in list(after.items())[:3]
+            if value is not None
+        ]
+        if highlights:
+            pieces.append(" ".join(highlights))
+        pieces.append("Review the preview and confirm to apply the change.")
+        text = " ".join(pieces)
+
+        artifact = Artifact(
+            type=ArtifactType.ACTION_PREVIEW_CARD.value,
+            title=preview.title,
+            content=preview.model_dump(by_alias=True),
+        )
+        return text, {
+            "actionPreview": preview.model_dump(by_alias=True),
+            "artifacts": [artifact.model_dump(by_alias=True)],
+        }
+
+    async def _action_preview_response(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        proposal: ActionProposal,
+        plan: ControllerPlan,
+        start_time: float,
+    ) -> CopilotChatResponse | None:
+        """Synchronous action path — returns None if not actionable."""
+        from app.financial.artifacts.schemas import Artifact
+
+        result = await self._run_action_preview(user_id, session_id, proposal)
+        if result is None:
+            return None
+
+        text, payload = result
+        latency = int((time.perf_counter() - start_time) * 1000)
+        preview = payload.get("actionPreview")
+        response_type = (
+            ResponseType.ACTION_PREVIEW
+            if preview is not None
+            else ResponseType.CLARIFICATION
+        )
+        msg = await self._memory.save_message(
+            user_id,
+            session_id,
+            "assistant",
+            text,
+            intent="action_preview",
+            latency_ms=latency,
+            agent_chain={"executionId": (preview or {}).get("executionId")},
+        )
+        return CopilotChatResponse(
+            message_id=msg.id,
+            message=text,
+            response_type=response_type,
+            summary=text,
+            intent=to_copilot_intent(plan.intent),
+            artifacts=[
+                Artifact.model_validate(a) for a in payload.get("artifacts", [])
+            ],
+            action_preview=preview,
         )
 
     async def _build_context(

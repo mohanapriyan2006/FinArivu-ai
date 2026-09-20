@@ -8,7 +8,13 @@
  * by `ChatService`, `useCopilot`, `CopilotScreen`, and chat components.
  */
 
-/** Action types the backend may emit. API_ACTION is never executed. */
+import type { ActionExecutionStatus, ActionPreview, ActionResult } from './actions'
+
+/**
+ * Action types the backend may emit. API_ACTION opens a server-validated
+ * preview via POST /v1/copilot/actions/preview — the user confirms before
+ * anything is applied; the client never mutates financial data directly.
+ */
 export type CopilotActionType = 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION'
 
 export interface CopilotArtifact {
@@ -67,6 +73,11 @@ export interface CopilotChatResponse {
   metadata?: CopilotMetadata
   disclaimer: string
   guardrailTriggered: boolean
+  /**
+   * Populated when the pipeline produced a validated action preview —
+   * render an ActionPreviewCard and let the user confirm explicitly.
+   */
+  actionPreview?: ActionPreview | null
   provider?: string
   model?: string
   tokensInput?: number
@@ -106,5 +117,11 @@ export interface ChatMessageItemData {
   suggestedActions?: SuggestedAction[]
   disclaimer?: string
   guardrailTriggered?: boolean
+  /** Confirmed action preview attached to this message. */
+  actionPreview?: ActionPreview
+  /** Terminal status once the preview was resolved (EXECUTED/CANCELLED/...). */
+  actionPreviewResolved?: ActionExecutionStatus
+  /** Action result appended after execution or undo. */
+  actionResult?: ActionResult
   createdAt?: string
 }

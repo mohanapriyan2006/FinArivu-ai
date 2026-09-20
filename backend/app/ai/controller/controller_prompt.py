@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from app.actions.action_types import ActionOperation
 from app.ai.registry.registry import CONTROLLER_SELECTABLE_AGENTS
 from app.ai.schemas.orchestration import IntentEnum
 
@@ -9,6 +10,10 @@ from app.ai.schemas.orchestration import IntentEnum
 # Specialist agents the controller is allowed to select — derived from the
 # canonical registry so the prompt can never drift from reality.
 _ALLOWED_AGENTS = CONTROLLER_SELECTABLE_AGENTS
+
+# Executable financial operations the controller may PROPOSE — never execute.
+# Execution requires validation, preview and explicit user confirmation.
+_ALLOWED_ACTIONS = [op.value for op in ActionOperation]
 
 # Deterministic financial engines the agents may use (informational only —
 # agents call tools, which call these engines).
@@ -47,8 +52,16 @@ Rules:
 - missing_information: list any missing required user data
 - safety_action: allow, block, or educational_refusal (for investment advice/stock tips)
 - response_style: educational, concise, detailed, or friendly
+- proposed_action: when the user explicitly asks to ADD, CHANGE or UPDATE a financial
+  record (expense, budget, goal, income), emit {{"operation": one of {actions},
+  "arguments": {{...}}, "reason": "...", "missing_fields": [...]}}.
+  Extract only values the user stated — NEVER invent amounts, dates, or names.
+  For updates reference the entity by name (category_name, goal_name, source)
+  unless an id is already known. Omit the field entirely for questions,
+  analysis or advice requests. proposed_action is only a proposal — it will be
+  validated and confirmed by the user before anything changes.
 Do NOT include markdown, explanations, or text outside the JSON object.
-""".format(intents=_ALLOWED_INTENTS_TEXT)
+""".format(intents=_ALLOWED_INTENTS_TEXT, actions=", ".join(_ALLOWED_ACTIONS))
 
 
 CONTROLLER_PROMPT_TEMPLATE: str = """\

@@ -80,6 +80,9 @@ class Settings(BaseSettings):
     ai_max_repair_attempts: int = Field(default=2, alias="AI_MAX_REPAIR_ATTEMPTS")
     ai_enable_api_verifier: bool = Field(default=True, alias="AI_ENABLE_API_VERIFIER")
 
+    # Copilot actions
+    action_preview_ttl_seconds: int = Field(default=300, alias="ACTION_PREVIEW_TTL_SECONDS")
+
     # Provider routing per task type
     ai_provider_fast: str = Field(default="groq", alias="AI_PROVIDER_FAST")
     ai_provider_reasoning: str = Field(default="gemini", alias="AI_PROVIDER_REASONING")
