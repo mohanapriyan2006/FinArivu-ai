@@ -78,20 +78,17 @@ class ControllerService:
             request_id,
         )
 
-        # Handle controller-level safety or clarification.
+        # Handle controller-level safety first — nothing proceeds on a block.
         if plan.safety_action in ("block", "educational_refusal"):
             return await self._blocked_response(
                 user_id, session_id, user_message, plan, start,
             )
 
-        if plan.missing_information and plan.response_mode == "clarification":
-            return await self._clarification_response(
-                user_id, session_id, plan, start,
-            )
-
         # ── Action requests: proposal → validated preview → confirmation ──
         # The LLM/extractor only proposes; the action layer validates and the
-        # user confirms before anything mutates.
+        # user confirms before anything mutates. Runs before the generic
+        # missing-information clarification so typed NEEDS_INPUT questions
+        # (with exact field names) take precedence.
         proposal = self._action_proposal(plan, user_message)
         if proposal is not None:
             action_response = await self._action_preview_response(
@@ -99,6 +96,11 @@ class ControllerService:
             )
             if action_response is not None:
                 return action_response
+
+        if plan.missing_information and plan.response_mode == "clarification":
+            return await self._clarification_response(
+                user_id, session_id, plan, start,
+            )
 
         financial_context = await self._build_context(user_id, session_id, plan, user_context)
         if (
@@ -199,14 +201,9 @@ class ControllerService:
             await self._memory.save_message(user_id, session_id, "assistant", text)
             return
 
-        if plan.missing_information and plan.response_mode == "clarification":
-            text = plan.to_clarification_message()
-            yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
-            yield StreamEvent(event_type=StreamEventType.DONE)
-            await self._memory.save_message(user_id, session_id, "assistant", text)
-            return
-
         # ── Action requests: emit the preview card payload, then DONE ──
+        # Typed NEEDS_INPUT clarifications take precedence over the generic
+        # missing-information path.
         proposal = self._action_proposal(plan, user_message)
         if proposal is not None:
             preview = await self._run_action_preview(user_id, session_id, proposal)
@@ -229,6 +226,13 @@ class ControllerService:
                     agent_chain=event_payload.get("actionPreview") or {},
                 )
                 return
+
+        if plan.missing_information and plan.response_mode == "clarification":
+            text = plan.to_clarification_message()
+            yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+            yield StreamEvent(event_type=StreamEventType.DONE)
+            await self._memory.save_message(user_id, session_id, "assistant", text)
+            return
 
         yield StreamEvent(
             event_type=StreamEventType.AGENT_START,

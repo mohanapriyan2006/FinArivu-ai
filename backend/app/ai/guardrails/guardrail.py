@@ -15,8 +15,17 @@ class Guardrail:
     """
 
     SQL_PATTERNS: list[re.Pattern[str]] = [
-        re.compile(r"(\b|;\s*)(select|insert|update|delete|drop|union|alter|exec|execute)\b", re.I),
-        re.compile(r"(\b|\s)(--|#|/\*|\*/)"),
+        # Real SQL constructs only — a bare "update"/"select" in normal
+        # English ("update my food expense") must NOT be blocked.
+        re.compile(
+            r";\s*(select|insert|update|delete|drop|union|alter|exec|execute)\b", re.I
+        ),
+        re.compile(
+            r"\b(select\s+.+\s+from|insert\s+into|delete\s+from|drop\s+table|"
+            r"alter\s+table|union\s+select|update\s+\w+\s+set|exec\s*\(|"
+            r"execute\s+\w+\s*\()", re.I,
+        ),
+        re.compile(r"(\b|\s)(--|/\*|\*/)"),
         re.compile(r"'\s*or\s*'\s*\d\s*=\s*\d"),
     ]
 

@@ -44,16 +44,40 @@ class GuardrailEngine:
         "epf", "nps", "tax", "taxes", "tds", "gst", "loan", "emi",
         "debt", "credit card", "insurance", "retirement", "pension",
         "goal", "net worth", "asset", "liability", "financial", "money",
-        "rupee", "inr", "80c", "80d", "hra", "lta", "deduction",
+        "rupee", "rupees", "inr", "80c", "80d", "hra", "lta", "deduction",
         "filing", "itr", "pf", "health insurance", "emergency fund",
         "emergency", "fund", "wealth", "corpus", "inflation",
         "interest", "compound", "fd", "fixed deposit", "rd",
         "recurring deposit", "elss", "section", "regime",
+        # Money-management verbs — a finance app's write requests are in
+        # scope (they become safe, confirmed actions).
+        "spent", "spend", "spending", "paid", "pay ", "payment",
+        "received", "earned", "earn", "cost", "afford", "save", "saved",
+        "add", "log", "record", "track", "update", "change", "set",
+        "create", "delete", "remove", "reduce", "increase", "raise",
+        "lower", "transfer",
+        # Everyday spending categories users mention naturally.
+        "food", "dining", "groceries", "grocery", "rent", "bill", "bills",
+        "fuel", "petrol", "transport", "travel", "movie", "shopping",
+        "restaurant", "coffee", "medical", "medicine", "electricity",
+        "recharge", "subscription", "utility", "utilities", "snack",
+        "dinner", "lunch", "breakfast", "cab", "uber", "ola", "metro",
+        # Amount markers — ₹/Rs/lakh/crore handled by _has_amount_pattern.
+        "lakh", "lac", "crore", "thousand",
         # Greetings and meta are allowed through as "general" intent.
         "hello", "hi", "hey", "namaste", "thanks", "thank you",
         "help", "what can you do", "who are you",
         # Generic guidance requests inside a finance app are in scope.
         "tip", "tips", "advice", "guidance", "suggest", "recommend",
+    ]
+
+    # Currency/amount patterns that make any message financial in scope —
+    # "Add ₹500", "Rs 2000 for chai", "spent 1.5k".
+    _AMOUNT_PATTERNS: ClassVar[list[re.Pattern[str]]] = [
+        re.compile(r"(₹|rs\.?|inr)\s*[\d,]+", re.I),
+        re.compile(r"\b[\d,]+(?:\.\d+)?\s*(₹|rs\.?|inr|lakh|lac|crore|k)\b", re.I),
+        re.compile(r"\b(add|log|record|spent|paid|received|earned|update|set|"
+                   r"change|create|increase|reduce)\b.*\b\d", re.I),
     ]
 
     INVESTMENT_ADVICE_PATTERNS: ClassVar[list[str]] = [
@@ -151,7 +175,9 @@ class GuardrailEngine:
 
     @classmethod
     def _is_financial(cls, lowered: str) -> bool:
-        return any(kw in lowered for kw in cls.FINANCIAL_KEYWORDS)
+        if any(kw in lowered for kw in cls.FINANCIAL_KEYWORDS):
+            return True
+        return any(p.search(lowered) for p in cls._AMOUNT_PATTERNS)
 
     @classmethod
     def _mask_pii(cls, text: str) -> str:

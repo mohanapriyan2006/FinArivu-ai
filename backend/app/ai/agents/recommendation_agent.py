@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import uuid
 from typing import Any
 
@@ -38,8 +39,11 @@ class RecommendationAgent(BaseSpecialistAgent):
 
             if agent_name == "BudgetAgent" and data.get("overspendingCategories"):
                 for cat in data["overspendingCategories"][:2]:
+                    name = str(cat.get("categoryName") or "this category")
+                    if re.fullmatch(r"[0-9a-fA-F-]{8,}", name):
+                        name = "this category"
                     recommendations.append({
-                        "title": f"Review {cat.get('categoryName', 'this category')}",
+                        "title": f"Review {name}",
                         "description": (
                             f"You are overspending by ₹{float(cat.get('overspend', 0) or 0):,.0f} "
                             f"in this category. Consider a spending limit next month."

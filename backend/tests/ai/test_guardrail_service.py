@@ -57,3 +57,39 @@ class TestGuardrailServiceCheck:
         result = gs.check("SELECT * FROM users; DROP TABLE--")
         assert result["allowed"] is False
         assert result["reason"] == "sql_injection"
+
+    def test_sql_injection_blocked_union_select(self):
+        gs = GuardrailService()
+        result = gs.check("' OR '1'='1' UNION SELECT password FROM users")
+        assert result["allowed"] is False
+        assert result["reason"] == "sql_injection"
+
+    def test_action_verbs_not_sql_injection(self):
+        """Financial CRUD phrasing must not be blocked as SQL."""
+        gs = GuardrailService()
+        for message in [
+            "Update my food expenses to 3500 rs",
+            "Set my dining budget to 8000",
+            "Change my grocery budget to Rs 7,500",
+            "Delete the duplicate expense",
+        ]:
+            result = gs.check(message)
+            assert result["allowed"] is True, message
+
+    def test_amount_patterns_are_financial(self):
+        """Messages with amounts or money verbs are in scope."""
+        gs = GuardrailService()
+        for message in [
+            "Add Rs 2000",
+            "spent 500 on groceries",
+            "add 1.5 lakh to savings",
+            "paid 350 for chai",
+        ]:
+            result = gs.check(message)
+            assert result["allowed"] is True, message
+
+    def test_pure_non_financial_still_blocked(self):
+        gs = GuardrailService()
+        result = gs.check("What is the weather in Mumbai tomorrow?")
+        assert result["allowed"] is False
+        assert result["reason"] == "non_financial"

@@ -48,6 +48,22 @@ class ResponseValidationService:
     _NUMBER_RE = re.compile(r"(?<!\d)([\d,]+(?:\.\d{1,2})?)(?!\d)")
     _YEAR_RE = re.compile(r"\b(?:19|20)\d{2}\b")
 
+    # Generic financial constants used in educational guidance (rules of
+    # thumb, step counts, statutory sections) — never "user data claims".
+    _COMMON_CONSTANTS = frozenset({
+        4, 5, 6, 7, 10, 12, 15, 20, 25, 30, 33, 40, 50, 60, 70, 75, 80, 90, 100,
+        80.0, 50000.0, 150000.0,  # 80C/80D limits commonly cited
+    })
+
+    # Engines whose presence means the response is expected to carry
+    # verified user data. If none of them produced real data, the answer
+    # is educational — strict numeric grounding would be a false positive.
+    _ENGINE_AGENTS = frozenset({
+        "BudgetAgent", "GoalAgent", "TaxAgent", "RetirementAgent",
+        "HealthAgent", "NetWorthAgent", "CashFlowAgent", "ReportAgent",
+        "DebtAgent", "SimulationAgent",
+    })
+
     def __init__(self, local: Phi4Provider | None = None, api=None) -> None:
         self._local = local or Phi4Provider()
         self._api = api
@@ -177,6 +193,13 @@ class ResponseValidationService:
         # response is general guidance and should pass through.
         if not known:
             return ValidationResult(status="PASS", grounded=True, confidence=1.0)
+
+        # If no engine-backed agent contributed real data, the response is
+        # educational/explanatory — generic numbers (50/30/20, 4% rule) are
+        # expected and must not be refused as "unverified".
+        if not self._has_engine_data(agent_results):
+            return ValidationResult(status="PASS", grounded=True, confidence=0.9)
+
         numerical_errors: list[str] = []
 
         # Check currency values.
@@ -191,7 +214,7 @@ class ResponseValidationService:
             if not self._is_known(value, known):
                 numerical_errors.append(f"Unverified currency value: ₹{value}")
 
-        # Check percentages.
+        # Check percentages — rules of thumb (50/30/20, 4% rule) are fine.
         for match in self._PERCENT_RE.finditer(response_text):
             raw = match.group(1).replace(",", "")
             if not raw:
@@ -200,10 +223,13 @@ class ResponseValidationService:
                 value = float(raw)
             except ValueError:
                 continue
+            if value in self._COMMON_CONSTANTS:
+                continue
             if not self._is_known(value, known):
                 numerical_errors.append(f"Unverified percentage: {value}%")
 
-        # Stand-alone numbers (heuristic; ignore years and numbers already checked).
+        # Stand-alone numbers — only large values can be fabricated user
+        # data; small integers are step counts, months, and rules of thumb.
         seen: set[float] = set()
         for match in self._NUMBER_RE.finditer(response_text):
             raw = match.group(1).replace(",", "")
@@ -215,7 +241,7 @@ class ResponseValidationService:
                 value = float(raw)
             except ValueError:
                 continue
-            if value in seen:
+            if value in seen or value < 1000 or value in self._COMMON_CONSTANTS:
                 continue
             seen.add(value)
             if not self._is_known(value, known):
@@ -257,7 +283,25 @@ class ResponseValidationService:
             out.add(float(data))
 
     def _is_known(self, value: float, known: set[float]) -> bool:
-        return round(value, 1) in known
+        """Approximate match — tolerate rounding and paise-level drift."""
+        rv = round(value, 1)
+        if rv in known:
+            return True
+        return any(
+            abs(rv - k) <= max(1.0, abs(k) * 0.005)
+            for k in known
+            if k != 0
+        )
+
+    def _has_engine_data(self, agent_results: list[AgentResult]) -> bool:
+        """True when a deterministic-engine agent contributed real data."""
+        for r in agent_results:
+            if r.agent_name not in self._ENGINE_AGENTS:
+                continue
+            data = r.data or {}
+            if data and not data.get("dataMissing"):
+                return True
+        return False
 
     # ── Local Phi-4 validation ─────────────────────────────────────────────
 

@@ -9,6 +9,7 @@ Navigation screen. Targets with no real screen are never emitted.
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from app.ai.intents import to_internal_intent
@@ -179,6 +180,16 @@ class ActionDecisionEngine:
         return actions
 
     @staticmethod
+    def _safe_name(value: Any, fallback: str = "this category") -> str:
+        """Guard against raw ids leaking into user-facing labels."""
+        text = str(value or "").strip()
+        if not text:
+            return fallback
+        if re.fullmatch(r"[0-9a-fA-F-]{8,}", text):
+            return fallback
+        return text
+
+    @staticmethod
     def _budget_actions(result: AgentResult | None) -> list[SuggestedAction]:
         if not result or not result.data or result.data.get("dataMissing"):
             return []
@@ -186,7 +197,7 @@ class ActionDecisionEngine:
         data = result.data
         overspending = data.get("overspendingCategories", []) or []
         for cat in overspending[:1]:
-            category = str(cat.get("categoryName", "this category"))
+            category = ActionDecisionEngine._safe_name(cat.get("categoryName"))
             slug = category.lower().replace(" ", "_").replace("&", "and")
             actions.append(SuggestedAction(
                 id=f"view_{slug}_expenses",

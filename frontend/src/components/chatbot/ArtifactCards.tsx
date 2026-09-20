@@ -131,7 +131,8 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
   const usage = typeof top?.usage === 'number' ? top.usage : 0
   const pct = Math.max(0, Math.round(usage - 100))
   const overBudget = spent > 0
-  const statusText = overBudget ? 'Over Budget' : 'On Track'
+  const noBudgets = !overBudget && !(data.totalBudget && data.totalBudget > 0)
+  const statusText = noBudgets ? 'No Budgets' : overBudget ? 'Over Budget' : 'On Track'
   const statusColor = overBudget ? colors.danger : colors.success
 
   return (
@@ -161,9 +162,11 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
       </View>
 
       <Text style={styles.noteText}>
-        {overBudget
-          ? `Overspent by ₹${spent.toLocaleString('en-IN')} in ${category}`
-          : `Spent ₹${(data.totalSpent ?? 0).toLocaleString('en-IN')} of ₹${(data.totalBudget ?? 0).toLocaleString('en-IN')} budgeted`}
+        {noBudgets
+          ? `No budgets set yet — spent ₹${(data.totalSpent ?? 0).toLocaleString('en-IN')} this period. Ask me to create one.`
+          : overBudget
+            ? `Overspent by ₹${spent.toLocaleString('en-IN')} in ${category}`
+            : `Spent ₹${(data.totalSpent ?? 0).toLocaleString('en-IN')} of ₹${(data.totalBudget ?? 0).toLocaleString('en-IN')} budgeted`}
       </Text>
     </Animated.View>
   )

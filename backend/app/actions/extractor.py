@@ -128,6 +128,8 @@ def extract_action(message: str) -> ActionProposal | None:
         _update_expense,
         # Incomplete proposals — produce NEEDS_INPUT clarifications.
         _create_expense_incomplete,
+        _create_budget_incomplete,
+        _create_income_incomplete,
         _update_budget_incomplete,
         _update_goal_incomplete,
         _update_income_incomplete,
@@ -170,7 +172,7 @@ def _update_budget(text: str) -> ActionProposal | None:
 
 def _update_budget_incomplete(text: str) -> ActionProposal | None:
     return _incomplete_update(
-        text, "budget", ActionOperation.UPDATE_BUDGET,
+        text, "budgets?", ActionOperation.UPDATE_BUDGET,
         "monthlyLimit", "categoryName",
     )
 
@@ -233,14 +235,14 @@ def _update_goal(text: str) -> ActionProposal | None:
 
 def _update_goal_incomplete(text: str) -> ActionProposal | None:
     return _incomplete_update(
-        text, "goal", ActionOperation.UPDATE_GOAL,
+        text, "goals?", ActionOperation.UPDATE_GOAL,
         "targetAmount", "goalName",
     )
 
 
 def _create_goal(text: str) -> ActionProposal | None:
     match = re.search(
-        r"\b(?:create|add|set up|start)\s+(?:a\s+|an\s+)?(?:new\s+)?goal\s+"
+        r"\b(?:create|add|set up|start)\s+(?:a\s+|an\s+)?(?:new\s+)?goal\b\s*"
         r"(?:called\s+|named\s+|for\s+|to\s+save\s+)?(.*)",
         text,
         re.IGNORECASE,
@@ -280,11 +282,56 @@ def _create_goal(text: str) -> ActionProposal | None:
     target = _month_target(text)
     if target:
         arguments["targetDate"] = target.isoformat()
+    confidence = 0.85 if not missing else 0.6
     return ActionProposal(
         operation=ActionOperation.CREATE_GOAL.value,
         arguments=arguments,
         reason="User asked to create a savings goal",
-        confidence=0.85,
+        confidence=confidence,
+        missing_fields=missing,
+    )
+
+
+def _create_budget_incomplete(text: str) -> ActionProposal | None:
+    """'Create budget' / 'create a food budget' without an amount → clarify."""
+    match = re.search(
+        r"\b(?:create|add|set up|start)\s+(?:a\s+|an\s+|my\s+)?(?:new\s+)?"
+        r"([a-zA-Z &]*?)\s*budgets?\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    category = _entity_name(match.group(1))
+    arguments: dict = {"categoryName": category} if category else {}
+    missing = ["monthlyLimit"] + ([] if category else ["categoryName"])
+    return ActionProposal(
+        operation=ActionOperation.CREATE_BUDGET.value,
+        arguments=arguments,
+        reason="User asked to create a budget",
+        confidence=0.6,
+        missing_fields=missing,
+    )
+
+
+def _create_income_incomplete(text: str) -> ActionProposal | None:
+    """'Add income' / 'add salary' without an amount → clarify."""
+    match = re.search(
+        r"\b(?:add|log|record|create)\s+(?:an?\s+|my\s+)?(?:new\s+)?"
+        r"(" + _INCOME_WORDS + r"|income)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    source = match.group(1).strip().lower()
+    arguments: dict = {} if source == "income" else {"source": source}
+    missing = ["amount"] + ([] if source and source != "income" else ["source"])
+    return ActionProposal(
+        operation=ActionOperation.CREATE_INCOME.value,
+        arguments=arguments,
+        reason="User asked to record income",
+        confidence=0.6,
         missing_fields=missing,
     )
 
@@ -357,7 +404,7 @@ def _create_income(text: str) -> ActionProposal | None:
 def _create_expense(text: str) -> ActionProposal | None:
     match = re.search(
         r"\b(?:add|log|record|spent)\s+(?:an?\s+|my\s+)?"
-        r"(?:new\s+|recurring\s+)?(?:expense\s+)?(?:of\s+)?" + _NUM
+        r"(?:new\s+|recurring\s+)?(?:expenses?\s+)?(?:of\s+)?" + _NUM
         + r"\s+(?:for|on|towards?|to)\s+([a-zA-Z &]+)",
         text,
         re.IGNORECASE,
@@ -366,7 +413,7 @@ def _create_expense(text: str) -> ActionProposal | None:
         # "add a ₹2,000 recurring transport expense"
         alt = re.search(
             r"\b(?:add|log|record)\s+(?:an?\s+)?(?:new\s+)?" + _NUM
-            + r"\s+(recurring\s+)?([a-zA-Z &]+?)\s+expense",
+            + r"\s+(recurring\s+)?([a-zA-Z &]+?)\s+expenses?",
             text,
             re.IGNORECASE,
         )
@@ -434,7 +481,7 @@ def _create_expense_incomplete(text: str) -> ActionProposal | None:
 
     # 'Add an expense' — verb with no amount or category at all.
     if re.search(
-        r"\b(?:add|log|record)\s+(?:an?\s+|my\s+)?(?:new\s+|recurring\s+)?expense\b",
+        r"\b(?:add|log|record)\s+(?:an?\s+|my\s+)?(?:new\s+|recurring\s+)?expenses?\b",
         text,
         re.IGNORECASE,
     ):
@@ -450,7 +497,7 @@ def _create_expense_incomplete(text: str) -> ActionProposal | None:
 
 def _update_expense(text: str) -> ActionProposal | None:
     match = re.search(
-        r"\b(?:update|change|set)\s+(?:my\s+|the\s+)?([a-zA-Z &]+?)\s+expense"
+        r"\b(?:update|change|set)\s+(?:my\s+|the\s+)?([a-zA-Z &]+?)\s+expenses?"
         r"\s+to\s+" + _NUM,
         text,
         re.IGNORECASE,
@@ -475,7 +522,7 @@ def _update_expense(text: str) -> ActionProposal | None:
 
 def _update_expense_incomplete(text: str) -> ActionProposal | None:
     return _incomplete_update(
-        text, "expense", ActionOperation.UPDATE_EXPENSE,
+        text, "expenses?", ActionOperation.UPDATE_EXPENSE,
         "amount", "categoryName",
     )
 
