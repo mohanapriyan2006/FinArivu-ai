@@ -234,6 +234,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
       })
 
       sse.addEventListener('error', (event) => {
+        sse.close()
         const message =
           'message' in event && event.message
             ? event.message
@@ -263,7 +264,15 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
           intent: h.intent || undefined,
           createdAt: h.createdAt || new Date().toISOString(),
         }))
-        setMessages((prev) => [...mapped, ...prev])
+        setMessages((prev) => {
+          // Drop optimistic local copies (user_*/ai_* ids) that the server
+          // already persisted — otherwise pull-to-refresh duplicates them.
+          const serverKeys = new Set(mapped.map((m) => `${m.role}:${m.content}`))
+          const localOnly = prev.filter(
+            (m) => !serverKeys.has(`${m.role}:${m.content}`)
+          )
+          return [...mapped, ...localOnly]
+        })
       } catch (err) {
         console.warn('Failed to load copilot history:', err)
       }

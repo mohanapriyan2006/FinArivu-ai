@@ -14,7 +14,10 @@
       }
     },
     "android": {
-      "permissions": ["RECORD_AUDIO"],
+      "permissions": [
+        "RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/logo.png",
@@ -30,6 +33,11 @@
     "newArchEnabled": true,
     "plugins": [
       "expo-speech-recognition"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "80bb18f2-224a-4ee6-9866-845fe415dc76"
+      }
+    }
   }
 }

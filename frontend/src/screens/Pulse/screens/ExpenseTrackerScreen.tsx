@@ -7,7 +7,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { formatInr, formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Expense, ExpenseInput } from '@/services/ExpenseService'
+import type { Expense } from '@/services/ExpenseService'
 import { useExpenses } from '@/hooks/useExpenses'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 import type { StackNavigationProp } from '@react-navigation/stack'
@@ -55,7 +55,7 @@ export default function ExpenseTrackerScreen() {
   const navigation = useNavigation<NavigationProp>()
 
   return (
-    <TrackerScreen<Expense, ExpenseInput>
+    <TrackerScreen<Expense>
       title="Expenses"
       useData={useExpenses}
       renderSummary={(data) => <Summary data={data} />}
@@ -69,14 +69,12 @@ export default function ExpenseTrackerScreen() {
           trailing={`₹${formatInrNumber(item.amount)}`}
         />
       )}
-      buildInput={() => ({} as ExpenseInput)}
-      fields={[]}
       addLabel="+ Add Expense"
       emptyIcon={Receipt}
       emptyTitle="No expenses yet"
       emptyMessage="Start tracking your spending to understand where your money goes."
       itemKey={(item) => item.id}
-      onAdd={() => navigation.navigate('QuickAddExpense')}
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'expenses' })}
       testID="expense-tracker"
     />
   )

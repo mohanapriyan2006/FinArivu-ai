@@ -2,8 +2,7 @@ import { useMemo } from 'react'
 
 import { useTrackerList } from './useTrackerList'
 import { AssetService, type Asset, type AssetInput } from '@/services/AssetService'
-
-const SAVINGS_TYPES = new Set(['Bank', 'Cash'])
+import { SAVINGS_TYPES } from '@/screens/Pulse/sectionConfig'
 
 export function useSavings() {
   const { data, ...rest } = useTrackerList<Asset, AssetInput>(AssetService)

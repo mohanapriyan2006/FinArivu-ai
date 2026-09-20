@@ -6,7 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { formatInr, formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Budget, BudgetInput } from '@/services/BudgetService'
+import type { Budget } from '@/services/BudgetService'
 import { useBudgets } from '@/hooks/useBudgets'
 
 import { TrackerScreen } from '../components/TrackerScreen'
@@ -38,7 +38,7 @@ export default function BudgetTrackerScreen() {
   const { colors } = useTheme()
 
   return (
-    <TrackerScreen<Budget, BudgetInput>
+    <TrackerScreen<Budget>
       title="Budget"
       useData={useBudgets}
       renderSummary={(data) => <Summary data={data} />}
@@ -52,8 +52,6 @@ export default function BudgetTrackerScreen() {
           trailing={`₹${formatInrNumber(item.monthlyLimit)}`}
         />
       )}
-      buildInput={() => ({} as BudgetInput)}
-      fields={[]}
       addLabel="+ Add Budget"
       emptyIcon={PieChart}
       emptyTitle="No budget set"

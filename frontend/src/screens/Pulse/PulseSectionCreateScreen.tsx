@@ -15,28 +15,14 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useRoute } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
 import Animated, { FadeInUp } from 'react-native-reanimated'
-import {
-  Banknote,
-  Calculator,
-  ChevronLeft,
-  CreditCard,
-  Landmark,
-  Plus,
-  Receipt,
-  Rocket,
-  Shield,
-  Target,
-  TrendingUp,
-  Wallet,
-  type LucideIcon,
-} from 'lucide-react-native'
+import { ChevronLeft, Rocket } from 'lucide-react-native'
 
 import { useAuthContext } from '@/contexts/AuthContext'
 import { useFinancialProfile } from '@/contexts/FinancialProfileContext'
 import { useTheme } from '@/contexts/ThemeContext'
 import { CARD_SHADOW } from '@/components/insights/Common'
 import { AssetService, type AssetInput } from '@/services/AssetService'
-import { CategoryService, type Category } from '@/services/CategoryService'
+import { CategoryService } from '@/services/CategoryService'
 import { ExpenseService, type ExpenseInput } from '@/services/ExpenseService'
 import { GoalService, type GoalInput } from '@/services/GoalService'
 import { IncomeService, type IncomeInput } from '@/services/IncomeService'
@@ -44,188 +30,38 @@ import { LiabilityService, type LiabilityInput } from '@/services/LiabilityServi
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
+import {
+  getSectionSpec,
+  resolveSectionBackground,
+  resolveSectionColor,
+} from './sectionConfig'
 
 type SectionNavigationProp = StackNavigationProp<RootStackParamList>
-
-type ColorKey = 'primary' | 'secondary' | 'success' | 'warning' | 'danger'
-type BackgroundKey = 'primaryBackground' | 'successBackground' | 'accentBackground' | 'dangerBackground' | 'surface'
-
-interface SectionSpec {
-  title: string
-  icon: LucideIcon
-  color: ColorKey
-  background: BackgroundKey
-  fields: CreateField[]
-}
-
-interface CreateField {
-  key: string
-  label: string
-  placeholder?: string
-  keyboard?: 'default' | 'numeric'
-  options?: string[]
-}
 
 type CategoryOption = { id: string; name: string }
 
 const today = () => new Date().toISOString().split('T')[0]
 
-const SECTIONS: Record<string, SectionSpec> = {
-  income: {
-    title: 'Income',
-    icon: Banknote,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'source', label: 'Source', placeholder: 'Salary' },
-      { key: 'amount', label: 'Amount', placeholder: '50000', keyboard: 'numeric' },
-      { key: 'incomeDate', label: 'Date', placeholder: today() },
-      { key: 'notes', label: 'Notes (optional)', placeholder: 'Monthly salary' },
-    ],
-  },
-  expenses: {
-    title: 'Expense',
-    icon: Receipt,
-    color: 'danger',
-    background: 'dangerBackground',
-    fields: [
-      { key: 'description', label: 'Description', placeholder: 'Grocery shopping' },
-      { key: 'amount', label: 'Amount', placeholder: '1200', keyboard: 'numeric' },
-      { key: 'expenseDate', label: 'Date', placeholder: today() },
-      { key: 'categoryId', label: 'Category' },
-    ],
-  },
-  savings: {
-    title: 'Savings',
-    icon: Wallet,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'name', label: 'Account name', placeholder: 'Emergency Fund' },
-      { key: 'assetType', label: 'Account type', placeholder: 'Bank / Cash' },
-      { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric' },
-    ],
-  },
-  investments: {
-    title: 'Investment',
-    icon: TrendingUp,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund' },
-      { key: 'assetType', label: 'Investment type', placeholder: 'Mutual Fund / Stock' },
-      { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric' },
-    ],
-  },
-  fixed_deposits: {
-    title: 'Fixed Deposit',
-    icon: Landmark,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'FD name', placeholder: 'SBI Fixed Deposit' },
-      { key: 'value', label: 'Value', placeholder: '100000', keyboard: 'numeric' },
-      { key: 'interestRate', label: 'Interest rate (%)', placeholder: '7.5', keyboard: 'numeric' },
-      { key: 'maturityDate', label: 'Maturity date', placeholder: '2030-12-31' },
-    ],
-  },
-  loans: {
-    title: 'Loan',
-    icon: Banknote,
-    color: 'danger',
-    background: 'dangerBackground',
-    fields: [
-      { key: 'name', label: 'Loan name', placeholder: 'Home Loan' },
-      { key: 'liabilityType', label: 'Loan type', placeholder: 'Personal / Home' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'emi', label: 'Monthly EMI', placeholder: '25000', keyboard: 'numeric' },
-    ],
-  },
-  credit_cards: {
-    title: 'Credit Card',
-    icon: CreditCard,
-    color: 'secondary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia' },
-      { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric' },
-      { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric' },
-      { key: 'monthlySpend', label: 'Monthly spend (optional)', placeholder: '30000', keyboard: 'numeric' },
-    ],
-  },
-  insurance: {
-    title: 'Insurance Policy',
-    icon: Shield,
-    color: 'success',
-    background: 'successBackground',
-    fields: [
-      { key: 'type', label: 'Policy type', options: ['health', 'life'] },
-      { key: 'coverage', label: 'Coverage amount', placeholder: '500000', keyboard: 'numeric' },
-      { key: 'annualPremium', label: 'Annual premium', placeholder: '15000', keyboard: 'numeric' },
-    ],
-  },
-  tax: {
-    title: 'Tax Details',
-    icon: Calculator,
-    color: 'primary',
-    background: 'primaryBackground',
-    fields: [
-      { key: 'annualIncome', label: 'Annual income', placeholder: '1200000', keyboard: 'numeric' },
-      { key: 'taxRegime', label: 'Tax regime', options: ['old', 'new', 'not-sure'] },
-      { key: 'deduction_80c', label: '80C deduction', placeholder: '150000', keyboard: 'numeric' },
-      { key: 'deduction_80d', label: '80D deduction', placeholder: '25000', keyboard: 'numeric' },
-      { key: 'homeLoanInterest', label: 'Home loan interest', placeholder: '0', keyboard: 'numeric' },
-      { key: 'nps', label: 'NPS deduction', placeholder: '0', keyboard: 'numeric' },
-      { key: 'other', label: 'Other deductions', placeholder: '0', keyboard: 'numeric' },
-    ],
-  },
-  goals: {
-    title: 'Goal',
-    icon: Target,
-    color: 'warning',
-    background: 'accentBackground',
-    fields: [
-      { key: 'goalName', label: 'Goal name', placeholder: 'Dream Home' },
-      { key: 'goalType', label: 'Goal type', placeholder: 'home / travel / education' },
-      { key: 'targetAmount', label: 'Target amount', placeholder: '2000000', keyboard: 'numeric' },
-      { key: 'currentAmount', label: 'Already saved (optional)', placeholder: '0', keyboard: 'numeric' },
-      { key: 'targetDate', label: 'Target date', placeholder: today() },
-    ],
-  },
+function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return d.toISOString().split('T')[0]
 }
 
-function resolveColor(key: ColorKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primary':
-      return colors.primary
-    case 'secondary':
-      return colors.secondary
-    case 'success':
-      return colors.success
-    case 'warning':
-      return colors.warning
-    case 'danger':
-      return colors.danger
-    default:
-      return colors.primary
-  }
+function isoYearEnd(yearsAhead: number): string {
+  return `${new Date().getFullYear() + yearsAhead}-12-31`
 }
 
-function resolveBackground(key: BackgroundKey, colors: ThemeColors): string {
-  switch (key) {
-    case 'primaryBackground':
-      return colors.primaryBackground
-    case 'successBackground':
-      return colors.successBackground
-    case 'accentBackground':
-      return colors.accentBackground
-    case 'dangerBackground':
-      return colors.dangerBackground
-    case 'surface':
-    default:
-      return colors.surface
-  }
-}
+const RECENT_DATE_PRESETS: { label: string; value: string }[] = [
+  { label: 'Today', value: today() },
+  { label: 'Yesterday', value: isoDaysAgo(1) },
+  { label: '2 days ago', value: isoDaysAgo(2) },
+]
+
+const YEAR_DATE_PRESETS: { label: string; value: string }[] = [1, 2, 3, 5, 10].map((y) => ({
+  label: `+${y}y`,
+  value: isoYearEnd(y),
+}))
 
 function stringValue(value: unknown): string {
   if (value === undefined || value === null) return ''
@@ -243,19 +79,6 @@ function toNumOrUndefined(value: string): number | undefined {
   return value === '' || Number.isNaN(n) ? undefined : n
 }
 
-function inferGoalType(name: string): string {
-  const lower = name.toLowerCase()
-  if (lower.includes('home') || lower.includes('house')) return 'home'
-  if (lower.includes('car') || lower.includes('vehicle')) return 'vehicle'
-  if (lower.includes('travel') || lower.includes('vacation')) return 'travel'
-  if (lower.includes('education') || lower.includes('study')) return 'education'
-  if (lower.includes('emergency')) return 'emergency'
-  if (lower.includes('retirement')) return 'retirement'
-  if (lower.includes('marriage') || lower.includes('wedding')) return 'marriage'
-  if (lower.includes('wealth')) return 'wealth'
-  return 'other'
-}
-
 export default function PulseSectionCreateScreen() {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
@@ -266,18 +89,15 @@ export default function PulseSectionCreateScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors])
 
   const { section, record } = route.params
-  const spec = SECTIONS[section] ?? {
-    title: section,
-    icon: Plus,
-    color: 'primary' as ColorKey,
-    background: 'primaryBackground' as BackgroundKey,
-    fields: [{ key: 'name', label: 'Name' }],
-  }
+  const spec = getSectionSpec(section)
   const isEdit = record !== undefined && Object.keys(record).length > 0
 
   const [values, setValues] = useState<Record<string, string>>({})
   const [categories, setCategories] = useState<CategoryOption[]>([])
+  const [categoriesLoading, setCategoriesLoading] = useState(false)
+  const [categoriesError, setCategoriesError] = useState<string | null>(null)
   const [isSaving, setIsSaving] = useState(false)
+  const [errors, setErrors] = useState<Record<string, string>>({})
 
   useEffect(() => {
     const initial: Record<string, string> = {}
@@ -298,35 +118,61 @@ export default function PulseSectionCreateScreen() {
         }
       }
     }
-    if (section === 'goals' && initial.goalType === '' && initial.goalName !== '') {
-      initial.goalType = inferGoalType(initial.goalName)
-    }
     setValues(initial)
+    setErrors({})
   }, [record, section, spec.fields])
+
+  const loadCategories = useCallback(async () => {
+    setCategoriesLoading(true)
+    setCategoriesError(null)
+    try {
+      const token = await getToken()
+      const list = await CategoryService.list(token)
+      setCategories(list.map((c) => ({ id: c.id, name: c.name })))
+    } catch (err) {
+      setCategories([])
+      setCategoriesError(
+        err instanceof Error && err.message
+          ? `Couldn't load categories: ${err.message}`
+          : "Couldn't load categories. Check your connection and try again."
+      )
+    } finally {
+      setCategoriesLoading(false)
+    }
+  }, [getToken])
 
   useEffect(() => {
     if (section !== 'expenses') return
-    let cancelled = false
-    async function loadCategories() {
-      try {
-        const token = await getToken()
-        const list = await CategoryService.list(token)
-        if (!cancelled) setCategories(list.map((c) => ({ id: c.id, name: c.name })))
-      } catch {
-        if (!cancelled) setCategories([])
-      }
-    }
     loadCategories()
-    return () => {
-      cancelled = true
-    }
-  }, [section, getToken])
+  }, [section, loadCategories])
 
   const updateValue = useCallback((key: string, value: string) => {
     setValues((prev) => ({ ...prev, [key]: value }))
+    setErrors((prev) => {
+      if (!prev[key]) return prev
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }, [])
 
+  const validate = useCallback((): boolean => {
+    const next: Record<string, string> = {}
+    for (const field of spec.fields) {
+      if (!field.required) continue
+      const v = (values[field.key] ?? '').trim()
+      if (!v) {
+        next[field.key] = `${field.label} is required`
+      } else if (field.keyboard === 'numeric' && numberValue(v) <= 0) {
+        next[field.key] = `Enter a valid ${field.label.toLowerCase()}`
+      }
+    }
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }, [spec.fields, values])
+
   const handleSave = useCallback(async () => {
+    if (!validate()) return
     setIsSaving(true)
     try {
       const token = await getToken()
@@ -361,7 +207,7 @@ export default function PulseSectionCreateScreen() {
           source: values.source ?? '',
           amount: numberValue(values.amount ?? '0'),
           incomeDate: values.incomeDate ?? today(),
-          notes: values.notes ?? '',
+          description: values.description ?? '',
         }
         if (isEdit && record?.id) {
           await IncomeService.update(record.id as string, input, token)
@@ -416,11 +262,10 @@ export default function PulseSectionCreateScreen() {
       } else if (section === 'goals') {
         const input: GoalInput = {
           goalName: values.goalName ?? '',
-          goalType: (values.goalType as string) ?? 'other',
           targetAmount: numberValue(values.targetAmount ?? '0'),
           currentAmount: toNumOrUndefined(values.currentAmount ?? ''),
           targetDate: values.targetDate ?? today(),
-          status: 'active',
+          status: 'Active',
         }
         if (isEdit && record?.id) {
           await GoalService.update(record.id as string, input, token)
@@ -434,10 +279,10 @@ export default function PulseSectionCreateScreen() {
     } finally {
       setIsSaving(false)
     }
-  }, [section, values, record, isEdit, getToken, profile, saveSection, categories, navigation])
+  }, [section, values, record, isEdit, getToken, profile, saveSection, categories, navigation, validate])
 
-  const iconColor = resolveColor(spec.color, colors)
-  const iconBg = resolveBackground(spec.background, colors)
+  const iconColor = resolveSectionColor(spec.color, colors)
+  const iconBg = resolveSectionBackground(spec.background, colors)
   const Icon = spec.icon
 
   return (
@@ -459,7 +304,9 @@ export default function PulseSectionCreateScreen() {
               <Pressable onPress={() => navigation.goBack()} style={styles.iconButton} accessibilityRole="button">
                 <ChevronLeft size={24} color={colors.textPrimary} strokeWidth={2} />
               </Pressable>
-              <Text style={styles.headerTitle}>{isEdit ? 'Edit' : 'Add'} {spec.title}</Text>
+              <Text style={[styles.headerTitle, { color: colors.textHero }]}>
+                {isEdit ? 'Edit' : 'Add'} {spec.title}
+              </Text>
               <View style={styles.iconButton} />
             </View>
           </Animated.View>
@@ -476,57 +323,31 @@ export default function PulseSectionCreateScreen() {
             </View>
           </Animated.View>
 
-          {spec.fields.map((field, index) => (
-            <Animated.View key={field.key} entering={FadeInUp.delay(100 + index * 50).springify()}>
-              <View style={[styles.fieldCard, { backgroundColor: colors.surface }]}>
-                <Text style={styles.fieldLabel}>{field.label}</Text>
-                {field.options ? (
-                  <View style={styles.optionsRow}>
-                    {field.options.map((option) => {
-                      const selected = values[field.key] === option
-                      return (
-                        <Pressable
-                          key={option}
-                          onPress={() => updateValue(field.key, option)}
-                          style={[
-                            styles.option,
-                            {
-                              backgroundColor: selected ? colors.primary : colors.background,
-                              borderColor: selected ? colors.primary : colors.border,
-                            },
-                          ]}
-                          accessibilityRole="button"
-                          accessibilityState={{ selected }}
-                        >
-                          <Text
-                            style={[
-                              styles.optionText,
-                              { color: selected ? colors.surface : colors.textPrimary },
-                            ]}
-                          >
-                            {option.charAt(0).toUpperCase() + option.slice(1)}
-                          </Text>
-                        </Pressable>
-                      )
-                    })}
+          {spec.fields.map((field, index) => {
+            const error = errors[field.key]
+            const hasError = Boolean(error)
+            return (
+              <Animated.View key={field.key} entering={FadeInUp.delay(100 + index * 50).springify()}>
+                <View
+                  style={[
+                    styles.fieldCard,
+                    { backgroundColor: colors.surface },
+                    hasError ? { borderColor: colors.danger } : null,
+                  ]}
+                >
+                  <View style={styles.fieldLabelRow}>
+                    <Text style={styles.fieldLabel}>{field.label}</Text>
+                    {field.required ? <Text style={[styles.requiredMark, { color: colors.danger }]}>*</Text> : null}
                   </View>
-                ) : field.key === 'categoryId' ? (
-                  <View style={styles.optionsRow}>
-                    {categories.length === 0 ? (
-                      <TextInput
-                        style={[styles.input, { backgroundColor: colors.background }]}
-                        value={values[field.key] ?? ''}
-                        onChangeText={(text) => updateValue(field.key, text)}
-                        placeholder="Category ID"
-                        placeholderTextColor={colors.textTertiary}
-                      />
-                    ) : (
-                      categories.map((cat) => {
-                        const selected = values[field.key] === cat.id
+                  {field.helper ? <Text style={styles.fieldHelper}>{field.helper}</Text> : null}
+                  {field.options ? (
+                    <View style={styles.optionsRow}>
+                      {field.options.map((option) => {
+                        const selected = values[field.key] === option
                         return (
                           <Pressable
-                            key={cat.id}
-                            onPress={() => updateValue(field.key, cat.id)}
+                            key={option}
+                            onPress={() => updateValue(field.key, option)}
                             style={[
                               styles.option,
                               {
@@ -543,27 +364,125 @@ export default function PulseSectionCreateScreen() {
                                 { color: selected ? colors.surface : colors.textPrimary },
                               ]}
                             >
-                              {cat.name}
+                              {option.charAt(0).toUpperCase() + option.slice(1)}
                             </Text>
                           </Pressable>
                         )
-                      })
-                    )}
-                  </View>
-                ) : (
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.background }]}
-                    value={values[field.key] ?? ''}
-                    onChangeText={(text) => updateValue(field.key, text)}
-                    placeholder={field.placeholder ?? field.label}
-                    placeholderTextColor={colors.textTertiary}
-                    keyboardType={field.keyboard ?? 'default'}
-                    accessibilityLabel={field.label}
-                  />
-                )}
-              </View>
-            </Animated.View>
-          ))}
+                      })}
+                    </View>
+                  ) : field.key === 'categoryId' ? (
+                    <View style={styles.optionsRow}>
+                      {categoriesLoading ? (
+                        <ActivityIndicator color={colors.primary} />
+                      ) : categoriesError ? (
+                        <View style={styles.retryRow}>
+                          <Text style={[styles.fieldHelper, { color: colors.danger, flex: 1, marginBottom: 0 }]}>
+                            {categoriesError}
+                          </Text>
+                          <Pressable
+                            onPress={loadCategories}
+                            style={[styles.option, { borderColor: colors.primary }]}
+                            accessibilityRole="button"
+                          >
+                            <Text style={[styles.optionText, { color: colors.primary }]}>Retry</Text>
+                          </Pressable>
+                        </View>
+                      ) : categories.length === 0 ? (
+                        <Text style={styles.fieldHelper}>
+                          No categories found. Pull to refresh on the expenses screen, then try again.
+                        </Text>
+                      ) : (
+                        categories.map((cat) => {
+                          const selected = values[field.key] === cat.id
+                          return (
+                            <Pressable
+                              key={cat.id}
+                              onPress={() => updateValue(field.key, cat.id)}
+                              style={[
+                                styles.option,
+                                {
+                                  backgroundColor: selected ? colors.primary : colors.background,
+                                  borderColor: selected ? colors.primary : colors.border,
+                                },
+                              ]}
+                              accessibilityRole="button"
+                              accessibilityState={{ selected }}
+                            >
+                              <Text
+                                style={[
+                                  styles.optionText,
+                                  { color: selected ? colors.surface : colors.textPrimary },
+                                ]}
+                              >
+                                {cat.name}
+                              </Text>
+                            </Pressable>
+                          )
+                        })
+                      )}
+                    </View>
+                  ) : (
+                    <>
+                      <View
+                        style={[
+                          styles.inputRow,
+                          { backgroundColor: colors.background, borderColor: hasError ? colors.danger : colors.border },
+                        ]}
+                      >
+                        {field.currency ? (
+                          <Text style={[styles.currencyPrefix, { color: colors.textSecondary }]}>₹</Text>
+                        ) : null}
+                        <TextInput
+                          style={styles.inputFlex}
+                          value={values[field.key] ?? ''}
+                          onChangeText={(text) => updateValue(field.key, text)}
+                          placeholder={field.placeholder ?? field.label}
+                          placeholderTextColor={colors.textTertiary}
+                          keyboardType={field.keyboard ?? 'default'}
+                          accessibilityLabel={field.label}
+                        />
+                      </View>
+                      {field.datePresets ? (
+                        <View style={[styles.optionsRow, { marginTop: 10 }]}>
+                          {(field.datePresets === 'recent' ? RECENT_DATE_PRESETS : YEAR_DATE_PRESETS).map(
+                            (preset) => {
+                              const selected = values[field.key] === preset.value
+                              return (
+                                <Pressable
+                                  key={preset.label}
+                                  onPress={() => updateValue(field.key, preset.value)}
+                                  style={[
+                                    styles.option,
+                                    styles.dateChip,
+                                    {
+                                      backgroundColor: selected ? colors.primary : colors.background,
+                                      borderColor: selected ? colors.primary : colors.border,
+                                    },
+                                  ]}
+                                  accessibilityRole="button"
+                                  accessibilityState={{ selected }}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.optionText,
+                                      { color: selected ? colors.surface : colors.textSecondary },
+                                    ]}
+                                  >
+                                    {preset.label}
+                                  </Text>
+                                </Pressable>
+                              )
+                            }
+                          )}
+                        </View>
+                      ) : null}
+                    </>
+                  )}
+                  {hasError ? <Text style={[styles.errorText, { color: colors.danger }]}>{error}</Text> : null}
+                </View>
+              </Animated.View>
+            )
+          })}
 
           <Animated.View entering={FadeInUp.delay(100 + spec.fields.length * 50).springify()}>
             <Pressable
@@ -614,9 +533,8 @@ const makeStyles = (colors: ThemeColors) =>
     },
     headerTitle: {
       fontFamily: Typography.fontFamily,
-      fontSize: 20,
+      fontSize: Typography.sizes.h2,
       fontWeight: Typography.fontWeights.bold,
-      color: colors.primary,
     },
     heroCard: {
       borderRadius: 24,
@@ -657,6 +575,11 @@ const makeStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
       ...CARD_SHADOW,
     },
+    fieldLabelRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      marginBottom: 4,
+    },
     fieldLabel: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.xs,
@@ -664,18 +587,57 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.textSecondary,
       textTransform: 'uppercase',
       letterSpacing: 1,
+    },
+    requiredMark: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.bold,
+      marginLeft: 4,
+    },
+    fieldHelper: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.regular,
+      color: colors.textSecondary,
       marginBottom: 10,
     },
-    input: {
+    inputRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
       borderWidth: 1,
-      borderColor: colors.border,
       borderRadius: 16,
       paddingHorizontal: 16,
+      marginTop: 6,
+    },
+    currencyPrefix: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.lg,
+      fontWeight: Typography.fontWeights.bold,
+      marginRight: 8,
+    },
+    inputFlex: {
+      flex: 1,
       paddingVertical: 14,
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.base,
       fontWeight: Typography.fontWeights.semibold,
       color: colors.textPrimary,
+    },
+    dateChip: {
+      paddingHorizontal: 14,
+      paddingVertical: 8,
+      borderRadius: 12,
+    },
+    retryRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    errorText: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.semibold,
+      marginTop: 8,
     },
     optionsRow: {
       flexDirection: 'row',
@@ -701,6 +663,11 @@ const makeStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       marginTop: 8,
       marginBottom: 24,
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 6 },
+      shadowOpacity: 0.25,
+      shadowRadius: 12,
+      elevation: 4,
     },
     ctaIcon: {
       marginRight: 8,

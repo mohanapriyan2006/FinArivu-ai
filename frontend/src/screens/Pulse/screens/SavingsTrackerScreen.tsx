@@ -1,13 +1,16 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 import { Wallet } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Asset, AssetInput } from '@/services/AssetService'
+import type { Asset } from '@/services/AssetService'
 import { useSavings } from '@/hooks/useSavings'
+import type { RootStackParamList } from '@/navigation/AppNavigator'
 
 import { TrackerScreen } from '../components/TrackerScreen'
 import { FinancialRecordRow } from '../components/FinancialRecordRow'
@@ -36,9 +39,10 @@ function Summary({ data }: { data: Asset[] }) {
 
 export default function SavingsTrackerScreen() {
   const { colors } = useTheme()
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
 
   return (
-    <TrackerScreen<Asset, AssetInput>
+    <TrackerScreen<Asset>
       title="Savings"
       useData={useSavings}
       renderSummary={(data) => <Summary data={data} />}
@@ -52,18 +56,8 @@ export default function SavingsTrackerScreen() {
           trailing={`₹${formatInrNumber(item.value)}`}
         />
       )}
-      fields={[
-        { key: 'name', label: 'Account name', placeholder: 'Emergency Fund' },
-        { key: 'value', label: 'Current value', placeholder: '50000', keyboard: 'numeric' },
-        { key: 'assetType', label: 'Type', placeholder: 'Bank', autoCapitalize: 'words' },
-      ]}
-      buildInput={(values) => ({
-        name: values.name,
-        value: Number(values.value || '0'),
-        assetType: values.assetType || 'Bank',
-        isEmergencyFund: false,
-      })}
       addLabel="+ Add Savings"
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'savings' })}
       emptyIcon={Wallet}
       emptyTitle="No savings added"
       emptyMessage="Add your savings accounts and emergency funds to track them."

@@ -1,4 +1,5 @@
 export { AuthInput } from './AuthInput'
+export { AuthErrorBanner } from './AuthErrorBanner'
 export { PrimaryButton, ArrowPrimaryButton } from './PrimaryButton'
 export { RegisterForm } from './RegisterForm'
 export { SocialButton } from './SocialButton'

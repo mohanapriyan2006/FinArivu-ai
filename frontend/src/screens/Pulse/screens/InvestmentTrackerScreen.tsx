@@ -1,13 +1,16 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 import { TrendingUp } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Asset, AssetInput } from '@/services/AssetService'
+import type { Asset } from '@/services/AssetService'
 import { useInvestments } from '@/hooks/useInvestments'
+import type { RootStackParamList } from '@/navigation/AppNavigator'
 
 import { TrackerScreen } from '../components/TrackerScreen'
 import { FinancialRecordRow } from '../components/FinancialRecordRow'
@@ -36,9 +39,10 @@ function Summary({ data }: { data: Asset[] }) {
 
 export default function InvestmentTrackerScreen() {
   const { colors } = useTheme()
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
 
   return (
-    <TrackerScreen<Asset, AssetInput>
+    <TrackerScreen<Asset>
       title="Investments"
       useData={useInvestments}
       renderSummary={(data) => <Summary data={data} />}
@@ -52,17 +56,8 @@ export default function InvestmentTrackerScreen() {
           trailing={`₹${formatInrNumber(item.value)}`}
         />
       )}
-      fields={[
-        { key: 'name', label: 'Investment name', placeholder: 'SBI Small Cap Fund' },
-        { key: 'value', label: 'Current value', placeholder: '100000', keyboard: 'numeric' },
-        { key: 'assetType', label: 'Type', placeholder: 'Mutual Fund', autoCapitalize: 'words' },
-      ]}
-      buildInput={(values) => ({
-        name: values.name,
-        value: Number(values.value || '0'),
-        assetType: values.assetType || 'Mutual Fund',
-      })}
       addLabel="+ Add Investment"
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'investments' })}
       emptyIcon={TrendingUp}
       emptyTitle="No investments added"
       emptyMessage="Add your existing investments to keep your financial picture complete."

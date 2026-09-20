@@ -1,13 +1,16 @@
 import { useMemo } from 'react'
 import { StyleSheet, Text, View } from 'react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
 import { CreditCard } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { formatInrNumber } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
-import type { Liability, LiabilityInput } from '@/services/LiabilityService'
+import type { Liability } from '@/services/LiabilityService'
 import { useCreditCards } from '@/hooks/useCreditCards'
+import type { RootStackParamList } from '@/navigation/AppNavigator'
 
 import { TrackerScreen } from '../components/TrackerScreen'
 import { FinancialRecordRow } from '../components/FinancialRecordRow'
@@ -37,9 +40,10 @@ function Summary({ data }: { data: Liability[] }) {
 
 export default function CreditCardTrackerScreen() {
   const { colors } = useTheme()
+  const navigation = useNavigation<StackNavigationProp<RootStackParamList>>()
 
   return (
-    <TrackerScreen<Liability, LiabilityInput>
+    <TrackerScreen<Liability>
       title="Credit Cards"
       useData={useCreditCards}
       renderSummary={(data) => <Summary data={data} />}
@@ -53,18 +57,8 @@ export default function CreditCardTrackerScreen() {
           trailing={`₹${formatInrNumber(item.amount)}`}
         />
       )}
-      fields={[
-        { key: 'name', label: 'Card name / bank', placeholder: 'HDFC Regalia' },
-        { key: 'amount', label: 'Outstanding amount', placeholder: '15000', keyboard: 'numeric' },
-        { key: 'creditLimit', label: 'Credit limit', placeholder: '200000', keyboard: 'numeric' },
-      ]}
-      buildInput={(values) => ({
-        name: values.name,
-        amount: Number(values.amount || '0'),
-        creditLimit: values.creditLimit ? Number(values.creditLimit) : undefined,
-        liabilityType: 'Credit Card',
-      })}
       addLabel="+ Add Credit Card"
+      onAdd={() => navigation.navigate('PulseSectionCreate', { section: 'credit_cards' })}
       emptyIcon={CreditCard}
       emptyTitle="No credit cards added"
       emptyMessage="Track your credit cards and due amounts without storing sensitive details."

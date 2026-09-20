@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Text,
   View,
-  useWindowDimensions,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
@@ -17,75 +16,17 @@ import { formatInr } from '@/utils/formatInr'
 import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 
-interface MetricBarProps {
-  label: string
-  value: number
-  max: number
-  color: string
-  colors: ThemeColors
-}
-
-const barStyles = StyleSheet.create({
-  metricRow: {
-    marginBottom: 14,
-  },
-  metricLabelRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  metricLabel: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.fontWeights.medium,
-  },
-  metricValue: {
-    fontFamily: Typography.fontFamily,
-    fontSize: Typography.sizes.body,
-    fontWeight: Typography.fontWeights.semibold,
-  },
-  barTrack: {
-    height: 10,
-    borderRadius: 5,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: 5,
-  },
-})
-
-const MetricBar: React.FC<MetricBarProps> = ({ label, value, max, color, colors }) => {
-  const { width } = useWindowDimensions()
-  const fillWidth = max > 0 ? Math.min(1, Math.max(0, Math.abs(value) / max)) : 0
-  return (
-    <View style={barStyles.metricRow}>
-      <View style={barStyles.metricLabelRow}>
-        <Text style={[barStyles.metricLabel, { color: colors.textPrimary }]}>{label}</Text>
-        <Text style={[barStyles.metricValue, { color: colors.textPrimary }]}>
-          {formatInr(value, { fallback: '₹0' })}
-        </Text>
-      </View>
-      <View
-        style={[
-          barStyles.barTrack,
-          { backgroundColor: colors.border ?? 'rgba(0,0,0,0.06)', width: width - 104 },
-        ]}
-      >
-        <View style={[barStyles.barFill, { width: `${fillWidth * 100}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-  )
-}
+import { GradientBar } from './components/GradientBar'
+import { MiniGauge } from './components/MiniGauge'
+import { DonutChart } from './components/DonutChart'
+import type { DonutSegment } from './components/DonutChart'
 
 export default function FinancialHealthPlaceholderScreen() {
   const { colors } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation()
   const { profile } = useFinancialProfile()
-  const { width } = useWindowDimensions()
-  const styles = useMemo(() => makeStyles(colors, width), [colors, width])
+  const styles = useMemo(() => makeStyles(colors), [colors])
 
   const income = profile.income?.monthlyTakeHome ?? 0
   const expenses = profile.expenses?.totalMonthlyExpenses ?? 0
@@ -101,12 +42,30 @@ export default function FinancialHealthPlaceholderScreen() {
   const savingsRate = income > 0 ? ((income - expenses) / income) * 100 : 0
   const dti = income > 0 ? ((loans + creditCards) / income) * 100 : 0
 
-  const spendingBreakdown = useMemo(() => {
+  const spendingSegments = useMemo<DonutSegment[]>(() => {
     if (!profile.expenses?.breakdown) return []
-    return Object.entries(profile.expenses.breakdown).filter(
-      ([, amount]) => typeof amount === 'number' && amount > 0
-    ) as [string, number][]
-  }, [profile.expenses?.breakdown])
+    const palette = [
+      colors.primary,
+      colors.secondary,
+      colors.success,
+      colors.warning,
+      colors.danger,
+    ]
+    return (Object.entries(profile.expenses.breakdown) as [string, number][])
+      .filter(([, amount]) => typeof amount === 'number' && amount > 0)
+      .sort((a, b) => b[1] - a[1])
+      .map(([category, amount], index) => ({
+        label: category,
+        value: amount,
+        color: palette[index % palette.length],
+        displayValue: formatInr(amount, { fallback: '₹0' }),
+      }))
+  }, [profile.expenses?.breakdown, colors])
+
+  const savingsRateTone =
+    savingsRate >= 20 ? colors.success : savingsRate >= 10 ? colors.warning : colors.danger
+  const dtiTone =
+    dti <= 30 ? colors.success : dti <= 50 ? colors.warning : colors.danger
 
   const goals = useMemo(() => profile.goals?.goals?.slice(0, 5) ?? [], [profile.goals?.goals])
 
@@ -150,44 +109,75 @@ export default function FinancialHealthPlaceholderScreen() {
           <View style={styles.body}>
             <Text style={[styles.sectionTitle, { color: colors.textHero }]}>Monthly Overview</Text>
             <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-              <MetricBar label="Income" value={income} max={barMax} color="#22C55E" colors={colors} />
-              <MetricBar label="Expenses" value={expenses} max={barMax} color="#EF4444" colors={colors} />
-              <MetricBar label="Savings" value={savings} max={barMax} color="#3B82F6" colors={colors} />
-              <MetricBar label="Investments" value={investments} max={barMax} color="#8B5CF6" colors={colors} />
-              <MetricBar label="Loans" value={loans} max={barMax} color="#F97316" colors={colors} />
-              <MetricBar label="Net worth" value={netWorth} max={barMax} color="#4F46E5" colors={colors} />
+              <GradientBar
+                label="Income"
+                value={formatInr(income, { fallback: '₹0' })}
+                progress={income / barMax}
+                color={colors.success}
+              />
+              <GradientBar
+                label="Expenses"
+                value={formatInr(expenses, { fallback: '₹0' })}
+                progress={expenses / barMax}
+                color={colors.danger}
+              />
+              <GradientBar
+                label="Savings"
+                value={formatInr(savings, { fallback: '₹0' })}
+                progress={savings / barMax}
+                color={colors.secondary}
+              />
+              <GradientBar
+                label="Investments"
+                value={formatInr(investments, { fallback: '₹0' })}
+                progress={investments / barMax}
+                color={colors.primary}
+              />
+              <GradientBar
+                label="Loans"
+                value={formatInr(loans, { fallback: '₹0' })}
+                progress={loans / barMax}
+                color={colors.warning}
+              />
+              <GradientBar
+                label="Net worth"
+                value={formatInr(netWorth, { fallback: '₹0' })}
+                progress={Math.abs(netWorth) / barMax}
+                color={colors.primary}
+                colorEnd={colors.secondary}
+              />
             </View>
 
             <Text style={[styles.sectionTitle, { color: colors.textHero }]}>Key Ratios</Text>
-            <View style={styles.row}>
-              <View style={[styles.ratioCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.ratioValue, { color: colors.textPrimary }]}>
-                  {`${Math.max(0, Math.round(savingsRate))}%`}
-                </Text>
-                <Text style={[styles.ratioLabel, { color: colors.textSecondary }]}>Savings rate</Text>
-              </View>
-              <View style={[styles.ratioCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                <Text style={[styles.ratioValue, { color: colors.textPrimary }]}>
-                  {`${Math.max(0, Math.round(dti))}%`}
-                </Text>
-                <Text style={[styles.ratioLabel, { color: colors.textSecondary }]}>Debt-to-income</Text>
-              </View>
+            <View style={[styles.card, styles.ratioRow, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+              <MiniGauge
+                percent={Math.max(0, savingsRate)}
+                displayValue={`${Math.max(0, Math.round(savingsRate))}%`}
+                label="Savings rate"
+                color={savingsRateTone}
+                colorEnd={colors.secondary}
+                caption={savingsRate >= 20 ? 'Healthy' : savingsRate >= 10 ? 'Fair' : 'Low'}
+              />
+              <View style={[styles.ratioDivider, { backgroundColor: colors.border }]} />
+              <MiniGauge
+                percent={Math.max(0, Math.min(100, dti))}
+                displayValue={`${Math.max(0, Math.round(dti))}%`}
+                label="Debt-to-income"
+                color={dtiTone}
+                colorEnd={colors.warning}
+                caption={dti <= 30 ? 'Healthy' : dti <= 50 ? 'Watch' : 'High'}
+              />
             </View>
 
-            {spendingBreakdown.length > 0 ? (
+            {spendingSegments.length > 0 ? (
               <>
                 <Text style={[styles.sectionTitle, { color: colors.textHero }]}>Spending Breakdown</Text>
                 <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-                  {spendingBreakdown.map(([category, amount]) => (
-                    <MetricBar
-                      key={category}
-                      label={category}
-                      value={amount}
-                      max={expenses || 1}
-                      color="#F59E0B"
-                      colors={colors}
-                    />
-                  ))}
+                  <DonutChart
+                    segments={spendingSegments}
+                    centerValue={formatInr(expenses, { fallback: '₹0' })}
+                    centerLabel="Monthly spend"
+                  />
                 </View>
               </>
             ) : null}
@@ -203,20 +193,27 @@ export default function FinancialHealthPlaceholderScreen() {
                         : 0
                     return (
                       <View key={goal.id} style={styles.goalRow}>
-                        <Text style={[styles.goalName, { color: colors.textPrimary }]} numberOfLines={1}>
-                          {goal.name}
-                        </Text>
+                        <View style={styles.goalHeader}>
+                          <Text style={[styles.goalName, { color: colors.textPrimary }]} numberOfLines={1}>
+                            {goal.name}
+                          </Text>
+                          <View style={[styles.goalPctChip, { backgroundColor: colors.accentBackground }]}>
+                            <Text style={[styles.goalPct, { color: colors.accentDark }]}>
+                              {`${Math.round(progress * 100)}%`}
+                            </Text>
+                          </View>
+                        </View>
                         <Text style={[styles.goalAmount, { color: colors.textSecondary }]}>
                           {formatInr(goal.currentSavedAmount ?? 0)} / {formatInr(goal.targetAmount)}
                         </Text>
-                        <View style={[styles.goalTrack, { backgroundColor: colors.border ?? 'rgba(0,0,0,0.06)' }]}>
-                          <View
-                            style={[
-                              styles.goalFill,
-                              { width: `${progress * 100}%`, backgroundColor: '#10B981' },
-                            ]}
-                          />
-                        </View>
+                        <GradientBar
+                          label=""
+                          value=""
+                          progress={progress}
+                          color={colors.warning}
+                          colorEnd={colors.success}
+                          height={8}
+                        />
                       </View>
                     )
                   })}
@@ -230,7 +227,7 @@ export default function FinancialHealthPlaceholderScreen() {
   )
 }
 
-const makeStyles = (colors: ThemeColors, screenWidth: number) =>
+const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       flex: 1,
@@ -289,56 +286,55 @@ const makeStyles = (colors: ThemeColors, screenWidth: number) =>
       marginBottom: 12,
     },
     card: {
-      borderRadius: 20,
+      borderRadius: 24,
       borderWidth: 1,
-      padding: 16,
+      padding: 20,
       marginBottom: 8,
+      shadowColor: colors.shadowColor,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.08,
+      shadowRadius: 12,
+      elevation: 3,
     },
-    row: {
+    ratioRow: {
       flexDirection: 'row',
-      gap: 12,
-      marginBottom: 8,
-    },
-    ratioCard: {
-      flex: 1,
-      borderRadius: 20,
-      borderWidth: 1,
-      padding: 16,
       alignItems: 'center',
     },
-    ratioValue: {
-      fontFamily: Typography.fontFamily,
-      fontSize: 28,
-      fontWeight: Typography.fontWeights.bold,
-    },
-    ratioLabel: {
-      fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.body,
-      fontWeight: Typography.fontWeights.medium,
-      marginTop: 4,
+    ratioDivider: {
+      width: 1,
+      alignSelf: 'stretch',
+      marginHorizontal: 16,
     },
     goalRow: {
-      marginBottom: 14,
+      marginBottom: 18,
+    },
+    goalHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: 4,
     },
     goalName: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.body,
-      fontWeight: Typography.fontWeights.medium,
-      marginBottom: 4,
+      fontWeight: Typography.fontWeights.semibold,
+      flex: 1,
+      marginRight: 8,
+    },
+    goalPctChip: {
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+    },
+    goalPct: {
+      fontFamily: Typography.fontFamily,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.bold,
     },
     goalAmount: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.xs,
       fontWeight: Typography.fontWeights.regular,
-      marginBottom: 6,
-    },
-    goalTrack: {
-      height: 8,
-      borderRadius: 4,
-      overflow: 'hidden',
-    },
-    goalFill: {
-      height: '100%',
-      borderRadius: 4,
+      marginBottom: 8,
     },
   })

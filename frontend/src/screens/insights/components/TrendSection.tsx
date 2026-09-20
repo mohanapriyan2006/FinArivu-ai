@@ -39,7 +39,16 @@ export function TrendSection({ trends, testID }: TrendSectionProps) {
               {trend.toValue}
             </Text>
           </View>
-          <View style={styles.delta}>
+          <View
+            style={[
+              styles.deltaPill,
+              {
+                backgroundColor: trend.isPositive
+                  ? colors.successBackground
+                  : colors.dangerTint,
+              },
+            ]}
+          >
             {trend.isPositive ? (
               <ArrowUpRight size={14} color={colors.success} />
             ) : (
@@ -111,14 +120,17 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: Typography.sizes.body,
       marginHorizontal: 6,
     },
-    delta: {
+    deltaPill: {
       flexDirection: 'row',
       alignItems: 'center',
+      borderRadius: 999,
+      paddingHorizontal: 10,
+      paddingVertical: 5,
     },
     deltaText: {
       fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.body,
-      fontWeight: Typography.fontWeights.semibold,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.bold,
       marginLeft: 4,
     },
   })

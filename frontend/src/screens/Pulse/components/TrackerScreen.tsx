@@ -1,13 +1,13 @@
-import { useCallback, useState, type ReactNode } from 'react'
+import { useCallback, useRef, type ReactNode } from 'react'
 import {
   FlatList,
-  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { useFocusEffect } from '@react-navigation/native'
 import type { LucideIcon } from 'lucide-react-native'
 
 import { ScalePress } from '@/components/animation/ScalePress'
@@ -16,36 +16,30 @@ import { Typography } from '@/theme'
 import type { ThemeColors } from '@/theme'
 import type { UseTrackerListReturn } from '@/hooks/useTrackerList'
 
-import { AddRecordSheet, type FormField } from './AddRecordSheet'
-import { FinancialRecordRow } from './FinancialRecordRow'
 import { TrackerEmptyState } from './TrackerEmptyState'
 import { TrackerErrorState } from './TrackerErrorState'
 import { TrackerHeader } from './TrackerHeader'
 import { TrackerSkeleton } from './TrackerSkeleton'
 
-export interface TrackerScreenProps<T, TInput> {
+export interface TrackerScreenProps<T, TInput = never> {
   title: string
   useData: () => UseTrackerListReturn<T, TInput>
   renderItem: (item: T) => ReactNode
   renderSummary?: (data: T[]) => ReactNode
-  buildInput: (values: Record<string, string>) => TInput
-  fields: FormField[]
   addLabel: string
   emptyIcon: LucideIcon
   emptyTitle: string
   emptyMessage: string
   itemKey: (item: T) => string
-  onAdd?: () => void
+  onAdd: () => void
   testID?: string
 }
 
-export function TrackerScreen<T, TInput>({
+export function TrackerScreen<T, TInput = never>({
   title,
   useData,
   renderItem,
   renderSummary,
-  buildInput,
-  fields,
   addLabel,
   emptyIcon,
   emptyTitle,
@@ -56,28 +50,18 @@ export function TrackerScreen<T, TInput>({
 }: TrackerScreenProps<T, TInput>) {
   const { colors } = useTheme()
   const styles = makeStyles(colors)
-  const { data, isLoading, error, refresh, create } = useData()
-  const [addVisible, setAddVisible] = useState(false)
+  const { data, isLoading, error, refresh } = useData()
 
-  const handleAdd = useCallback(() => {
-    if (onAdd) {
-      onAdd()
-      return
-    }
-    setAddVisible(true)
-  }, [onAdd])
-
-  const handleSubmit = useCallback(
-    async (values: Record<string, string>) => {
-      try {
-        const input = buildInput(values)
-        await create(input)
-        setAddVisible(false)
-      } catch (err) {
-        // Swallow validation errors; the service call will surface via the list error
+  // Refetch on focus so records added via the create screen show up.
+  const skipFirstFocus = useRef(true)
+  useFocusEffect(
+    useCallback(() => {
+      if (skipFirstFocus.current) {
+        skipFirstFocus.current = false
+        return
       }
-    },
-    [buildInput, create]
+      refresh()
+    }, [refresh])
   )
 
   if (isLoading && !error && data.length === 0) {
@@ -91,7 +75,7 @@ export function TrackerScreen<T, TInput>({
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <TrackerHeader title={title} onAdd={onAdd || data.length > 0 ? handleAdd : undefined} addLabel={addLabel} />
+      <TrackerHeader title={title} onAdd={data.length > 0 ? onAdd : undefined} addLabel={addLabel} />
 
       {error ? (
         <TrackerErrorState message={error} onRetry={refresh} testID={`${testID}-error`} />
@@ -101,7 +85,7 @@ export function TrackerScreen<T, TInput>({
           title={emptyTitle}
           message={emptyMessage}
           actionLabel={addLabel}
-          onAction={handleAdd}
+          onAction={onAdd}
           testID={`${testID}-empty`}
         />
       ) : (
@@ -123,24 +107,15 @@ export function TrackerScreen<T, TInput>({
         />
       )}
 
-      {data.length > 0 && !onAdd ? (
+      {data.length > 0 ? (
         <View style={styles.fab} pointerEvents="box-none">
-          <ScalePress onPress={handleAdd} scale={0.96} testID={`${testID}-fab`}>
+          <ScalePress onPress={onAdd} scale={0.96} testID={`${testID}-fab`}>
             <View style={[styles.fabButton, { backgroundColor: colors.primary }]}>
               <Text style={[styles.fabText, { color: colors.surface }]}>{addLabel}</Text>
             </View>
           </ScalePress>
         </View>
       ) : null}
-
-      <AddRecordSheet
-        visible={addVisible}
-        title={addLabel}
-        fields={fields}
-        onClose={() => setAddVisible(false)}
-        onSubmit={handleSubmit}
-        testID={`${testID}-sheet`}
-      />
     </SafeAreaView>
   )
 }

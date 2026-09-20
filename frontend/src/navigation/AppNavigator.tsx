@@ -7,8 +7,6 @@ import AuthNavigator from './AuthNavigator'
 import MainTabNavigator from './MainTabNavigator'
 import SplashScreen from '@/screens/onboarding/SplashScreen'
 import OnboardingScreen from '@/screens/onboarding/OnboardingScreen'
-import QuickAddExpenseScreen from '@/screens/expenses/QuickAddExpenseScreen'
-import CreateGoalScreen from '@/screens/Pulse/CreateGoalScreen'
 import ExpenseTrackerScreen from '@/screens/Pulse/screens/ExpenseTrackerScreen'
 import BudgetTrackerScreen from '@/screens/Pulse/screens/BudgetTrackerScreen'
 import SavingsTrackerScreen from '@/screens/Pulse/screens/SavingsTrackerScreen'
@@ -17,7 +15,6 @@ import GoalsTrackerScreen from '@/screens/Pulse/screens/GoalsTrackerScreen'
 import LoanTrackerScreen from '@/screens/Pulse/screens/LoanTrackerScreen'
 import CreditCardTrackerScreen from '@/screens/Pulse/screens/CreditCardTrackerScreen'
 import InsuranceTrackerScreen from '@/screens/Pulse/screens/InsuranceTrackerScreen'
-import AddInvestmentScreen from '@/screens/Pulse/screens/AddInvestmentScreen'
 import PulseSectionListScreen from '@/screens/Pulse/PulseSectionListScreen'
 import PulseSectionCreateScreen from '@/screens/Pulse/PulseSectionCreateScreen'
 import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
@@ -31,9 +28,7 @@ export type RootStackParamList = {
   Auth: undefined
   Main: undefined
   FinancialProfileSetup: { startStep?: string } | undefined
-  CreateGoal: undefined
   Notifications: undefined
-  QuickAddExpense: undefined
   WeeklyReport: undefined
   ExpenseTracker: undefined
   BudgetTracker: undefined
@@ -43,7 +38,6 @@ export type RootStackParamList = {
   LoanTracker: undefined
   CreditCardTracker: undefined
   InsuranceTracker: undefined
-  AddInvestment: undefined
   PulseSectionList: { section: string }
   PulseSectionCreate: { section: string; record?: Record<string, unknown> }
   FinancialHealth: undefined
@@ -84,7 +78,6 @@ export default function AppNavigator() {
         <Stack.Group>
           <Stack.Screen name="FinancialProfileSetup" component={FinancialProfileSetupScreen} />
           <Stack.Screen name="Main" component={MainTabNavigator} />
-          <Stack.Screen name="CreateGoal" component={CreateGoalScreen} />
           <Stack.Screen name="ExpenseTracker" component={ExpenseTrackerScreen} />
           <Stack.Screen name="BudgetTracker" component={BudgetTrackerScreen} />
           <Stack.Screen name="SavingsTracker" component={SavingsTrackerScreen} />
@@ -93,13 +86,7 @@ export default function AppNavigator() {
           <Stack.Screen name="LoanTracker" component={LoanTrackerScreen} />
           <Stack.Screen name="CreditCardTracker" component={CreditCardTrackerScreen} />
           <Stack.Screen name="InsuranceTracker" component={InsuranceTrackerScreen} />
-          <Stack.Screen name="AddInvestment" component={AddInvestmentScreen} />
           <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen
-            name="QuickAddExpense"
-            component={QuickAddExpenseScreen}
-            options={{ presentation: 'modal' }}
-          />
           <Stack.Screen name="WeeklyReport" component={WeeklyReportStoryScreen} />
           <Stack.Screen name="FinancialHealth" component={FinancialHealthPlaceholderScreen} />
           <Stack.Screen name="PulseSectionList" component={PulseSectionListScreen} />

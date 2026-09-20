@@ -44,7 +44,7 @@ const validRoutes = [
   'LoanTracker',
   'CreditCardTracker',
   'FinancialHealth',
-  'QuickAddExpense',
+  'PulseSectionCreate',
   'FinancialProfileSetup',
 ]
 

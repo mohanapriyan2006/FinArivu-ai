@@ -11,8 +11,10 @@ import {
   AuthFooter,
   SecurityBadge,
 } from '@/components/layout'
-import { AuthInput, PrimaryButton, SocialAuthRow } from '@/components/forms'
+import { AuthErrorBanner, AuthInput, PrimaryButton, SocialAuthRow } from '@/components/forms'
 import { Typography } from '@/theme'
+import { getErrorMessage } from '@/utils/errors'
+import { validateEmail, validateLoginPassword } from '@/utils/validation'
 
 interface LoginScreenProps {
   navigation: {
@@ -27,15 +29,24 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [emailError, setEmailError] = useState<string | null>(null)
+  const [passwordError, setPasswordError] = useState<string | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const onSignInPress = async () => {
-    if (!email || !password) return
+    const emailErr = validateEmail(email)
+    const passwordErr = validateLoginPassword(password)
+    setEmailError(emailErr)
+    setPasswordError(passwordErr)
+    setFormError(null)
+    if (emailErr || passwordErr) return
+
     setLoading(true)
     try {
-      await login(email, password)
+      await login(email.trim(), password)
     } catch (err: unknown) {
       console.error(err)
-      alert('Login failed. Please check your credentials and try again.')
+      setFormError(getErrorMessage(err, 'Login failed. Please check your credentials and try again.'))
     } finally {
       setLoading(false)
     }
@@ -106,23 +117,37 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
           Sign in to access your financial dashboard.
         </Text>
 
+        <AuthErrorBanner message={formError} testID="login-error-banner" />
+
         <View style={styles.inputGroup}>
           <AuthInput
             leadingIcon={Mail}
             placeholder="name@company.com"
             keyboardType="email-address"
             autoCapitalize="none"
+            autoComplete="email"
             value={email}
-            onChangeText={setEmail}
+            onChangeText={(text) => {
+              setEmail(text)
+              if (emailError) setEmailError(null)
+              if (formError) setFormError(null)
+            }}
+            onBlur={() => email && setEmailError(validateEmail(email))}
+            error={emailError}
             testID="login-email-input"
           />
-          
+
           <AuthInput
             leadingIcon={Lock}
             placeholder="••••••••"
             isPassword
             value={password}
-            onChangeText={setPassword}
+            onChangeText={(text) => {
+              setPassword(text)
+              if (passwordError) setPasswordError(null)
+              if (formError) setFormError(null)
+            }}
+            error={passwordError}
             testID="login-password-input"
           />
         </View>
@@ -141,7 +166,7 @@ export default function LoginScreen({ navigation }: LoginScreenProps) {
             title="Sign In"
             onPress={onSignInPress}
             loading={loading}
-            disabled={!email || !password}
+            disabled={!email || !password || loading}
             testID="login-sign-in-button"
           />
         </View>

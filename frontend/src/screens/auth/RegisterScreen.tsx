@@ -10,8 +10,9 @@ import {
   RegisterTrustBadges,
   RegisterAssurance,
 } from '@/components/layout'
-import { RegisterForm } from '@/components/forms'
+import { AuthErrorBanner, RegisterForm } from '@/components/forms'
 import { Typography } from '@/theme'
+import { getErrorMessage } from '@/utils/errors'
 
 interface RegisterScreenProps {
   navigation: {
@@ -24,12 +25,14 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
   const { colors } = useTheme()
   const { register } = useAuthContext()
   const [loading, setLoading] = useState(false)
+  const [formError, setFormError] = useState<string | null>(null)
 
   const onCreateAccountPress = async (data: {
     fullName: string
     email: string
     password: string
   }) => {
+    setFormError(null)
     setLoading(true)
     try {
       await register({
@@ -39,7 +42,7 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
       })
     } catch (err: unknown) {
       console.error(err)
-      alert('Account creation failed. Please try again.')
+      setFormError(getErrorMessage(err, 'Account creation failed. Please try again.'))
     } finally {
       setLoading(false)
     }
@@ -92,6 +95,8 @@ export default function RegisterScreen({ navigation }: RegisterScreenProps) {
         {/* <View style={styles.trustBadges}>
           <RegisterTrustBadges />
         </View> */}
+
+        <AuthErrorBanner message={formError} testID="register-error-banner" />
 
         <RegisterForm loading={loading} onSubmit={onCreateAccountPress} />
 

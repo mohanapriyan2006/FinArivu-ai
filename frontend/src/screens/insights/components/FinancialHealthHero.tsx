@@ -1,6 +1,12 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
-import Svg, { Circle } from 'react-native-svg'
+import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg'
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
@@ -15,8 +21,17 @@ interface FinancialHealthHeroProps {
   onPress?: () => void
 }
 
-const RADIUS = 80
+const SIZE = 210
+const CENTER = SIZE / 2
+const RADIUS = 84
+const STROKE = 14
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS
+
+const AnimatedCircle = Animated.createAnimatedComponent(Circle)
+
+function humanizeStatus(status: string): string {
+  return status.replace(/_/g, ' ').toLowerCase()
+}
 
 export function FinancialHealthHero({
   score,
@@ -35,8 +50,26 @@ export function FinancialHealthHero({
     return colors.danger
   }, [colors, score])
 
-  const progress = score === null ? 0 : Math.min(1, Math.max(0, score / 100))
-  const offset = CIRCUMFERENCE * (1 - progress)
+  const ringColorEnd = useMemo(() => {
+    if (score === null) return colors.textSecondary
+    if (score >= 75) return colors.secondary
+    if (score >= 50) return colors.danger
+    return colors.warning
+  }, [colors, score])
+
+  const target = score === null ? 0 : Math.min(1, Math.max(0, score / 100))
+  const progress = useSharedValue(0)
+
+  useEffect(() => {
+    progress.value = withTiming(target, {
+      duration: 900,
+      easing: Easing.out(Easing.cubic),
+    })
+  }, [target, progress])
+
+  const animatedProps = useAnimatedProps(() => ({
+    strokeDashoffset: CIRCUMFERENCE * (1 - progress.value),
+  }))
 
   return (
     <Pressable
@@ -51,39 +84,67 @@ export function FinancialHealthHero({
       </Text>
 
       <View style={styles.gaugeContainer}>
-        <Svg width={200} height={200} viewBox="0 0 200 200">
-          <Circle
-            cx={100}
-            cy={100}
-            r={RADIUS}
-            stroke={colors.border}
-            strokeWidth={10}
-            fill="none"
-          />
-          <Circle
-            cx={100}
-            cy={100}
+        <Svg width={SIZE} height={SIZE} viewBox={`0 0 ${SIZE} ${SIZE}`}>
+          <Defs>
+            <LinearGradient id="healthRing" x1="0" y1="0" x2="1" y2="1">
+              <Stop offset="0" stopColor={ringColor} />
+              <Stop offset="1" stopColor={ringColorEnd} />
+            </LinearGradient>
+          </Defs>
+          {/* soft glow behind the progress arc */}
+          <AnimatedCircle
+            cx={CENTER}
+            cy={CENTER}
             r={RADIUS}
             stroke={ringColor}
-            strokeWidth={10}
+            strokeWidth={STROKE + 10}
             fill="none"
             strokeLinecap="round"
             strokeDasharray={CIRCUMFERENCE}
-            strokeDashoffset={offset}
-            transform="rotate(-90 100 100)"
+            animatedProps={animatedProps}
+            transform={`rotate(-90 ${CENTER} ${CENTER})`}
+            opacity={0.15}
+          />
+          <Circle
+            cx={CENTER}
+            cy={CENTER}
+            r={RADIUS}
+            stroke={colors.border}
+            strokeWidth={STROKE}
+            fill="none"
+          />
+          <AnimatedCircle
+            cx={CENTER}
+            cy={CENTER}
+            r={RADIUS}
+            stroke="url(#healthRing)"
+            strokeWidth={STROKE}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={CIRCUMFERENCE}
+            animatedProps={animatedProps}
+            transform={`rotate(-90 ${CENTER} ${CENTER})`}
           />
         </Svg>
         <View style={styles.gaugeCenter}>
           <Text style={[styles.score, { color: colors.textHero }]}>
             {score === null ? '—' : score}
           </Text>
-          <Text style={[styles.status, { color: ringColor }]}>{status}</Text>
+          <Text style={[styles.status, { color: ringColor }]}>
+            {humanizeStatus(status)}
+          </Text>
         </View>
       </View>
 
       <View style={styles.factors}>
         {factors.map((factor) => (
-          <View key={factor.id} style={styles.factor}>
+          <View
+            key={factor.id}
+            style={[
+              styles.factorChip,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <View
               style={[
                 styles.dot,
@@ -137,8 +198,8 @@ const makeStyles = (colors: ThemeColors) =>
       textTransform: 'uppercase',
     },
     gaugeContainer: {
-      width: 200,
-      height: 200,
+      width: SIZE,
+      height: SIZE,
       alignItems: 'center',
       justifyContent: 'center',
       marginBottom: 20,
@@ -165,11 +226,15 @@ const makeStyles = (colors: ThemeColors) =>
       flexWrap: 'wrap',
       justifyContent: 'center',
       marginBottom: 16,
-      gap: 12,
+      gap: 8,
     },
-    factor: {
+    factorChip: {
       flexDirection: 'row',
       alignItems: 'center',
+      borderRadius: 999,
+      borderWidth: 1,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
     },
     dot: {
       width: 8,
@@ -179,8 +244,8 @@ const makeStyles = (colors: ThemeColors) =>
     },
     factorName: {
       fontFamily: Typography.fontFamily,
-      fontSize: Typography.sizes.sm,
-      fontWeight: Typography.fontWeights.medium,
+      fontSize: Typography.sizes.xs,
+      fontWeight: Typography.fontWeights.semibold,
     },
     explanation: {
       fontFamily: Typography.fontFamily,

@@ -4,6 +4,12 @@ import { Mail, Lock, User, Check } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
+import {
+  validateConfirmPassword,
+  validateEmail,
+  validateFullName,
+  validatePassword,
+} from '@/utils/validation'
 import { AuthInput } from './AuthInput'
 import { ArrowPrimaryButton } from './PrimaryButton'
 
@@ -17,6 +23,9 @@ interface RegisterFormProps {
   testID?: string
 }
 
+type Field = 'fullName' | 'email' | 'password' | 'confirmPassword'
+type FieldErrors = Partial<Record<Field, string | null>>
+
 export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
   const { colors } = useTheme()
   const [fullName, setFullName] = useState('')
@@ -24,10 +33,24 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [agreed, setAgreed] = useState(false)
+  const [errors, setErrors] = useState<FieldErrors>({})
+  const [agreedError, setAgreedError] = useState<string | null>(null)
 
-  const passwordsMatch = password === confirmPassword && password.length > 0
-  const canSubmit =
-    fullName && email && passwordsMatch && agreed && password.length > 0
+  const setFieldError = (field: Field, message: string | null) =>
+    setErrors((prev) => ({ ...prev, [field]: message }))
+
+  const handleSubmit = () => {
+    const next: FieldErrors = {
+      fullName: validateFullName(fullName),
+      email: validateEmail(email),
+      password: validatePassword(password),
+      confirmPassword: validateConfirmPassword(password, confirmPassword),
+    }
+    setErrors(next)
+    setAgreedError(agreed ? null : 'You must agree to the Terms of Service and Privacy Policy')
+    if (Object.values(next).some(Boolean) || !agreed) return
+    onSubmit({ fullName: fullName.trim(), email: email.trim(), password })
+  }
 
   const styles = useMemo(
     () =>
@@ -92,6 +115,14 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
         primaryButtonSpacing: {
           marginTop: 24,
         },
+        agreedErrorText: {
+          fontFamily: Typography.fontFamily,
+          fontSize: Typography.sizes.xs,
+          fontWeight: Typography.fontWeights.regular,
+          color: colors.danger,
+          marginTop: 6,
+          marginLeft: 32,
+        },
       }),
     [
       agreed,
@@ -99,6 +130,7 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
       colors.primary,
       colors.shadowColor,
       colors.surface,
+      colors.danger,
       colors.textPrimary,
       colors.textSecondary,
     ]
@@ -115,8 +147,14 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
         <AuthInput
           leadingIcon={User}
           placeholder="e.g. John Doe"
+          autoComplete="name"
           value={fullName}
-          onChangeText={setFullName}
+          onChangeText={(text) => {
+            setFullName(text)
+            if (errors.fullName) setFieldError('fullName', null)
+          }}
+          onBlur={() => fullName && setFieldError('fullName', validateFullName(fullName))}
+          error={errors.fullName}
           testID="register-full-name-input"
         />
         <AuthInput
@@ -124,31 +162,53 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
           placeholder="name@company.com"
           keyboardType="email-address"
           autoCapitalize="none"
+          autoComplete="email"
           value={email}
-          onChangeText={setEmail}
+          onChangeText={(text) => {
+            setEmail(text)
+            if (errors.email) setFieldError('email', null)
+          }}
+          onBlur={() => email && setFieldError('email', validateEmail(email))}
+          error={errors.email}
           testID="register-email-input"
         />
         <AuthInput
           leadingIcon={Lock}
-          placeholder="••••••••"
+          placeholder="Min. 8 chars, letters + numbers"
           isPassword
           value={password}
-          onChangeText={setPassword}
+          onChangeText={(text) => {
+            setPassword(text)
+            if (errors.password) setFieldError('password', null)
+          }}
+          onBlur={() => password && setFieldError('password', validatePassword(password))}
+          error={errors.password}
           testID="register-password-input"
         />
         <AuthInput
           leadingIcon={Lock}
-          placeholder="••••••••"
+          placeholder="Confirm password"
           isPassword
           value={confirmPassword}
-          onChangeText={setConfirmPassword}
+          onChangeText={(text) => {
+            setConfirmPassword(text)
+            if (errors.confirmPassword) setFieldError('confirmPassword', null)
+          }}
+          onBlur={() =>
+            confirmPassword &&
+            setFieldError('confirmPassword', validateConfirmPassword(password, confirmPassword))
+          }
+          error={errors.confirmPassword}
           testID="register-confirm-password-input"
         />
       </View>
 
       <Pressable
         style={styles.checkboxRow}
-        onPress={() => setAgreed((prev) => !prev)}
+        onPress={() => {
+          setAgreed((prev) => !prev)
+          if (agreedError) setAgreedError(null)
+        }}
         accessibilityRole="checkbox"
         accessibilityState={{ checked: agreed }}
         accessibilityLabel="Agree to Terms of Service and Privacy Policy"
@@ -162,13 +222,18 @@ export function RegisterForm({ loading, onSubmit, testID }: RegisterFormProps) {
           <Text style={styles.link}>Privacy Policy</Text>.
         </Text>
       </Pressable>
+      {agreedError && (
+        <Text style={styles.agreedErrorText} testID="register-agree-error">
+          {agreedError}
+        </Text>
+      )}
 
       <View style={styles.primaryButtonSpacing}>
         <ArrowPrimaryButton
           title="Create Account"
-          onPress={() => onSubmit({ fullName, email, password })}
+          onPress={handleSubmit}
           loading={loading}
-          disabled={!canSubmit}
+          disabled={loading}
           testID="register-create-account-button"
         />
       </View>

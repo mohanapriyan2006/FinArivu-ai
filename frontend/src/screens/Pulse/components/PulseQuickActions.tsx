@@ -36,8 +36,10 @@ export function PulseQuickActions({ actions, onAction, testID }: PulseQuickActio
             scale={0.96}
           >
             <View style={styles.chip}>
-              <Icon size={18} color={colors.primary} strokeWidth={2} />
-              <Text style={styles.label}>+ {action.label}</Text>
+              <View style={[styles.iconBox, { backgroundColor: colors.primaryBackground }]}>
+                <Icon size={16} color={colors.primary} strokeWidth={2.25} />
+              </View>
+              <Text style={styles.label}>{action.label}</Text>
             </View>
           </ScalePress>
         )
@@ -57,19 +59,26 @@ const makeStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingHorizontal: 16,
-      paddingVertical: 12,
-      borderRadius: 16,
+      paddingHorizontal: 14,
+      paddingVertical: 10,
+      borderRadius: 18,
       backgroundColor: colors.surface,
       borderWidth: 1,
       borderColor: colors.border,
       gap: 8,
       minWidth: 110,
     },
+    iconBox: {
+      width: 28,
+      height: 28,
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
     label: {
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.sm,
       fontWeight: Typography.fontWeights.semibold,
-      color: colors.primary,
+      color: colors.textPrimary,
     },
   })
