@@ -25,6 +25,8 @@ import {
   CreditCard,
   Banknote,
   RefreshCw,
+  FlaskConical,
+  ChevronRight,
 } from 'lucide-react-native'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
@@ -377,6 +379,51 @@ export default function HomeScreen() {
             </View>
           </View>
 
+          {/* Scenario Lab shortcut */}
+          <View style={styles.cardSpacing}>
+            <Pressable
+              onPress={() => navigation.navigate('ScenarioLab')}
+              accessibilityRole="button"
+              accessibilityLabel="Open Scenario Lab"
+            >
+              <GlassCard isDark={isDark}>
+                <View style={styles.scenarioRow}>
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      {
+                        backgroundColor: isDark
+                          ? 'rgba(14, 165, 233, 0.16)'
+                          : 'rgba(14, 165, 233, 0.10)',
+                      },
+                    ]}
+                  >
+                    <FlaskConical size={20} color="#0EA5E9" />
+                  </View>
+                  <View style={styles.scenarioTextWrap}>
+                    <Text
+                      style={[
+                        styles.cardTitle,
+                        { color: colors.textPrimary, marginLeft: 0 },
+                      ]}
+                    >
+                      What if…?
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardSubtitle,
+                        { color: colors.textSecondary, marginTop: 2 },
+                      ]}
+                    >
+                      Simulate income, purchases, retirement & more
+                    </Text>
+                  </View>
+                  <ChevronRight size={18} color={colors.textSecondary} />
+                </View>
+              </GlassCard>
+            </Pressable>
+          </View>
+
           <View style={styles.cardSpacing}>
             <GlassCard isDark={isDark}>
               <Text style={[styles.cardTitle, { color: colors.textPrimary }]}>
@@ -553,6 +600,14 @@ const styles = StyleSheet.create({
   },
   cardSpacing: {
     marginBottom: 16, // Strict spacing scale
+  },
+  scenarioRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  scenarioTextWrap: {
+    flex: 1,
   },
   cardTopRow: {
     flexDirection: 'row',

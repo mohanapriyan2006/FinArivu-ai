@@ -8,14 +8,28 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
+import Animated, { FadeInDown } from 'react-native-reanimated'
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native'
-import { ArrowLeft, History } from 'lucide-react-native'
+import {
+  ArrowLeft,
+  Bookmark,
+  FlaskConical,
+  History,
+} from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ThemeColors, Typography } from '@/theme'
 import { useScenarios } from '@/hooks/useScenarios'
-import { previewAction, executeAction, cancelAction } from '@/services/ActionService'
-import type { ActionOperation, ActionPreview, ActionResult } from '@/types/actions'
+import {
+  cancelAction,
+  executeAction,
+  previewAction,
+} from '@/services/ActionService'
+import type {
+  ActionOperation,
+  ActionPreview,
+  ActionResult,
+} from '@/types/actions'
 import type {
   ScenarioApplyAction,
   ScenarioHistoryItem,
@@ -31,17 +45,57 @@ import { ActionResultCard } from '@/components/actions/ActionResultCard'
 
 type LabRoute = RouteProp<RootStackParamList, 'ScenarioLab'>
 
+/** One-tap preset scenarios — real runs against server-side data. */
+const PRESETS = [
+  {
+    id: 'income-up',
+    label: 'Salary +10%',
+    scenarioType: 'INCOME_CHANGE',
+    parameters: { change_type: 'percent', change_value: 10 },
+  },
+  {
+    id: 'expense-down',
+    label: 'Expenses −10%',
+    scenarioType: 'EXPENSE_CHANGE',
+    parameters: { change_type: 'percent', change_value: -10 },
+  },
+  {
+    id: 'save-more',
+    label: 'Save ₹5k/mo more',
+    scenarioType: 'MONTHLY_SAVINGS_CHANGE',
+    parameters: { change_amount: 5000 },
+  },
+  {
+    id: 'purchase',
+    label: '₹75k purchase',
+    scenarioType: 'PURCHASE',
+    parameters: { purchase_amount: 75000, item_name: 'Purchase' },
+  },
+  {
+    id: 'retire-early',
+    label: 'Retire at 50',
+    scenarioType: 'RETIREMENT_AGE_CHANGE',
+    parameters: { new_retirement_age: 50 },
+  },
+  {
+    id: 'inflation',
+    label: 'Inflation 8%',
+    scenarioType: 'INFLATION_CHANGE',
+    parameters: { new_inflation_rate: 0.08 },
+  },
+] as const
+
 /**
  * Scenario Lab — deterministic what-if simulations on real user data.
  * Running a scenario never mutates records; applying a change routes
  * through the Phase 1 action preview + explicit user confirmation.
  */
 export default function ScenarioLabScreen() {
-  const { colors } = useTheme()
+  const { colors, isDark } = useTheme()
   const insets = useSafeAreaInsets()
   const navigation = useNavigation()
   const route = useRoute<LabRoute>()
-  const styles = useMemo(() => makeStyles(colors), [colors])
+  const styles = useMemo(() => makeStyles(colors, isDark), [colors, isDark])
 
   const scenarios = useScenarios()
   const [types, setTypes] = useState<ScenarioTypeInfo[]>([])
@@ -57,6 +111,7 @@ export default function ScenarioLabScreen() {
     scenarioType: string
     parameters: Record<string, unknown>
   } | null>(null)
+  const [activePreset, setActivePreset] = useState<string | null>(null)
 
   useEffect(() => {
     scenarios
@@ -87,6 +142,23 @@ export default function ScenarioLabScreen() {
     scenarios.state.kind === 'saved'
       ? scenarios.state.result
       : null
+
+  const runScenario = useCallback(
+    (scenarioType: string, parameters: Record<string, unknown>) => {
+      setActionPreview(null)
+      setActionResult(null)
+      setLastRun({ scenarioType, parameters })
+      scenarios.run({ scenarioType, parameters })
+    },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [],
+  )
+
+  const handlePreset = (preset: (typeof PRESETS)[number]) => {
+    setActivePreset(preset.id)
+    setSelected(preset.scenarioType)
+    runScenario(preset.scenarioType, { ...preset.parameters })
+  }
 
   const handleApply = useCallback(async (apply: ScenarioApplyAction) => {
     // Bridge into Phase 1 — server-validated preview + explicit confirm.
@@ -119,11 +191,11 @@ export default function ScenarioLabScreen() {
       <View style={styles.header}>
         <Pressable
           onPress={() => navigation.goBack()}
-          style={styles.back}
+          style={styles.headerButton}
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <ArrowLeft size={24} color={colors.textPrimary} />
+          <ArrowLeft size={22} color={colors.textPrimary} />
         </Pressable>
         <Text style={[styles.title, { color: colors.textHero }]}>
           Scenario Lab
@@ -133,7 +205,7 @@ export default function ScenarioLabScreen() {
             setHistoryOpen(true)
             refreshHistory()
           }}
-          style={styles.back}
+          style={styles.headerButton}
           accessibilityRole="button"
           accessibilityLabel="Scenario history"
         >
@@ -148,30 +220,81 @@ export default function ScenarioLabScreen() {
         }}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={styles.caption}>
-          Explore what-if changes on your real data — simulations never modify
-          anything.
-        </Text>
+        {/* Hero */}
+        <Animated.View
+          entering={FadeInDown.duration(400).delay(60)}
+          style={styles.hero}
+        >
+          <View style={styles.heroIconRing}>
+            <View style={styles.heroIcon}>
+              <FlaskConical size={26} color={colors.onPrimary} strokeWidth={2.2} />
+            </View>
+          </View>
+          <Text style={styles.heroTitle}>Explore what-if scenarios</Text>
+          <Text style={styles.heroSubtitle}>
+            Run deterministic simulations on your real data — nothing changes
+            until you explicitly confirm it.
+          </Text>
+        </Animated.View>
 
-        <ScenarioTypeSelector
-          types={types}
-          selected={selected}
-          onSelect={setSelected}
-        />
+        {/* One-tap presets */}
+        <Animated.View entering={FadeInDown.duration(400).delay(140)}>
+          <Text style={styles.sectionLabel}>TRY A SCENARIO</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.presetRow}
+          >
+            {PRESETS.map((preset) => {
+              const active = preset.id === activePreset && running
+              return (
+                <Pressable
+                  key={preset.id}
+                  style={[styles.presetChip, active && styles.presetChipActive]}
+                  onPress={() => handlePreset(preset)}
+                  accessibilityRole="button"
+                  accessibilityLabel={preset.label}
+                >
+                  {active ? (
+                    <ActivityIndicator size={12} color={colors.onPrimary} />
+                  ) : null}
+                  <Text
+                    style={[
+                      styles.presetText,
+                      active && styles.presetTextActive,
+                    ]}
+                  >
+                    {preset.label}
+                  </Text>
+                </Pressable>
+              )
+            })}
+          </ScrollView>
+        </Animated.View>
 
-        <ScenarioInputForm
-          type={selectedType}
-          submitting={running}
-          onRun={(parameters) => {
-            if (!selected) return
-            setActionPreview(null)
-            setActionResult(null)
-            setLastRun({ scenarioType: selected, parameters })
-            scenarios.run({ scenarioType: selected, parameters })
-          }}
-        />
+        {/* Custom scenario builder */}
+        <Animated.View entering={FadeInDown.duration(400).delay(220)}>
+          <Text style={styles.sectionLabel}>BUILD YOUR OWN</Text>
+          <ScenarioTypeSelector
+            types={types}
+            selected={selected}
+            onSelect={(t) => {
+              setSelected(t)
+              setActivePreset(null)
+            }}
+          />
+          <ScenarioInputForm
+            type={selectedType}
+            submitting={running}
+            onRun={(parameters) => {
+              if (!selected) return
+              setActivePreset(null)
+              runScenario(selected, parameters)
+            }}
+          />
+        </Animated.View>
 
-        {running && (
+        {running && !result && (
           <ActivityIndicator
             size="small"
             color={colors.primary}
@@ -184,35 +307,50 @@ export default function ScenarioLabScreen() {
         )}
 
         {result && (
-          <>
+          <Animated.View entering={FadeInDown.duration(350)}>
+            <Text style={styles.sectionLabel}>RESULT</Text>
             <ScenarioResultCard result={result} onApply={handleApply} />
-            {result.status === 'COMPUTED' && !result.scenarioId && lastRun && (
-              <Pressable
-                style={styles.saveButton}
-                onPress={() =>
-                  scenarios.save({
-                    scenarioType: lastRun.scenarioType,
-                    parameters: lastRun.parameters,
-                    title: result.title,
-                  })
-                }
-                accessibilityRole="button"
-                accessibilityLabel="Save scenario"
-              >
-                <Text style={styles.saveText}>Save scenario</Text>
-              </Pressable>
-            )}
-          </>
+            {result.status === 'COMPUTED' &&
+              !result.scenarioId &&
+              lastRun && (
+                <Pressable
+                  style={styles.saveButton}
+                  onPress={() =>
+                    scenarios.save({
+                      scenarioType: lastRun.scenarioType,
+                      parameters: lastRun.parameters,
+                      title: result.title,
+                    })
+                  }
+                  accessibilityRole="button"
+                  accessibilityLabel="Save scenario"
+                >
+                  <Bookmark size={13} color={colors.primary} />
+                  <Text style={styles.saveText}>Save to history</Text>
+                </Pressable>
+              )}
+          </Animated.View>
+        )}
+
+        {scenarios.state.kind === 'saved' && (
+          <Text style={styles.savedNote}>Saved to your scenario history.</Text>
         )}
 
         {actionPreview && !actionResult && (
-          <ActionPreviewCard
-            preview={actionPreview}
-            onConfirm={handleConfirmAction}
-            onCancel={handleCancelAction}
-          />
+          <Animated.View entering={FadeInDown.duration(300)}>
+            <Text style={styles.sectionLabel}>CONFIRM CHANGE</Text>
+            <ActionPreviewCard
+              preview={actionPreview}
+              onConfirm={handleConfirmAction}
+              onCancel={handleCancelAction}
+            />
+          </Animated.View>
         )}
-        {actionResult && <ActionResultCard result={actionResult} />}
+        {actionResult && (
+          <Animated.View entering={FadeInDown.duration(300)}>
+            <ActionResultCard result={actionResult} />
+          </Animated.View>
+        )}
       </ScrollView>
 
       <ScenarioHistorySheet
@@ -237,42 +375,129 @@ export default function ScenarioLabScreen() {
   )
 }
 
-const makeStyles = (colors: ThemeColors) =>
+const makeStyles = (colors: ThemeColors, isDark: boolean) =>
   StyleSheet.create({
     container: { flex: 1 },
     header: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
-      paddingHorizontal: 20,
-      paddingVertical: 12,
+      paddingHorizontal: 16,
+      paddingVertical: 10,
     },
-    back: {
+    headerButton: {
       width: 44,
       height: 44,
       alignItems: 'center',
       justifyContent: 'center',
+      borderRadius: 22,
     },
     title: {
       ...Typography.titleSmall,
       fontSize: 18,
       fontWeight: '700',
     },
-    caption: {
+    hero: {
+      alignItems: 'center',
+      paddingVertical: 20,
+      paddingHorizontal: 12,
+    },
+    heroIconRing: {
+      width: 72,
+      height: 72,
+      borderRadius: 36,
+      backgroundColor: isDark
+        ? 'rgba(91, 78, 250, 0.18)'
+        : 'rgba(91, 78, 250, 0.10)',
+      alignItems: 'center',
+      justifyContent: 'center',
+      borderWidth: 1,
+      borderColor: isDark
+        ? 'rgba(91, 78, 250, 0.4)'
+        : 'rgba(91, 78, 250, 0.25)',
+    },
+    heroIcon: {
+      width: 52,
+      height: 52,
+      borderRadius: 26,
+      backgroundColor: colors.primary,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: colors.primary,
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.3,
+      shadowRadius: 8,
+      elevation: 5,
+    },
+    heroTitle: {
+      ...Typography.titleSmall,
+      color: colors.textHero,
+      fontSize: 19,
+      fontWeight: '800',
+      marginTop: 14,
+      textAlign: 'center',
+    },
+    heroSubtitle: {
       ...Typography.bodyMedium,
       color: colors.textSecondary,
       fontSize: 13,
-      marginBottom: 10,
+      lineHeight: 19,
+      textAlign: 'center',
+      marginTop: 6,
+      maxWidth: 320,
     },
-    loader: { marginTop: 16 },
+    sectionLabel: {
+      ...Typography.labelSmall,
+      color: colors.textTertiary,
+      fontSize: 11,
+      fontWeight: '700',
+      letterSpacing: 0.9,
+      marginTop: 18,
+      marginBottom: 8,
+      textTransform: 'uppercase',
+    },
+    presetRow: {
+      flexDirection: 'row',
+      gap: 8,
+      paddingRight: 16,
+      paddingVertical: 2,
+    },
+    presetChip: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      paddingHorizontal: 14,
+      paddingVertical: 9,
+    },
+    presetChipActive: {
+      backgroundColor: colors.primary,
+      borderColor: colors.primary,
+    },
+    presetText: {
+      ...Typography.labelSmall,
+      color: colors.textPrimary,
+      fontSize: 12,
+      fontWeight: '600',
+    },
+    presetTextActive: {
+      color: colors.onPrimary,
+    },
+    loader: { marginTop: 20 },
     error: {
       ...Typography.bodyMedium,
       color: colors.danger,
       fontSize: 13,
-      marginTop: 12,
+      marginTop: 14,
     },
     saveButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
       alignSelf: 'flex-start',
+      gap: 6,
       marginTop: 10,
       borderWidth: 1,
       borderColor: colors.border,
@@ -286,5 +511,11 @@ const makeStyles = (colors: ThemeColors) =>
       color: colors.primary,
       fontWeight: '700',
       fontSize: 12,
+    },
+    savedNote: {
+      ...Typography.labelSmall,
+      color: colors.success,
+      fontSize: 11,
+      marginTop: 8,
     },
   })

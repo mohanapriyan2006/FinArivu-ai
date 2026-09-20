@@ -33,6 +33,7 @@ import {
   Plus,
   Landmark,
   MoreHorizontal,
+  FlaskConical,
 } from 'lucide-react-native'
 
 export interface PulseViewModelInput {
@@ -537,6 +538,7 @@ export const QUICK_ACTIONS: PulseQuickAction[] = [
   { id: 'add-expense', label: 'Expense', icon: Plus, route: 'PulseSectionCreate', params: { section: 'expenses' } },
   { id: 'add-goal', label: 'Goal', icon: Target, route: 'PulseSectionCreate', params: { section: 'goals' } },
   { id: 'add-investment', label: 'Investment', icon: TrendingUp, route: 'PulseSectionCreate', params: { section: 'investments' } },
+  { id: 'what-if', label: 'What-If', icon: FlaskConical, route: 'ScenarioLab' },
   { id: 'more', label: 'More', icon: MoreHorizontal, route: '__more__' },
 ]
 

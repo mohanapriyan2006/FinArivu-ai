@@ -11,7 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
-import { Bell } from 'lucide-react-native'
+import { Bell, FlaskConical } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useInsights } from './useInsights'
@@ -210,14 +210,24 @@ export default function InsightsHubScreen() {
 
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.primary }]}>Insights</Text>
-        <Pressable
-          onPress={handleNotifications}
-          style={styles.bellButton}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-        >
-          <Bell size={22} color={colors.textPrimary} strokeWidth={2} />
-        </Pressable>
+        <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => navigation.navigate('ScenarioLab')}
+            style={styles.bellButton}
+            accessibilityRole="button"
+            accessibilityLabel="Open Scenario Lab"
+          >
+            <FlaskConical size={20} color={colors.textPrimary} strokeWidth={2} />
+          </Pressable>
+          <Pressable
+            onPress={handleNotifications}
+            style={styles.bellButton}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+          >
+            <Bell size={22} color={colors.textPrimary} strokeWidth={2} />
+          </Pressable>
+        </View>
       </View>
 
       {content()}
@@ -241,6 +251,10 @@ const makeStyles = (colors: ThemeColors) =>
       fontFamily: Typography.fontFamily,
       fontSize: Typography.sizes.xl,
       fontWeight: Typography.fontWeights.bold,
+    },
+    headerActions: {
+      flexDirection: 'row',
+      alignItems: 'center',
     },
     bellButton: {
       width: 44,
