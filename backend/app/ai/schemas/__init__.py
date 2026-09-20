@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from app.ai.schemas.copilot import (
+    ActionType,
     AgentResult,
     Artifact,
     ChatMetadata,
@@ -23,26 +24,19 @@ from app.ai.schemas.copilot import (
     SuggestedAction,
 )
 from app.ai.schemas.orchestration import (
-    AgentRequest,
-    AgentResponse,
-    Artifact,
-    ChatResponse,
-    ConversationSummary,
     ExecutionPlan,
     ExecutionStep,
     FinancialContext,
+    GuardrailChatResponse,
     IntentEnum,
     IntentResult,
 )
 
 __all__ = [
-    "AgentRequest",
-    "AgentResponse",
+    "ActionType",
     "AgentResult",
     "Artifact",
     "ChatMetadata",
-    "ChatResponse",
-    "ConversationSummary",
     "CopilotAttachment",
     "CopilotChatRequest",
     "CopilotChatResponse",
@@ -54,6 +48,7 @@ __all__ = [
     "ExecutionStep",
     "FinancialContext",
     "FollowUpQuestion",
+    "GuardrailChatResponse",
     "IntentEnum",
     "IntentResult",
     "PlannerOutput",

@@ -8,6 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
+from app.ai.intents import to_internal_intent
 from app.ai.schemas.copilot import ResponseType
 from app.ai.schemas import AgentResult
 from app.ai.schemas.orchestration import IntentEnum
@@ -31,7 +32,7 @@ class ResponseDecisionEngine:
 
     _INTENT_ARTIFACT: dict[IntentEnum, str] = {
         IntentEnum.BUDGET: "budget_card",
-        IntentEnum.EXPENSE: "expense_card",
+        IntentEnum.EXPENSE: "budget_card",
         IntentEnum.GOAL: "goal_card",
         IntentEnum.HEALTH: "health_card",
         IntentEnum.TAX: "tax_card",
@@ -53,26 +54,10 @@ class ResponseDecisionEngine:
         IntentEnum.REPORT: "ReportAgent",
     }
 
-    _COPILOT_TO_INTERNAL: dict[str, IntentEnum] = {
-        "budget_analysis": IntentEnum.BUDGET,
-        "goal_tracking": IntentEnum.GOAL,
-        "retirement_planning": IntentEnum.RETIREMENT,
-        "tax_planning": IntentEnum.TAX,
-        "health_score": IntentEnum.HEALTH,
-        "net_worth": IntentEnum.NETWORTH,
-        "report_summary": IntentEnum.REPORT,
-        "education": IntentEnum.EDUCATION,
-    }
-
-    @classmethod
-    def _to_intent_enum(cls, intent: str | IntentEnum) -> IntentEnum:
+    @staticmethod
+    def _to_intent_enum(intent: str | IntentEnum) -> IntentEnum:
         """Convert an API intent string or enum into the internal IntentEnum."""
-        if isinstance(intent, IntentEnum):
-            return intent
-        try:
-            return IntentEnum(intent)
-        except ValueError:
-            return cls._COPILOT_TO_INTERNAL.get(intent, IntentEnum.GENERAL)
+        return to_internal_intent(intent)
 
     def decide(
         self,
@@ -99,10 +84,15 @@ class ResponseDecisionEngine:
         if main_agent:
             result = by_name.get(main_agent)
             if not result or result.error or self._is_data_missing(result.data):
+                missing = (
+                    (result.data or {}).get("missingFields")
+                    if result is not None
+                    else None
+                )
                 return ResponseDecision(
                     response_type=ResponseType.CLARIFICATION,
                     missing_data=True,
-                    missing_fields=self._missing_fields(intent),
+                    missing_fields=missing or self._missing_fields(intent),
                 )
 
         artifact_type = self._INTENT_ARTIFACT.get(intent)
@@ -118,11 +108,15 @@ class ResponseDecisionEngine:
 
     @staticmethod
     def _is_data_missing(data: dict | None) -> bool:
-        """Heuristic: data is missing when it's empty or all key numbers are zero."""
+        """Detect missing data: explicit flag, empty payload, or all-zero numbers."""
         if not data:
             return True
-        numeric = [v for v in data.values() if isinstance(v, (int, float))]
-        return all(v == 0 for v in numeric) and not any(isinstance(v, str) and v for v in data.values())
+        if data.get("dataMissing"):
+            return True
+        numeric = [v for v in data.values() if isinstance(v, (int, float)) and not isinstance(v, bool)]
+        return bool(numeric) and all(v == 0 for v in numeric) and not any(
+            isinstance(v, str) and v for v in data.values()
+        )
 
     @staticmethod
     def _missing_fields(intent: IntentEnum) -> list[str]:
@@ -149,16 +143,19 @@ class ResponseDecisionEngine:
             return bool(data.get("overspendingCategories"))
         if intent == IntentEnum.GOAL:
             data = by_name.get("GoalAgent", AgentResult(agent_name="GoalAgent")).data or {}
-            return data.get("status") in {"behind", "at_risk"}
+            return any(
+                isinstance(g, dict) and g.get("status") in {"behind", "at_risk"}
+                for g in data.get("goals", [])
+            )
         if intent == IntentEnum.HEALTH:
             data = by_name.get("HealthAgent", AgentResult(agent_name="HealthAgent")).data or {}
             return (data.get("overallScore") or 0) < 70
         if intent == IntentEnum.TAX:
             data = by_name.get("TaxAgent", AgentResult(agent_name="TaxAgent")).data or {}
-            return data.get("better_regime") is not None
+            return bool(data.get("betterRegime"))
         if intent == IntentEnum.RETIREMENT:
             data = by_name.get("RetirementAgent", AgentResult(agent_name="RetirementAgent")).data or {}
-            return data.get("corpusRequired") is not None
+            return bool(data.get("retirementCorpus"))
         if intent == IntentEnum.MIXED:
             return True
         return False

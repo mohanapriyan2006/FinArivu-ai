@@ -1,9 +1,11 @@
-"""Main CopilotService — the top-level orchestrator.
+"""CopilotService — legacy copilot orchestrator (superseded).
 
-Implements the full chat flow:
-    User Message → JWT Auth → Load Profile → Load History →
-    Guardrails → AI Planner → Agent Executor → Response Builder →
-    Persist → Return/Stream
+.. deprecated::
+    ``chat``/``chat_stream`` implement the old rule-based pipeline
+    (``AIPlannerService`` → ``AgentExecutor``). The live endpoint path is
+    ``AIController`` → ``ControllerService`` (Phi-4 controller + orchestrator).
+    Only the session/history/health helpers here are still exercised via
+    ``CopilotController``. Kept for backwards compatibility and tests.
 """
 
 from __future__ import annotations

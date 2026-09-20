@@ -10,6 +10,10 @@ from app.core.logger import logger
 class IntentClassifier:
     """Lightweight rule-based intent classifier with optional LLM fallback.
 
+    .. deprecated::
+        The live path uses the Phi-4 controller for intent. This rule-based
+        classifier is retained as a possible offline fallback.
+
     Step 1: keyword/regex rules determine the primary intent and confidence.
     Step 2: if confidence is low, a small LLM call may be used to resolve it.
     """

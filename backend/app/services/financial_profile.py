@@ -584,6 +584,9 @@ class FinancialProfileService:
             "general_savings": float(totals["general"]),
             "goal_savings": float(totals["goal"]),
             "total": float(sum(totals.values(), Decimal("0"))),
+            # Number of recorded cash/bank assets — distinguishes
+            # "no savings recorded" from "recorded zero savings".
+            "asset_count": len(assets),
         }
 
     @staticmethod

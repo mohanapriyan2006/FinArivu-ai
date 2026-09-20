@@ -5,7 +5,7 @@ from typing import Any
 
 from app.ai.agents.base_agent import BaseSpecialistAgent
 from app.ai.schemas import AgentResult
-from app.engines.networth_engine import calculate_net_worth
+from app.ai.tools.financial_tools import get_net_worth
 
 
 class NetWorthAgent(BaseSpecialistAgent):
@@ -20,33 +20,21 @@ class NetWorthAgent(BaseSpecialistAgent):
         user_id: uuid.UUID,
         context: dict[str, Any],
     ) -> AgentResult:
-        financial_context = context.get("financial_context", {})
-        assets = financial_context.get("assets", []) if isinstance(financial_context, dict) else []
-        liabilities = financial_context.get("liabilities", []) if isinstance(financial_context, dict) else []
+        data = await get_net_worth(self._session, user_id)
 
-        result = calculate_net_worth(assets, liabilities)
+        total_assets = float(data.get("totalAssets", 0))
+        total_liabilities = float(data.get("totalLiabilities", 0))
+        net_worth = float(data.get("netWorth", 0))
 
         summary = (
-            f"Total assets: ₹{float(result.total_assets):,.0f}; "
-            f"Total liabilities: ₹{float(result.total_liabilities):,.0f}; "
-            f"Net worth: ₹{float(result.net_worth):,.0f}"
+            f"Total assets: ₹{total_assets:,.0f}; "
+            f"Total liabilities: ₹{total_liabilities:,.0f}; "
+            f"Net worth: ₹{net_worth:,.0f}"
         )
 
         return AgentResult(
             agent_name=self.agent_name,
-            data={
-                "total_assets": float(result.total_assets),
-                "total_liabilities": float(result.total_liabilities),
-                "net_worth": float(result.net_worth),
-                "asset_breakdown": {
-                    k: float(v) for k, v in result.asset_breakdown.items()
-                },
-                "liability_breakdown": {
-                    k: float(v) for k, v in result.liability_breakdown.items()
-                },
-                "asset_count": result.asset_count,
-                "liability_count": result.liability_count,
-            },
+            data=data,
             summary=summary,
             confidence=1.0,
         )

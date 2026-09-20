@@ -61,8 +61,8 @@ def test_simulation_expenses_percent_decrease():
 def test_recommendation_engine_overspending():
     result = RecommendationEngine.generate({
         "BudgetAgent": {
-            "overspending_categories": [
-                {"category": "Food", "spent": 15000, "limit": 10000},
+            "overspendingCategories": [
+                {"categoryName": "Food", "spent": 15000, "overspend": 5000},
             ],
         },
     })
@@ -73,7 +73,7 @@ def test_recommendation_engine_overspending():
 
 def test_recommendation_engine_low_health_score():
     result = RecommendationEngine.generate({
-        "HealthAgent": {"overall_score": 50},
+        "HealthAgent": {"overallScore": 50},
     })
     assert any(r.category == "emergency" for r in result.recommendations)
 
@@ -81,7 +81,7 @@ def test_recommendation_engine_low_health_score():
 def test_recommendation_engine_goal_behind():
     result = RecommendationEngine.generate({
         "GoalAgent": {
-            "goals": [{"name": "Vacation", "progress": 30}],
+            "goals": [{"goalId": "g1", "completionPercentage": 30}],
         },
     })
     assert any(r.category == "goals" for r in result.recommendations)
@@ -90,8 +90,8 @@ def test_recommendation_engine_goal_behind():
 def test_recommendation_engine_tax_savings():
     result = RecommendationEngine.generate({
         "TaxAgent": {
-            "savings_vs_other_regime": 15000,
-            "recommended_regime": "old",
+            "savings": 15000,
+            "betterRegime": "old",
         },
     })
     assert any(r.category == "tax" for r in result.recommendations)
@@ -99,7 +99,7 @@ def test_recommendation_engine_tax_savings():
 
 def test_recommendation_engine_low_savings_rate():
     result = RecommendationEngine.generate({
-        "CashFlowAgent": {"savings_rate": 0.1},
+        "CashFlowAgent": {"savingsRate": 0.1},
     })
     assert any(r.category == "savings" for r in result.recommendations)
 
@@ -112,8 +112,8 @@ def test_recommendation_engine_empty_inputs():
 
 def test_recommendation_engine_priority_summary():
     result = RecommendationEngine.generate({
-        "BudgetAgent": {"overspending_categories": [{"category": "Food"}]},
-        "HealthAgent": {"overall_score": 50},
+        "BudgetAgent": {"overspendingCategories": [{"categoryName": "Food"}]},
+        "HealthAgent": {"overallScore": 50},
     })
     assert "high" in result.priority_summary
     assert result.priority_summary["high"] >= 2

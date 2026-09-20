@@ -4,12 +4,16 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.financial.schemas import BudgetAnalysis
+from app.schemas.financial import BudgetAnalysisResponse
 from app.services.financial import FinancialService
 
 
 class BudgetEngine:
-    """Deterministic budget analysis engine."""
+    """Deterministic budget analysis engine.
+
+    Returns the canonical ``BudgetAnalysisResponse`` so tool payloads keep the
+    same camelCase contract the agents and frontend cards consume.
+    """
 
     @staticmethod
     async def analyze(
@@ -18,7 +22,6 @@ class BudgetEngine:
         *,
         year: int | None = None,
         month: int | None = None,
-    ) -> BudgetAnalysis:
+    ) -> BudgetAnalysisResponse:
         svc = FinancialService(session)
-        result = await svc.analyze_budget(user_id, year=year, month=month)
-        return BudgetAnalysis(**result.model_dump())
+        return await svc.analyze_budget(user_id, year=year, month=month)

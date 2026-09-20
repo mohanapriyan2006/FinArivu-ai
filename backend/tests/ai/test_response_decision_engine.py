@@ -62,7 +62,7 @@ def test_goal_behind_is_actionable(engine: ResponseDecisionEngine) -> None:
     results = [
         AgentResult(
             agent_name="GoalAgent",
-            data={"goal_name": "House", "status": "behind", "monthly_required": 15000},
+            data={"goals": [{"status": "behind", "monthlyContribution": 15000}]},
         )
     ]
     decision = engine.decide(IntentEnum.GOAL, results)

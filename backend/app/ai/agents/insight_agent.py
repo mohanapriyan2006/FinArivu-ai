@@ -23,12 +23,12 @@ class InsightAgent(BaseSpecialistAgent):
         if hasattr(financial_context, "model_dump"):
             financial_context = financial_context.model_dump()
 
-        profile = financial_context.get("profile", {})
-        goals = financial_context.get("goals", [])
-        assets = financial_context.get("assets", [])
-        liabilities = financial_context.get("liabilities", [])
-        income = financial_context.get("income", [])
-        expenses = financial_context.get("expenses", [])
+        goals = financial_context.get("goals", []) or []
+        assets = financial_context.get("assets", []) or []
+        liabilities = financial_context.get("liabilities", []) or []
+        # income / expenses are aggregate dicts, not record lists.
+        income = financial_context.get("income", {}) or {}
+        expenses = financial_context.get("expenses", {}) or {}
 
         insights: list[str] = []
 
@@ -42,10 +42,10 @@ class InsightAgent(BaseSpecialistAgent):
             net_worth = total_assets - total_liabilities
             insights.append(f"Your net worth is ₹{net_worth:,.0f} across {len(assets)} asset(s) and {len(liabilities)} liability(ies).")
 
-        if income and expenses:
-            total_income = sum(float(i.get("amount", 0) or 0) for i in income)
-            total_expense = sum(float(e.get("amount", 0) or 0) for e in expenses)
-            surplus = total_income - total_expense
+        monthly_income = income.get("monthly_take_home")
+        monthly_expenses = expenses.get("monthly_estimate")
+        if monthly_income is not None and monthly_expenses is not None:
+            surplus = float(monthly_income) - float(monthly_expenses)
             if surplus > 0:
                 insights.append(f"You have a monthly surplus of ₹{surplus:,.0f}.")
             else:
@@ -60,27 +60,41 @@ class InsightAgent(BaseSpecialistAgent):
         if liabilities:
             follow_ups.append("Should I repay debt faster?")
 
+        # Canonical SuggestedAction dicts — serialise cleanly into the
+        # SuggestedAction schema (camelCase keys, canonical route targets).
         suggested_actions = [
-            {"label": "Review Budget", "action": "view_budget", "route": "/budget"},
-            {"label": "Improve Savings", "action": "improve_savings", "route": "/savings"},
-            {"label": "View Cash Flow", "action": "view_cash_flow", "route": "/cashflow"},
+            {"id": "review_budget", "label": "Review Budget", "type": "NAVIGATE",
+             "route": "budget", "payload": {}, "enabled": True},
+            {"id": "improve_savings", "label": "Improve Savings", "type": "NAVIGATE",
+             "route": "savings", "payload": {}, "enabled": True},
+            {"id": "view_cash_flow", "label": "View Cash Flow", "type": "NAVIGATE",
+             "route": "pulse", "payload": {}, "enabled": True},
         ]
         if goals:
-            suggested_actions.append({"label": "Update Goals", "action": "view_goals", "route": "/goals"})
+            suggested_actions.append({"id": "update_goals", "label": "Update Goals",
+                                      "type": "NAVIGATE", "route": "goals",
+                                      "payload": {}, "enabled": True})
         if liabilities:
-            suggested_actions.append({"label": "Repay Debt Faster", "action": "repay_debt", "route": "/liabilities"})
+            suggested_actions.append({"id": "repay_debt", "label": "Repay Debt Faster",
+                                      "type": "NAVIGATE", "route": "loans",
+                                      "payload": {}, "enabled": True})
         if assets:
-            suggested_actions.append({"label": "View Net Worth", "action": "view_networth", "route": "/networth"})
+            suggested_actions.append({"id": "view_investments", "label": "View Investments",
+                                      "type": "NAVIGATE", "route": "investments",
+                                      "payload": {}, "enabled": True})
 
-        # Cap at the requested maximum of 6 actions.
         suggested_actions = suggested_actions[:6]
 
         return AgentResult(
             agent_name=self.agent_name,
             data={
                 "insights": insights,
-                "follow_up_questions": [{"text": q} for q in follow_ups[:5]],
-                "suggested_actions": suggested_actions[:6],
+                # Canonical FollowUpQuestion dicts.
+                "followUpQuestions": [
+                    {"label": q, "type": "CHAT_FOLLOWUP", "payload": {"question": q}}
+                    for q in follow_ups[:5]
+                ],
+                "suggestedActions": suggested_actions,
             },
             summary="; ".join(insights) if insights else "No insights available.",
             confidence=1.0,

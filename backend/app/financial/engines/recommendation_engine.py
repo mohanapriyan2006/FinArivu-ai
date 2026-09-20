@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import uuid
 from collections import Counter
 from typing import Any
 
@@ -8,18 +7,22 @@ from app.financial.schemas import Recommendation, RecommendationResult
 
 
 class RecommendationEngine:
-    """Deterministic recommendation engine built from engine outputs."""
+    """Deterministic recommendation engine built from engine outputs.
+
+    Engine outputs arrive as camelCase model dumps (the canonical tool/agent
+    payload contract), so keys here match the API schema aliases.
+    """
 
     @staticmethod
     def generate(engine_outputs: dict[str, Any]) -> RecommendationResult:
         recommendations: list[Recommendation] = []
 
         budget = engine_outputs.get("BudgetAgent", {})
-        if budget and budget.get("overspending_categories"):
-            for cat in budget["overspending_categories"][:3]:
+        if budget and budget.get("overspendingCategories"):
+            for cat in budget["overspendingCategories"][:3]:
                 recommendations.append(
                     Recommendation(
-                        title=f"Reduce {cat.get('category', 'overspending')}",
+                        title=f"Reduce {cat.get('categoryName', 'overspending')}",
                         description="You are over budget in this category. Set a stricter limit next month.",
                         category="budget",
                         priority="high",
@@ -27,7 +30,7 @@ class RecommendationEngine:
                 )
 
         health = engine_outputs.get("HealthAgent", {})
-        if health and health.get("overall_score", 0) < 70:
+        if health and float(health.get("overallScore", 0)) < 70:
             recommendations.append(
                 Recommendation(
                     title="Build emergency fund",
@@ -40,10 +43,10 @@ class RecommendationEngine:
         goal = engine_outputs.get("GoalAgent", {})
         if goal:
             for g in goal.get("goals", []):
-                if isinstance(g, dict) and g.get("progress", 0) < 50:
+                if isinstance(g, dict) and float(g.get("completionPercentage", 0)) < 50:
                     recommendations.append(
                         Recommendation(
-                            title=f"Catch up on {g.get('name', 'goal')}",
+                            title="Catch up on a goal",
                             description="Your goal is behind track. Consider increasing monthly contributions.",
                             category="goals",
                             priority="medium",
@@ -51,18 +54,18 @@ class RecommendationEngine:
                     )
 
         tax = engine_outputs.get("TaxAgent", {})
-        if tax and tax.get("savings_vs_other_regime", 0) > 0:
+        if tax and float(tax.get("savings", 0)) > 0:
             recommendations.append(
                 Recommendation(
                     title="Review tax regime",
-                    description=f"Switching to the {tax.get('recommended_regime', 'recommended')} regime could save you money.",
+                    description=f"Switching to the {tax.get('betterRegime', 'recommended')} regime could save you money.",
                     category="tax",
                     priority="medium",
                 )
             )
 
         cash_flow = engine_outputs.get("CashFlowAgent", {})
-        if cash_flow and cash_flow.get("savings_rate", 0) < 0.2:
+        if cash_flow and float(cash_flow.get("savingsRate", 0)) < 0.2:
             recommendations.append(
                 Recommendation(
                     title="Increase savings rate",

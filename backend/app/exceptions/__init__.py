@@ -55,6 +55,21 @@ class BusinessRuleError(FinArivuException):
     error_code = "BUSINESS_RULE_ERROR"
 
 
+class InsufficientDataError(FinArivuException):
+    """A deterministic engine cannot compute because required user data is absent.
+
+    Agents catch this and convert it into a missing-data result so the
+    response layer asks the user for the data instead of inventing values.
+    """
+
+    status_code = 422
+    error_code = "INSUFFICIENT_DATA"
+
+    def __init__(self, message: str, missing_fields: list[str] | None = None) -> None:
+        super().__init__(message)
+        self.missing_fields = missing_fields or []
+
+
 class ExternalServiceError(FinArivuException):
     status_code = 502
     error_code = "EXTERNAL_SERVICE_ERROR"

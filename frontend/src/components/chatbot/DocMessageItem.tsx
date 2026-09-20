@@ -15,60 +15,33 @@ try {
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { ThemeColors, Typography } from '@/theme'
+import type {
+  ChatArtifact,
+  ChatMessageItemData,
+  SuggestedAction,
+} from '@/types/copilot'
 import {
   BudgetArtifactCard,
+  CashFlowArtifactCard,
   GoalArtifactCard,
   HealthArtifactCard,
+  InsightArtifactCard,
+  NetWorthArtifactCard,
+  ReportArtifactCard,
   RetirementArtifactCard,
   TaxArtifactCard,
+  type ArtifactPayload,
 } from './ArtifactCards'
 import { FollowUpChips } from './FollowUpChips'
 import { MarkdownMessage } from './MarkdownMessage'
 
-export interface ChatArtifact {
-  type: string
-  title: string
-  content: Record<string, any>
-}
-
-export interface ChatFollowUp {
-  label: string
-  type?: string
-  payload?: Record<string, any>
-}
-
-export interface SuggestedAction {
-  id: string
-  label: string
-  type: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
-  payload?: Record<string, any>
-  enabled?: boolean
-  route?: string
-}
-
-export interface ChatMessageAttachment {
-  filename: string
-  mimeType?: string
-}
-
-export interface ChatMessageItemData {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  attachments?: ChatMessageAttachment[]
-  summary?: string
-  responseType?: string
-  intent?: string
-  agentsUsed?: string[]
-  data?: Record<string, any>
-  artifacts?: ChatArtifact[]
-  recommendations?: { title: string; description: string; category: string }[]
-  followUpQuestions?: ChatFollowUp[] | string[]
-  suggestedActions?: SuggestedAction[]
-  disclaimer?: string
-  guardrailTriggered?: boolean
-  createdAt?: string
-}
+export type {
+  ChatArtifact,
+  ChatFollowUp,
+  ChatMessageAttachment,
+  ChatMessageItemData,
+  SuggestedAction,
+} from '@/types/copilot'
 
 interface DocMessageItemProps {
   item: ChatMessageItemData
@@ -113,10 +86,15 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
   const responseType = item.responseType || ''
 
   const handleActionPress = (action: SuggestedAction) => {
+    if (action.enabled === false) return
     if (onSelectAction) {
       onSelectAction(action)
-    } else if (onSelectFollowUp) {
-      onSelectFollowUp((action.payload?.question as string) || action.label)
+    } else if (action.type === 'CHAT_FOLLOWUP' && onSelectFollowUp) {
+      const question =
+        typeof action.payload?.question === 'string'
+          ? action.payload.question
+          : action.label
+      onSelectFollowUp(question)
     }
   }
 
@@ -140,19 +118,27 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
   }
 
   const renderArtifact = (artifact: ChatArtifact, index: number) => {
-    const content = artifact.content || {}
+    const content = (artifact.content || {}) as ArtifactPayload
     switch (artifact.type) {
       case 'health_card':
-        return <HealthArtifactCard key={`art-${index}`} data={content as any} />
+        return <HealthArtifactCard key={`art-${index}`} data={content} />
       case 'budget_card':
       case 'expense_card':
-        return <BudgetArtifactCard key={`art-${index}`} data={content as any} />
+        return <BudgetArtifactCard key={`art-${index}`} data={content} />
       case 'goal_card':
-        return <GoalArtifactCard key={`art-${index}`} data={content as any} />
+        return <GoalArtifactCard key={`art-${index}`} data={content} title={artifact.title} />
       case 'tax_card':
-        return <TaxArtifactCard key={`art-${index}`} data={content as any} />
+        return <TaxArtifactCard key={`art-${index}`} data={content} />
       case 'retirement_card':
-        return <RetirementArtifactCard key={`art-${index}`} data={content as any} />
+        return <RetirementArtifactCard key={`art-${index}`} data={content} />
+      case 'networth_card':
+        return <NetWorthArtifactCard key={`art-${index}`} data={content} />
+      case 'cashflow_card':
+        return <CashFlowArtifactCard key={`art-${index}`} data={content} />
+      case 'insight_card':
+        return <InsightArtifactCard key={`art-${index}`} data={content} title={artifact.title} />
+      case 'report_card':
+        return <ReportArtifactCard key={`art-${index}`} data={content} />
       default:
         return (
           <View key={`art-${index}`} style={styles.artifactCard}>
@@ -168,7 +154,7 @@ export function DocMessageItem({ item, onSelectFollowUp, onSelectAction }: DocMe
       {/* AI Header Line */}
       <View style={styles.aiHeaderRow}>
         <View style={styles.aiAvatar}>
-          <Bot size={16} color="#FFFFFF" strokeWidth={2.2} />
+          <Bot size={16} color={colors.onPrimary} strokeWidth={2.2} />
         </View>
         <Text style={styles.aiNameText}>FinArivu AI</Text>
         {intent && intent !== 'general' && (
@@ -384,7 +370,7 @@ const makeStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
-      borderColor: 'rgba(91, 78, 250, 0.25)',
+      borderColor: colors.border,
       borderRadius: 16,
       paddingHorizontal: 12,
       paddingVertical: 7,

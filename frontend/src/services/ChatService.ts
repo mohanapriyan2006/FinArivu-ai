@@ -1,5 +1,20 @@
 import { api } from './api'
 import SSE from 'react-native-sse'
+import type {
+  CopilotAttachmentInput,
+  CopilotChatResponse,
+} from '@/types/copilot'
+
+// Canonical copilot wire types live in src/types/copilot.ts — re-exported
+// here so existing imports keep working.
+export type {
+  CopilotArtifact,
+  CopilotChatResponse,
+  CopilotFollowUpQuestion,
+  CopilotMetadata,
+  CopilotRecommendation,
+  CopilotSuggestedAction,
+} from '@/types/copilot'
 
 // ── Legacy Chat (existing endpoint — preserved) ──────────────────────────
 
@@ -27,78 +42,13 @@ export const sendChatMessage = async (
 
 // ── AI Copilot (new multi-agent endpoint) ────────────────────────────────
 
-export interface CopilotAttachment {
-  filename: string
-  content: string
-  mimeType?: string
-}
+export type CopilotAttachment = CopilotAttachmentInput
 
 export interface CopilotChatRequest {
   sessionId: string
   message: string
   contextHints?: string[]
   attachments?: CopilotAttachment[]
-}
-
-export interface CopilotAgentData {
-  [agentName: string]: Record<string, unknown>
-}
-
-export interface CopilotArtifact {
-  type: string
-  title: string
-  content: CopilotAgentData
-}
-
-export interface CopilotRecommendation {
-  title: string
-  description: string
-  category: string
-}
-
-export interface CopilotSuggestedAction {
-  id: string
-  label: string
-  type: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
-  payload?: Record<string, unknown>
-  enabled?: boolean
-  route?: string
-}
-
-export interface CopilotFollowUpQuestion {
-  label: string
-  type?: 'CHAT_FOLLOWUP' | 'NAVIGATE' | 'API_ACTION' | 'CREATE' | 'VIEW' | 'SIMULATE'
-  payload?: Record<string, unknown>
-}
-
-export interface CopilotMetadata {
-  responseType?: string
-  intent: string
-  agentsUsed: string[]
-  provider?: string
-  model?: string
-  executionTimeMs: number
-}
-
-export interface CopilotChatResponse {
-  messageId: string | null
-  message: string
-  responseType?: string
-  summary?: string
-  intent: string
-  agentsUsed: string[]
-  data: CopilotAgentData
-  artifacts?: CopilotArtifact[]
-  recommendations?: CopilotRecommendation[]
-  followUpQuestions?: CopilotFollowUpQuestion[] | string[]
-  suggestedActions?: CopilotSuggestedAction[]
-  metadata?: CopilotMetadata
-  disclaimer: string
-  guardrailTriggered: boolean
-  provider?: string
-  model?: string
-  tokensInput?: number
-  tokensOutput?: number
 }
 
 export interface CopilotFeedbackRequest {

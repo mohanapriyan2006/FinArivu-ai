@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from app.ai.prompts.guardrails import GuardrailEngine, GuardrailResult
-from app.ai.schemas.orchestration import ChatResponse
+from app.ai.schemas.orchestration import GuardrailChatResponse
 from app.core.logger import logger
 
 
@@ -89,13 +89,13 @@ class Guardrail:
         """Return True if the message asks for specific investment advice."""
         return self._engine.is_investment_advice_request(message)
 
-    def build_response(self, reason: str) -> ChatResponse:
+    def build_response(self, reason: str) -> GuardrailChatResponse:
         """Return an educational/policy response for a blocked request."""
         text = self.POLICY_RESPONSES.get(
             reason,
             "I can only assist with personal finance topics for Indian salaried professionals.",
         )
-        return ChatResponse(
+        return GuardrailChatResponse(
             message=text,
             guardrail_triggered=True,
             disclaimer="This is educational information, not investment advice.",

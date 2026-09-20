@@ -24,7 +24,7 @@ class TaxAgent(BaseSpecialistAgent):
     ) -> AgentResult:
         data = await get_tax_comparison(self._session, user_id)
 
-        better = data.get("better_regime", "new")
+        better = data.get("betterRegime", "new")
         savings = data.get("savings", 0)
 
         summary = (

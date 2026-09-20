@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.financial.schemas import GoalAnalysis
+from app.schemas.financial import GoalProjectionsResponse
 from app.services.financial import FinancialService
 
 
@@ -15,7 +15,6 @@ class GoalEngine:
     async def analyze(
         session: AsyncSession,
         user_id: uuid.UUID,
-    ) -> GoalAnalysis:
+    ) -> GoalProjectionsResponse:
         svc = FinancialService(session)
-        result = await svc.project_goals(user_id)
-        return GoalAnalysis(**result.model_dump())
+        return await svc.project_goals(user_id)

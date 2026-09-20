@@ -12,7 +12,7 @@ import {
   type CopilotHistoryMessage,
   type CopilotSession,
 } from '@/services/ChatService'
-import type { ChatMessageItemData } from '@/components/chatbot/DocMessageItem'
+import type { ChatMessageItemData } from '@/types/copilot'
 
 const THINKING_STEPS = [
   'Planning analysis...',

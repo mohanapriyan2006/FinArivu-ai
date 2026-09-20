@@ -88,6 +88,9 @@ class Orchestrator:
             if cls is not None:
                 planned.append(("EducationAgent", cls(self._session), 30))
 
+        # RecommendationAgent consumes earlier agents' results — run it last.
+        planned.sort(key=lambda item: item[0] == "RecommendationAgent")
+
         results: list[AgentResult] = []
         for agent_name, agent, timeout in planned:
             try:
@@ -95,6 +98,9 @@ class Orchestrator:
                     agent, user_id, agent_context, timeout,
                 )
                 results.append(result)
+                # Share completed results so downstream agents (e.g.
+                # RecommendationAgent) can build on them.
+                agent_context["agent_results"] = [r.model_dump() for r in results]
             except Exception as exc:
                 logger.exception("Agent %s failed: %s", agent_name, exc)
                 results.append(

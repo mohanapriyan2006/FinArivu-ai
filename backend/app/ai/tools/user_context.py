@@ -1,7 +1,8 @@
 """User context loader for injecting financial profile data into LLM prompts.
 
-Gathers the user's profile, income, and a financial summary so the AI
-planner and explanation layer have relevant context.
+.. deprecated::
+    Used only by the legacy ``CopilotService`` pipeline. The live path uses
+    ``ContextBuilder`` which loads only the domains the plan requires.
 """
 
 from __future__ import annotations

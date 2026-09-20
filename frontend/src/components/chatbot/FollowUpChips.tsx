@@ -3,17 +3,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { Sparkles } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Typography } from '@/theme'
-
-interface FollowUpQuestion {
-  label: string
-  type?: string
-  payload?: Record<string, any>
-}
+import { ThemeColors, Typography } from '@/theme'
+import type { ChatFollowUp } from '@/types/copilot'
 
 interface FollowUpChipsProps {
   onSelect: (chipText: string) => void
-  suggestions?: string[] | FollowUpQuestion[]
+  suggestions?: string[] | ChatFollowUp[]
 }
 
 export function FollowUpChips({ onSelect, suggestions }: FollowUpChipsProps) {
@@ -60,7 +55,7 @@ export function FollowUpChips({ onSelect, suggestions }: FollowUpChipsProps) {
   )
 }
 
-const makeStyles = (colors: any) =>
+const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     container: {
       marginTop: 10,
@@ -75,7 +70,7 @@ const makeStyles = (colors: any) =>
       alignItems: 'center',
       backgroundColor: colors.primarySoft,
       borderWidth: 1,
-      borderColor: 'rgba(91, 78, 250, 0.25)',
+      borderColor: colors.border,
       borderRadius: 16,
       paddingHorizontal: 12,
       paddingVertical: 7,

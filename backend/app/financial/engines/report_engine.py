@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.exceptions import InsufficientDataError
 from app.financial.engines.budget_engine import BudgetEngine
 from app.financial.engines.cashflow_engine import CashFlowEngine
 from app.financial.engines.goal_engine import GoalEngine
@@ -18,7 +19,11 @@ from app.financial.schemas import Recommendation, ReportResult, ReportSection
 
 
 class ReportEngine:
-    """Deterministic financial report generator."""
+    """Deterministic financial report generator.
+
+    Composes the deterministic engines; sections whose inputs are missing are
+    omitted rather than filled with invented values.
+    """
 
     @staticmethod
     async def generate(
@@ -27,61 +32,75 @@ class ReportEngine:
         *,
         period: str = "monthly",
     ) -> ReportResult:
-        budget = await BudgetEngine.analyze(session, user_id)
-        health = await HealthEngine.calculate(session, user_id)
-        goal = await GoalEngine.analyze(session, user_id)
-        networth = await NetWorthEngine.calculate(session, user_id)
-        cashflow = await CashFlowEngine.analyze(session, user_id)
-        tax = await TaxEngine.analyze(session, user_id)
-        retirement = await RetirementEngine.project(session, user_id)
+        async def _safe(call, *args):
+            try:
+                return await call(session, user_id, *args)
+            except InsufficientDataError:
+                return None
+
+        budget = await _safe(BudgetEngine.analyze)
+        health = await _safe(HealthEngine.calculate)
+        goal = await _safe(GoalEngine.analyze)
+        networth = await _safe(NetWorthEngine.calculate)
+        cashflow = await _safe(CashFlowEngine.analyze)
+        tax = await _safe(TaxEngine.analyze)
+        retirement = await _safe(RetirementEngine.project)
 
         engine_outputs: dict[str, Any] = {
-            "BudgetAgent": budget.model_dump(),
-            "HealthAgent": health.model_dump(),
-            "GoalAgent": goal.model_dump(),
-            "NetWorthAgent": networth.model_dump(),
-            "CashFlowAgent": cashflow.model_dump(),
-            "TaxAgent": tax.model_dump(),
-            "RetirementAgent": retirement.model_dump(),
+            name: result.model_dump()
+            for name, result in {
+                "BudgetAgent": budget,
+                "HealthAgent": health,
+                "GoalAgent": goal,
+                "NetWorthAgent": networth,
+                "CashFlowAgent": cashflow,
+                "TaxAgent": tax,
+                "RetirementAgent": retirement,
+            }.items()
+            if result is not None
         }
 
         recs = RecommendationEngine.generate(engine_outputs)
 
         sections = [
-            ReportSection(title="Budget Summary", type="budget_card", data=budget.model_dump()),
-            ReportSection(title="Health Score", type="health_card", data=health.model_dump()),
-            ReportSection(title="Goal Progress", type="goal_card", data=goal.model_dump()),
-            ReportSection(title="Net Worth", type="networth_card", data=networth.model_dump()),
-            ReportSection(title="Cash Flow", type="cashflow_card", data=cashflow.model_dump()),
-            ReportSection(title="Tax Snapshot", type="tax_card", data=tax.model_dump()),
-            ReportSection(title="Retirement Projection", type="retirement_card", data=retirement.model_dump()),
+            ReportSection(title=title, type=atype, data=result.model_dump())
+            for title, atype, result in [
+                ("Budget Summary", "budget_card", budget),
+                ("Health Score", "health_card", health),
+                ("Goal Progress", "goal_card", goal),
+                ("Net Worth", "networth_card", networth),
+                ("Cash Flow", "cashflow_card", cashflow),
+                ("Tax Snapshot", "tax_card", tax),
+                ("Retirement Projection", "retirement_card", retirement),
+            ]
+            if result is not None
         ]
 
         achievements: list[str] = []
-        if health.overall_score >= 70:
+        if health and health.overall_score >= 70:
             achievements.append("Good overall financial health score")
-        if budget.total_remaining > 0:
+        if budget and budget.remaining_budget > 0:
             achievements.append("Budget underspend this period")
-        if cashflow.savings_rate >= 0.2:
+        if cashflow and cashflow.savings_rate >= 0.2:
             achievements.append("Healthy savings rate above 20%")
 
         improvement: list[str] = []
-        if health.overall_score < 70:
+        if health and health.overall_score < 70:
             improvement.append("Improve financial health score")
-        if budget.overspending_categories:
+        if budget and budget.overspending_categories:
             improvement.append("Reduce overspending categories")
-        if cashflow.savings_rate < 0.2:
+        if cashflow and cashflow.savings_rate < 0.2:
             improvement.append("Increase savings rate")
 
         return ReportResult(
             period=period,
             generated_at=datetime.now().isoformat(),
             summary=f"Financial report for user generated at {datetime.now().strftime('%Y-%m-%d')}.",
-            health_score=health.overall_score,
-            budget_summary=budget.model_dump(),
-            goal_progress=goal.model_dump(),
-            net_worth=networth.model_dump(),
-            cash_flow=cashflow.model_dump(),
+            health_score=float(health.overall_score) if health else 0,
+            budget_summary=budget.model_dump() if budget else {},
+            goal_progress=goal.model_dump() if goal else {},
+            net_worth=networth.model_dump() if networth else {},
+            cash_flow=cashflow.model_dump() if cashflow else {},
             recommendations=[Recommendation(**r.model_dump()) for r in recs.recommendations],
             achievements=achievements,
             improvement_areas=improvement,

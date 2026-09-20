@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import time
 import uuid
 from typing import AsyncIterator
@@ -15,13 +16,13 @@ from app.ai.context.context_requirements import (
 )
 from app.ai.controller.controller_schema import ControllerPlan
 from app.ai.controller.resilient_controller import ResilientController
+from app.ai.intents import to_copilot_intent
 from app.ai.memory.conversation_memory import ConversationMemory
 from app.ai.orchestrator.orchestrator import Orchestrator
 from app.ai.orchestrator.response_builder import BuildResult, ResponseBuilder
 from app.ai.providers.factory import get_ai_provider
 from app.ai.schemas import (
     CopilotChatResponse,
-    CopilotIntent,
     ResponseType,
     StreamEvent,
     StreamEventType,
@@ -130,7 +131,7 @@ class ControllerService:
             message=safe_response,
             response_type=build.response_type,
             summary=build.summary,
-            intent=self._map_intent(plan.intent),
+            intent=to_copilot_intent(plan.intent),
             agents_used=build.metadata.agents_used,
             data=build.merged_data,
             artifacts=build.artifacts,
@@ -249,7 +250,7 @@ class ControllerService:
 
         yield StreamEvent(
             event_type=StreamEventType.DATA,
-            data=str(build.merged_data),
+            data=json.dumps(build.merged_data, default=str),
         )
         yield StreamEvent(event_type=StreamEventType.DONE)
 
@@ -386,7 +387,7 @@ class ControllerService:
             message=text,
             response_type=ResponseType.EDUCATIONAL,
             summary=text,
-            intent=self._map_intent(plan.intent),
+            intent=to_copilot_intent(plan.intent),
             guardrail_triggered=True,
             disclaimer="This is educational information, not investment advice.",
         )
@@ -414,7 +415,7 @@ class ControllerService:
             message=text,
             response_type=ResponseType.CLARIFICATION,
             summary=text,
-            intent=self._map_intent(plan.intent),
+            intent=to_copilot_intent(plan.intent),
         )
 
     @staticmethod
@@ -494,28 +495,3 @@ class ControllerService:
                 content = getattr(item, "content", "")
             lines.append(f"{role}: {content[:80]}")
         return "\n".join(lines)
-
-    @staticmethod
-    def _map_intent(value: str) -> CopilotIntent:
-        """Map a controller intent string to the client-facing CopilotIntent."""
-        mapping: dict[str, str] = {
-            "budget": "budget_analysis",
-            "expense": "budget_analysis",
-            "goal": "goal_tracking",
-            "retirement": "retirement_planning",
-            "tax": "tax_planning",
-            "health": "health_score",
-            "networth": "net_worth",
-            "education": "education",
-            "investment_education": "education",
-            "report": "report_summary",
-            "greeting": "general",
-            "general": "general",
-            "mixed": "general",
-            "cash_flow": "general",
-            "scenario": "general",
-        }
-        try:
-            return CopilotIntent(mapping.get(value.lower(), value))
-        except ValueError:
-            return CopilotIntent.GENERAL

@@ -5,6 +5,8 @@ from typing import Any
 
 from pydantic import BaseModel, Field
 
+from app.financial.artifacts.schemas import Artifact
+
 
 class IntentEnum(str, Enum):
     """Supported copilot intents."""
@@ -84,37 +86,12 @@ class ExecutionPlan(BaseModel):
     response_style: str = "educational"
 
 
-class AgentRequest(BaseModel):
-    """Input to a specialist agent."""
+class GuardrailChatResponse(BaseModel):
+    """Canned response produced when a guardrail blocks a message.
 
-    user_id: str
-    session_id: str
-    agent_name: str
-    user_message: str
-    financial_context: FinancialContext
-    entities: dict[str, Any] = Field(default_factory=dict)
-
-
-class AgentResponse(BaseModel):
-    """Output from a specialist agent."""
-
-    agent_name: str
-    data: dict[str, Any] = Field(default_factory=dict)
-    summary: str = ""
-    confidence: float = 1.0
-    error: str | None = None
-
-
-class Artifact(BaseModel):
-    """Structured artifact returned with the chat response."""
-
-    type: str
-    title: str
-    content: dict[str, Any] = Field(default_factory=dict)
-
-
-class ChatResponse(BaseModel):
-    """Final response returned by AIController."""
+    Internal only — never serialised directly to the client (the router
+    wraps it in ``CopilotChatResponse``).
+    """
 
     message: str
     intent: str = "general"
@@ -125,11 +102,3 @@ class ChatResponse(BaseModel):
     disclaimer: str = "The information provided is for educational purposes only."
     provider: str | None = None
     model: str | None = None
-
-
-class ConversationSummary(BaseModel):
-    """Summary of a conversation session."""
-
-    session_id: str
-    summary: str
-    last_updated: str

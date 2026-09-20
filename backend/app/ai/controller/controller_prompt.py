@@ -2,35 +2,41 @@
 
 from __future__ import annotations
 
+from app.ai.registry.registry import CONTROLLER_SELECTABLE_AGENTS
+from app.ai.schemas.orchestration import IntentEnum
 
-# Specialist agents the controller is allowed to select.
-_ALLOWED_AGENTS = [
-    "BudgetAgent",
-    "TaxAgent",
-    "GoalAgent",
-    "RetirementAgent",
-    "HealthAgent",
-    "NetWorthAgent",
-    "EducationAgent",
-    "ReportAgent",
-]
 
-# Deterministic financial engines the agents may use.
+# Specialist agents the controller is allowed to select — derived from the
+# canonical registry so the prompt can never drift from reality.
+_ALLOWED_AGENTS = CONTROLLER_SELECTABLE_AGENTS
+
+# Deterministic financial engines the agents may use (informational only —
+# agents call tools, which call these engines).
 _ALLOWED_TOOLS = [
     "BudgetEngine",
     "TaxEngine",
     "GoalEngine",
     "RetirementEngine",
-    "DebtEngine",
     "NetWorthEngine",
-    "FinancialHealthEngine",
+    "HealthEngine",
     "CashFlowEngine",
+    "SimulationEngine",
+    "ReportEngine",
 ]
+
+# Intents the controller may emit. `unsupported_investment_advice` is excluded
+# deliberately — investment-advice requests are refused by the guardrail layer
+# before planning, so the controller never needs to route them.
+_ALLOWED_INTENTS = [
+    i.value for i in IntentEnum if i is not IntentEnum.UNSUPPORTED_INVESTMENT_ADVICE
+]
+
+_ALLOWED_INTENTS_TEXT = ", ".join(_ALLOWED_INTENTS)
 
 _CONTROLLER_SYSTEM = """\
 You are FinArivu's Controller.  Analyse the user message and produce a single JSON object.
 Rules:
-- intent: one of budget, expense, goal, retirement, tax, health, networth, education, investment_education, cash_flow, scenario, report, greeting, general, mixed
+- intent: one of {intents}
 - risk_level: low/medium/high/critical.  Use high/critical for tax, retirement, debt, networth or anything requiring verification.
 - required_context: list of data fields needed (e.g. monthly_income, monthly_expenses, savings, goals, tax_profile, loans, investments, net_worth, health_score)
 - selected_agents: pick only from the allowed list; choose 1-3 relevant agents
@@ -42,7 +48,7 @@ Rules:
 - safety_action: allow, block, or educational_refusal (for investment advice/stock tips)
 - response_style: educational, concise, detailed, or friendly
 Do NOT include markdown, explanations, or text outside the JSON object.
-"""
+""".format(intents=_ALLOWED_INTENTS_TEXT)
 
 
 CONTROLLER_PROMPT_TEMPLATE: str = """\

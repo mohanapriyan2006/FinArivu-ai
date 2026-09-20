@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.financial.schemas import NetWorthAnalysis
+from app.schemas.financial import NetWorthResponse
 from app.services.financial import FinancialService
 
 
@@ -15,7 +15,6 @@ class NetWorthEngine:
     async def calculate(
         session: AsyncSession,
         user_id: uuid.UUID,
-    ) -> NetWorthAnalysis:
+    ) -> NetWorthResponse:
         svc = FinancialService(session)
-        result = await svc.calculate_net_worth(user_id)
-        return NetWorthAnalysis(**result.model_dump())
+        return await svc.calculate_net_worth(user_id)

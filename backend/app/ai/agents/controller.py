@@ -1,7 +1,10 @@
 """LangGraph agent controller — routes planner output to specialist agents.
 
-Uses a ``StateGraph`` with conditional edges to fan-out to the required
-agents based on the planner's output, then merges all results.
+.. deprecated::
+    Used only by the legacy ``CopilotService`` pipeline (via
+    ``AgentExecutor``). The live path is ``Orchestrator`` driven by the
+    Phi-4 ``ControllerService``. Agent lookup delegates to the canonical
+    ``AgentRegistry``.
 """
 
 from __future__ import annotations
@@ -12,29 +15,16 @@ from typing import Any, TypedDict
 from langgraph.graph import END, StateGraph
 
 from app.ai.agents.base_agent import BaseSpecialistAgent
-from app.ai.agents.budget_agent import BudgetAgent
 from app.ai.agents.education_agent import EducationAgent
-from app.ai.agents.goal_agent import GoalAgent
-from app.ai.agents.health_agent import HealthAgent
-from app.ai.agents.report_agent import ReportAgent
-from app.ai.agents.retirement_agent import RetirementAgent
-from app.ai.agents.tax_agent import TaxAgent
+from app.ai.registry.registry import AgentRegistry
 from app.ai.schemas import AgentResult, PlannerOutput
 from app.core.logger import logger
 from sqlalchemy.ext.asyncio import AsyncSession
 
 
 # ── Agent registry ────────────────────────────────────────────────────────
-
-AGENT_REGISTRY: dict[str, type[BaseSpecialistAgent]] = {
-    "BudgetAgent": BudgetAgent,
-    "TaxAgent": TaxAgent,
-    "GoalAgent": GoalAgent,
-    "RetirementAgent": RetirementAgent,
-    "HealthAgent": HealthAgent,
-    "EducationAgent": EducationAgent,
-    "ReportAgent": ReportAgent,
-}
+# Delegate to the canonical AgentRegistry — never maintain a second list.
+AGENT_REGISTRY: dict[str, type[BaseSpecialistAgent]] = dict(AgentRegistry._AGENTS)
 
 
 # ── State definition ──────────────────────────────────────────────────────

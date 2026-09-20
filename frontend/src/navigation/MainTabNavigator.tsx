@@ -1,5 +1,7 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 
+import type { MainTabParamList } from '@/types/navigation'
+
 import { CustomBottomTabBar } from '@/components/navigation/CustomBottomTabBar'
 import HomeScreen from '@/screens/dashboard/HomeScreen'
 import InsightsHubScreen from '@/screens/insights/InsightsHubScreen'
@@ -7,7 +9,7 @@ import CopilotScreen from '@/screens/chatbot/CopilotScreen'
 import PulseScreen from '@/screens/Pulse/PulseScreen'
 import ProfileScreen from '@/screens/profile/ProfileScreen'
 
-const Tab = createBottomTabNavigator()
+const Tab = createBottomTabNavigator<MainTabParamList>()
 
 export default function MainTabNavigator() {
   return (

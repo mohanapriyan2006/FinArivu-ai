@@ -6,12 +6,17 @@ from decimal import Decimal
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.engines.tax_engine import Deductions, compare_regimes
+from app.exceptions import InsufficientDataError
 from app.financial.schemas import TaxAnalysis
 from app.repositories.profiles import ProfileRepository
 
 
 class TaxEngine:
-    """Deterministic tax comparison engine."""
+    """Deterministic tax comparison engine.
+
+    Wraps ``app.engines.tax_engine.compare_regimes`` — the single source of
+    slab/rebate/cess truth — and adapts it to the ``TaxAnalysis`` contract.
+    """
 
     @staticmethod
     async def analyze(
@@ -23,25 +28,35 @@ class TaxEngine:
         profile_repo = ProfileRepository(session)
         profile = await profile_repo.get_by_user_id(user_id)
 
-        gross_income = Decimal(str(profile.monthly_income or 0)) * 12 if profile else Decimal("1000000")
+        gross_income = (
+            Decimal(str(profile.monthly_income)) * 12
+            if profile and profile.monthly_income and profile.monthly_income > 0
+            else Decimal("0")
+        )
         if gross_income <= 0:
-            gross_income = Decimal("1000000")
+            raise InsufficientDataError(
+                "Tax analysis requires income information.",
+                missing_fields=["income"],
+            )
 
         deductions = deductions or Deductions()
         result = compare_regimes(gross_income, deductions)
 
-        recommended = "old" if result.old_regime_tax <= result.new_regime_tax else "new"
-        chosen = result.old_regime_tax if result.old_regime_tax <= result.new_regime_tax else result.new_regime_tax
-        other = result.new_regime_tax if chosen == result.old_regime_tax else result.old_regime_tax
+        old = result["old_regime"]
+        new = result["new_regime"]
+        better: str = result["better_regime"]
+        chosen = old if better == "old" else new
 
         return TaxAnalysis(
-            regime=recommended,
+            regime=better,
             gross_income=float(gross_income),
-            deductions=float(deductions.total_deductions()) if hasattr(deductions, "total_deductions") else 0.0,
-            taxable_income=float(gross_income - deductions.total_deductions()) if hasattr(deductions, "total_deductions") and gross_income > deductions.total_deductions() else float(gross_income),
-            tax_amount=float(chosen),
-            effective_tax_rate=float(chosen / gross_income) if gross_income > 0 else 0,
-            savings_vs_other_regime=float(other - chosen),
-            recommended_regime=recommended,
+            deductions=float(chosen.deductions_applied),
+            taxable_income=float(chosen.taxable_income),
+            tax_amount=float(chosen.total_tax),
+            effective_tax_rate=float(chosen.effective_tax_rate),
+            old_regime_tax=float(old.total_tax),
+            new_regime_tax=float(new.total_tax),
+            better_regime=better,
+            savings=float(result["savings"]),
             slabs=[],
         )

@@ -29,22 +29,29 @@ class CashFlowEngine:
         savings = total_income - total_expenses
         savings_rate = (savings / total_income) if total_income > 0 else 0
         burn_rate = total_expenses / max(len(expenses), 1)
-        runway_months = (total_income / total_expenses) if total_expenses > 0 else 0
 
         # Build a simple monthly trend keyed by YYYY-MM.
         trend: dict[str, dict[str, Any]] = {}
         for i in income:
-            key = _month_key(getattr(i, "date", None))
+            key = _month_key(getattr(i, "income_date", None))
             if key:
                 trend.setdefault(key, {"income": 0, "expenses": 0, "savings": 0})
                 trend[key]["income"] += float(getattr(i, "amount", 0) or 0)
         for e in expenses:
-            key = _month_key(getattr(e, "date", None))
+            key = _month_key(getattr(e, "expense_date", None))
             if key:
                 trend.setdefault(key, {"income": 0, "expenses": 0, "savings": 0})
                 trend[key]["expenses"] += float(getattr(e, "amount", 0) or 0)
         for key in trend:
             trend[key]["savings"] = trend[key]["income"] - trend[key]["expenses"]
+
+        # Runway = how many average-expense months the cumulative net savings cover.
+        avg_monthly_expenses = (
+            total_expenses / len(trend) if trend else total_expenses
+        )
+        runway_months = (
+            savings / avg_monthly_expenses if avg_monthly_expenses > 0 else 0
+        )
 
         return CashFlowAnalysis(
             total_income=total_income,

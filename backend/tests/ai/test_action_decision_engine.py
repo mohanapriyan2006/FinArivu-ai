@@ -21,8 +21,8 @@ def test_budget_overspending_generates_view_and_adjust_actions(engine: ActionDec
                 "totalBudget": 50000,
                 "totalSpent": 54000,
                 "overspendingCategories": [
-                    {"category": "Food & Dining", "amount": 9000},
-                    {"category": "Travel", "amount": 4000},
+                    {"categoryName": "Food & Dining", "overspend": 9000},
+                    {"categoryName": "Travel", "overspend": 4000},
                 ],
             },
         )
@@ -47,7 +47,7 @@ def test_goal_behind_suggests_view_and_increase_savings(engine: ActionDecisionEn
     results = [
         AgentResult(
             agent_name="GoalAgent",
-            data={"goal_name": "House", "goal_id": "abc-123", "status": "behind"},
+            data={"goals": [{"goalId": "abc-123", "status": "behind", "monthlyContribution": 15000}]},
         )
     ]
     actions, _ = engine.build(IntentEnum.GOAL, results)
@@ -70,9 +70,9 @@ def test_education_mutual_fund_returns_follow_up(engine: ActionDecisionEngine) -
 
 def test_mixed_intent_caps_at_three_actions(engine: ActionDecisionEngine) -> None:
     results = [
-        AgentResult(agent_name="BudgetAgent", data={"overspendingCategories": [{"category": "Food", "amount": 1000}]}),
-        AgentResult(agent_name="GoalAgent", data={"goal_name": "Car", "status": "behind"}),
-        AgentResult(agent_name="TaxAgent", data={"better_regime": "new"}),
+        AgentResult(agent_name="BudgetAgent", data={"overspendingCategories": [{"categoryName": "Food", "overspend": 1000}]}),
+        AgentResult(agent_name="GoalAgent", data={"goals": [{"status": "behind"}]}),
+        AgentResult(agent_name="TaxAgent", data={"betterRegime": "new"}),
     ]
     actions, _ = engine.build(IntentEnum.MIXED, results)
 

@@ -35,6 +35,10 @@ export interface ThemeColors {
   textTertiary: string
   primaryBackground: string
   chatBubbleBorder: string
+  /** Foreground colour rendered on top of `primary` fills. */
+  onPrimary: string
+  /** Scrim colour used behind modals and bottom sheets. */
+  overlay: string
   // Additional backwards-compatible fields
   primaryDark: string
   heroCard: string
@@ -78,6 +82,8 @@ export const lightTheme: { mode: 'light'; colors: ThemeColors } = {
     textTertiary: BaseColors.textSecondaryLight,
     primaryBackground: BaseColors.primarySoft,
     chatBubbleBorder: BaseColors.borderLight,
+    onPrimary: '#FFFFFF',
+    overlay: 'rgba(0, 0, 0, 0.35)',
     // Backwards compatible mappings
     primaryDark: BaseColors.textHeroLight,
     heroCard: BaseColors.primary,
@@ -122,6 +128,8 @@ export const darkTheme: { mode: 'dark'; colors: ThemeColors } = {
     textTertiary: BaseColors.textSecondaryDark,
     primaryBackground: 'rgba(91, 78, 250, 0.1)',
     chatBubbleBorder: BaseColors.borderDark,
+    onPrimary: '#FFFFFF',
+    overlay: 'rgba(0, 0, 0, 0.55)',
     // Backwards compatible mappings
     primaryDark: BaseColors.backgroundDark,
     heroCard: '#083A96',

@@ -223,6 +223,7 @@ async def copilot_delete_session(
 )
 async def copilot_health(
     controller: CopilotController = Depends(_get_copilot_controller),
+    user_id: str = Depends(get_current_user_id),
 ) -> dict:
     """Check whether the AI provider is reachable and responsive."""
     result = await controller.check_health()
@@ -240,7 +241,9 @@ async def copilot_health(
     status_code=status.HTTP_200_OK,
     summary="Get AI provider metrics",
 )
-async def copilot_metrics() -> dict:
+async def copilot_metrics(
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
     """Return in-memory provider request, token, and error metrics."""
     return success_response(
         data=ai_metrics.summary(),
@@ -259,7 +262,9 @@ _session_memory = SessionMemory()
     status_code=status.HTTP_200_OK,
     summary="List configured AI providers",
 )
-async def copilot_providers() -> dict:
+async def copilot_providers(
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
     """Return the configured AI providers and their models."""
     providers = [
         {
@@ -303,6 +308,7 @@ async def copilot_session(
 )
 async def copilot_clear_session(
     session_id: str = Query(..., min_length=1, max_length=255),
+    user_id: str = Depends(get_current_user_id),
 ) -> dict:
     """Clear the in-memory session state."""
     _session_memory.clear(session_id)

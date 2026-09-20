@@ -39,35 +39,38 @@ class RecommendationAgent(BaseSpecialistAgent):
             if agent_name == "BudgetAgent" and data.get("overspendingCategories"):
                 for cat in data["overspendingCategories"][:2]:
                     recommendations.append({
-                        "title": f"Review {cat.get('category', 'this category')}",
+                        "title": f"Review {cat.get('categoryName', 'this category')}",
                         "description": (
-                            f"You are overspending by ₹{float(cat.get('overspendAmount', 0) or 0):,.0f} "
+                            f"You are overspending by ₹{float(cat.get('overspend', 0) or 0):,.0f} "
                             f"in this category. Consider a spending limit next month."
                         ),
                         "category": "budget",
                     })
 
-            if agent_name == "GoalAgent" and data.get("status") in ["behind", "at_risk"]:
-                recommendations.append({
-                    "title": f"Catch up on {data.get('goal_name', 'your goal')}",
-                    "description": (
-                        f"You need ₹{float(data.get('monthly_required', 0) or 0):,.0f}/month "
-                        f"to stay on track."
-                    ),
-                    "category": "goals",
-                })
+            if agent_name == "GoalAgent":
+                for g in data.get("goals", []):
+                    if isinstance(g, dict) and g.get("status") in ["behind", "at_risk"]:
+                        recommendations.append({
+                            "title": "Catch up on a goal",
+                            "description": (
+                                f"You need ₹{float(g.get('monthlyContribution', 0) or 0):,.0f}/month "
+                                f"to stay on track."
+                            ),
+                            "category": "goals",
+                        })
+                        break
 
-            if agent_name == "HealthAgent" and data.get("overallScore", 0) < 70:
+            if agent_name == "HealthAgent" and float(data.get("overallScore", 0) or 0) < 70:
                 recommendations.append({
                     "title": "Improve financial health",
                     "description": "Build an emergency fund and reduce high-interest debt to raise your score.",
                     "category": "health",
                 })
 
-            if agent_name == "TaxAgent" and data.get("better_regime"):
+            if agent_name == "TaxAgent" and data.get("betterRegime"):
                 recommendations.append({
                     "title": "Consider tax regime review",
-                    "description": f"The {data['better_regime']} regime looks better by your current numbers.",
+                    "description": f"The {data['betterRegime']} regime looks better by your current numbers.",
                     "category": "tax",
                 })
 

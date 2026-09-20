@@ -78,5 +78,6 @@ def test_build_artifact_list():
         {"agent_name": "BudgetAgent", "data": None, "error": False},
     ]
     artifacts = ArtifactBuilder.build_artifact_list(results)
-    assert len(artifacts) == 2
+    # Unknown agents and empty payloads never produce visual artifacts.
+    assert len(artifacts) == 1
     assert artifacts[0].type == "health_card"

@@ -4,7 +4,12 @@ from app.ai.schemas.orchestration import ExecutionPlan, ExecutionStep, IntentEnu
 
 
 class Planner:
-    """Converts an IntentResult into an ExecutionPlan."""
+    """Converts an IntentResult into an ExecutionPlan.
+
+    .. deprecated::
+        Rule-based planner retained for tests/fallback. The live path uses
+        the Phi-4 controller (``ControllerPlan.to_execution_plan``).
+    """
 
     INTENT_AGENTS: dict[IntentEnum, list[str]] = {
         IntentEnum.BUDGET: ["BudgetAgent"],

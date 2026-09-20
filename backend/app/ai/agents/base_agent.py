@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.ai.schemas import AgentResult
 from app.core.logger import logger
+from app.exceptions import InsufficientDataError
 
 
 class BaseSpecialistAgent(abc.ABC):
@@ -37,6 +38,18 @@ class BaseSpecialistAgent(abc.ABC):
     ) -> AgentResult:
         """Run the agent's logic and return a structured result."""
 
+    def _missing_data_result(self, exc: InsufficientDataError) -> AgentResult:
+        """Convert an InsufficientDataError into an explicit missing-data result."""
+        return AgentResult(
+            agent_name=self.agent_name,
+            data={
+                "dataMissing": True,
+                "missingFields": exc.missing_fields,
+            },
+            summary=exc.message,
+            confidence=1.0,
+        )
+
     async def safe_execute(
         self,
         user_id: uuid.UUID,
@@ -45,6 +58,8 @@ class BaseSpecialistAgent(abc.ABC):
         """Execute with error handling — never raises."""
         try:
             return await self.execute(user_id, context)
+        except InsufficientDataError as exc:
+            return self._missing_data_result(exc)
         except Exception as exc:
             logger.error(
                 "Agent %s failed for user %s: %s",

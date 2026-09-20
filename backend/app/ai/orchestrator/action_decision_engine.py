@@ -2,37 +2,60 @@
 
 This component never invents generic advice. It looks at the agent results and
 emits at most 2 actions (3 for mixed/complex analysis) plus optional follow-ups.
+
+Navigation contract: NAVIGATE actions carry a canonical ``route`` target key
+(see ``NAVIGATION_TARGETS``); the frontend resolves it to a registered React
+Navigation screen. Targets with no real screen are never emitted.
 """
 from __future__ import annotations
 
-from app.ai.schemas import AgentResult
+from typing import Any
+
+from app.ai.intents import to_internal_intent
+from app.ai.schemas import ActionType, AgentResult
 from app.ai.schemas.copilot import FollowUpQuestion, SuggestedAction
 from app.ai.schemas.orchestration import IntentEnum
+
+
+# Canonical navigation targets the frontend can resolve to real screens.
+# Kept in sync with ``src/navigation/actionRoutes.ts``.
+NAVIGATION_TARGETS: dict[str, str] = {
+    "expenses": "ExpenseTracker",
+    "budget": "BudgetTracker",
+    "goals": "GoalsTracker",
+    "savings": "SavingsTracker",
+    "investments": "InvestmentTracker",
+    "loans": "LoanTracker",
+    "insurance": "InsuranceTracker",
+    "credit_cards": "CreditCardTracker",
+    "financial_health": "FinancialHealth",
+    "reports": "WeeklyReport",
+    "pulse": "Pulse",
+    "insights": "Insights",
+}
 
 
 class ActionDecisionEngine:
     """Builds SuggestedAction and FollowUpQuestion lists from agent results."""
 
-    _COPILOT_TO_INTERNAL: dict[str, IntentEnum] = {
-        "budget_analysis": IntentEnum.BUDGET,
-        "goal_tracking": IntentEnum.GOAL,
-        "retirement_planning": IntentEnum.RETIREMENT,
-        "tax_planning": IntentEnum.TAX,
-        "health_score": IntentEnum.HEALTH,
-        "net_worth": IntentEnum.NETWORTH,
-        "report_summary": IntentEnum.REPORT,
-        "education": IntentEnum.EDUCATION,
-    }
-
-    @classmethod
-    def _to_intent_enum(cls, intent: str | IntentEnum) -> IntentEnum:
+    @staticmethod
+    def _to_intent_enum(intent: str | IntentEnum) -> IntentEnum:
         """Convert an API intent string or enum into the internal IntentEnum."""
-        if isinstance(intent, IntentEnum):
-            return intent
-        try:
-            return IntentEnum(intent)
-        except ValueError:
-            return cls._COPILOT_TO_INTERNAL.get(intent, IntentEnum.GENERAL)
+        return to_internal_intent(intent)
+
+    @staticmethod
+    def _navigate(action_id: str, label: str, target: str,
+                  params: dict[str, Any] | None = None) -> SuggestedAction:
+        """Build a NAVIGATE action for a canonical target (validated)."""
+        if target not in NAVIGATION_TARGETS:
+            raise ValueError(f"Unknown navigation target: {target}")
+        return SuggestedAction(
+            id=action_id,
+            label=label,
+            type=ActionType.NAVIGATE,
+            route=target,
+            payload=params or {},
+        )
 
     def build(
         self,
@@ -68,157 +91,163 @@ class ActionDecisionEngine:
         if intent == IntentEnum.REPORT:
             actions.extend(self._report_actions(by_name.get("ReportAgent")))
 
+        if intent == IntentEnum.MIXED:
+            actions.extend(self._mixed_actions(results))
+
         max_actions = 3 if intent == IntentEnum.MIXED else 2
         actions = actions[:max_actions]
 
+        # Merge canonical actions contributed by agents (e.g. InsightAgent).
+        actions.extend(self._agent_contributed_actions(results))
+
         follow_ups = self._education_follow_ups(intent, by_name)
+        follow_ups.extend(self._agent_contributed_follow_ups(results))
 
         return actions, follow_ups
 
     @staticmethod
+    def _agent_contributed_actions(results: list[AgentResult]) -> list[SuggestedAction]:
+        """Validate SuggestedAction dicts emitted by agents into the schema."""
+        out: list[SuggestedAction] = []
+        for r in results:
+            for a in (r.data or {}).get("suggestedActions", []):
+                if not isinstance(a, dict):
+                    continue
+                try:
+                    action = SuggestedAction(**a)
+                except Exception:
+                    continue
+                if action.type == ActionType.API_ACTION:
+                    # API actions are never executable in Phase 0.
+                    action.enabled = False
+                if action.type == ActionType.NAVIGATE and (
+                    action.route not in NAVIGATION_TARGETS
+                ):
+                    continue
+                out.append(action)
+        return out
+
+    @staticmethod
+    def _agent_contributed_follow_ups(results: list[AgentResult]) -> list[FollowUpQuestion]:
+        """Validate FollowUpQuestion dicts emitted by agents into the schema."""
+        out: list[FollowUpQuestion] = []
+        for r in results:
+            for f in (r.data or {}).get("followUpQuestions", []):
+                if not isinstance(f, dict):
+                    continue
+                try:
+                    out.append(FollowUpQuestion(**f))
+                except Exception:
+                    continue
+        return out[:5]
+
+    @staticmethod
+    def _mixed_actions(results: list[AgentResult]) -> list[SuggestedAction]:
+        """Pick the primary action for each contributing agent on mixed intents."""
+        actions: list[SuggestedAction] = []
+        by_name = {r.agent_name: r for r in results}
+        for intent, method in (
+            (IntentEnum.BUDGET, ActionDecisionEngine._budget_actions),
+            (IntentEnum.GOAL, ActionDecisionEngine._goal_actions),
+            (IntentEnum.HEALTH, ActionDecisionEngine._health_actions),
+            (IntentEnum.NETWORTH, ActionDecisionEngine._networth_actions),
+            (IntentEnum.CASH_FLOW, ActionDecisionEngine._cashflow_actions),
+            (IntentEnum.REPORT, ActionDecisionEngine._report_actions),
+        ):
+            main = ResponseMainAgent.get(intent)
+            if main and main in by_name:
+                actions.extend(method(by_name.get(main)))
+        return actions
+
+    @staticmethod
     def _budget_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
         actions: list[SuggestedAction] = []
         data = result.data
         overspending = data.get("overspendingCategories", []) or []
-        for cat in overspending[:2]:
-            category = str(cat.get("category", "this category"))
+        for cat in overspending[:1]:
+            category = str(cat.get("categoryName", "this category"))
             slug = category.lower().replace(" ", "_").replace("&", "and")
             actions.append(SuggestedAction(
                 id=f"view_{slug}_expenses",
                 label=f"View {category} expenses",
-                type="NAVIGATE",
-                payload={"screen": "expenses", "params": {"category": category}},
+                type=ActionType.NAVIGATE,
+                route="expenses",
+                payload={"category": category},
             ))
-            actions.append(SuggestedAction(
-                id=f"adjust_{slug}_budget",
-                label=f"Adjust {category} budget",
-                type="NAVIGATE",
-                payload={"screen": "budget", "params": {"category": category}},
-            ))
-        if not actions:
-            actions.append(SuggestedAction(
-                id="view_budget",
-                label="View budget",
-                type="NAVIGATE",
-                payload={"screen": "budget"},
-            ))
+        actions.append(ActionDecisionEngine._navigate(
+            "view_budget", "View budget", "budget",
+        ))
         return actions
 
     @staticmethod
     def _goal_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
-        actions: list[SuggestedAction] = []
-        data = result.data
-        name = str(data.get("goal_name", "your goal"))
-        actions.append(SuggestedAction(
-            id="view_goal",
-            label=f"View {name} goal",
-            type="NAVIGATE",
-            payload={"screen": "goals", "params": {"goalId": data.get("goal_id")}},
-        ))
-        if data.get("status") in {"behind", "at_risk"}:
-            actions.append(SuggestedAction(
-                id="increase_savings",
-                label="Increase monthly savings",
-                type="NAVIGATE",
-                payload={"screen": "savings"},
+        actions: list[SuggestedAction] = [
+            ActionDecisionEngine._navigate("view_goals", "View goals", "goals"),
+        ]
+        goals = result.data.get("goals", []) or []
+        behind = any(
+            isinstance(g, dict) and g.get("status") in {"behind", "at_risk"}
+            for g in goals
+        )
+        if behind:
+            actions.append(ActionDecisionEngine._navigate(
+                "increase_savings", "Increase monthly savings", "savings",
             ))
         return actions
 
     @staticmethod
     def _tax_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
-            return []
-        actions = [
-            SuggestedAction(
-                id="compare_tax_regimes",
-                label="Compare tax regimes",
-                type="NAVIGATE",
-                payload={"screen": "tax"},
-            ),
-        ]
-        if result.data.get("better_regime"):
-            actions.append(SuggestedAction(
-                id="view_deductions",
-                label="View deductions",
-                type="NAVIGATE",
-                payload={"screen": "tax", "params": {"tab": "deductions"}},
-            ))
-        return actions
+        # No dedicated tax screen exists in Phase 0 — emit no NAVIGATE action.
+        return []
 
     @staticmethod
     def _retirement_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
-            return []
-        actions = [
-            SuggestedAction(
-                id="simulate_retirement",
-                label="Run retirement simulation",
-                type="NAVIGATE",
-                payload={"screen": "retirement_simulator"},
-            ),
-        ]
-        if result.data.get("monthly_savings_required"):
-            actions.append(SuggestedAction(
-                id="increase_retirement_savings",
-                label="Increase retirement savings",
-                type="NAVIGATE",
-                payload={"screen": "retirement"},
-            ))
-        return actions
+        # No dedicated retirement screen exists in Phase 0 — emit none.
+        return []
 
     @staticmethod
     def _health_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
         return [
-            SuggestedAction(
-                id="view_health_breakdown",
-                label="View full health breakdown",
-                type="NAVIGATE",
-                payload={"screen": "financial_health"},
+            ActionDecisionEngine._navigate(
+                "view_health_breakdown", "View full health breakdown",
+                "financial_health",
             ),
         ]
 
     @staticmethod
     def _networth_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
+        # The Pulse dashboard is the net-worth overview surface.
         return [
-            SuggestedAction(
-                id="view_net_worth",
-                label="View net worth",
-                type="NAVIGATE",
-                payload={"screen": "networth"},
+            ActionDecisionEngine._navigate(
+                "view_net_worth", "View dashboard", "pulse",
             ),
         ]
 
     @staticmethod
     def _cashflow_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
         return [
-            SuggestedAction(
-                id="view_cash_flow",
-                label="View cash flow",
-                type="NAVIGATE",
-                payload={"screen": "cashflow"},
+            ActionDecisionEngine._navigate(
+                "view_cash_flow", "View cash flow", "pulse",
             ),
         ]
 
     @staticmethod
     def _report_actions(result: AgentResult | None) -> list[SuggestedAction]:
-        if not result or not result.data:
+        if not result or not result.data or result.data.get("dataMissing"):
             return []
         return [
-            SuggestedAction(
-                id="view_report",
-                label="View full report",
-                type="NAVIGATE",
-                payload={"screen": "reports"},
+            ActionDecisionEngine._navigate(
+                "view_report", "View full report", "reports",
             ),
         ]
 
@@ -256,3 +285,17 @@ class ActionDecisionEngine:
             )]
 
         return []
+
+
+# Intent -> primary agent name (mirrors ResponseDecisionEngine._MAIN_AGENT).
+ResponseMainAgent: dict[IntentEnum, str] = {
+    IntentEnum.BUDGET: "BudgetAgent",
+    IntentEnum.EXPENSE: "BudgetAgent",
+    IntentEnum.GOAL: "GoalAgent",
+    IntentEnum.HEALTH: "HealthAgent",
+    IntentEnum.TAX: "TaxAgent",
+    IntentEnum.RETIREMENT: "RetirementAgent",
+    IntentEnum.NETWORTH: "NetWorthAgent",
+    IntentEnum.CASH_FLOW: "CashFlowAgent",
+    IntentEnum.REPORT: "ReportAgent",
+}

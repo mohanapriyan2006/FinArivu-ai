@@ -1,5 +1,9 @@
 """AI Planner — classifies intent and selects agents.
 
+.. deprecated::
+    Used only by the legacy ``CopilotService`` pipeline. The live path
+    routes through the Phi-4 ``ResilientController`` → ``ControllerPlan``.
+
 Takes the user message plus optional conversation history and calls the
 AI provider with the planner prompt to produce a structured ``PlannerOutput``.
 """

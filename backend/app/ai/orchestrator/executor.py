@@ -1,6 +1,8 @@
 """Agent executor — dispatches planner output to the LangGraph controller.
 
-Thin wrapper that builds the LangGraph state and invokes the compiled graph.
+.. deprecated::
+    Used only by the legacy ``CopilotService`` pipeline. The live path uses
+    ``Orchestrator`` with the canonical ``AgentRegistry``.
 """
 
 from __future__ import annotations

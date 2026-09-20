@@ -81,8 +81,10 @@ async def test_build_full_returns_structured_result(builder: ResponseBuilder, pl
             agent_name="InsightAgent",
             data={
                 "insights": ["Great savings rate."],
-                "follow_up_questions": [{"text": "How can I invest?"}],
-                "suggested_actions": [{"label": "View budget", "action": "view_budget", "route": "/budget"}],
+                "followUpQuestions": [{"label": "How can I invest?", "type": "CHAT_FOLLOWUP"}],
+                "suggestedActions": [
+                    {"id": "view_goals", "label": "View goals", "type": "NAVIGATE", "route": "goals"},
+                ],
             },
             summary="Insight complete.",
         ),
@@ -101,11 +103,14 @@ async def test_build_full_returns_structured_result(builder: ResponseBuilder, pl
     assert build.artifacts
     assert any(a.type == "budget_card" for a in build.artifacts)
     assert build.response_type == "financial_analysis"
-    assert build.recommendations == []
+    assert len(build.recommendations) == 1
+    assert build.recommendations[0].title == "Reduce dining"
     assert build.follow_up_questions == []
-    assert len(build.suggested_actions) == 1
+    assert len(build.suggested_actions) == 2
     assert build.suggested_actions[0].id == "view_budget"
     assert build.suggested_actions[0].type == "NAVIGATE"
+    assert build.suggested_actions[1].id == "view_goals"
+    assert build.suggested_actions[1].route == "goals"
     assert build.metadata.agents_used == ["BudgetAgent", "InsightAgent", "RecommendationAgent"]
     assert build.metadata.provider == "fake"
     assert build.ai_response is not None

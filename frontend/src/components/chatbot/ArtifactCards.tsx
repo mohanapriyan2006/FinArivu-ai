@@ -1,29 +1,32 @@
 import React, { useMemo } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated'
 import {
+  Activity,
   AlertTriangle,
-  ArrowUpRight,
   CheckCircle2,
-  ChevronRight,
   Compass,
+  FileText,
   HeartPulse,
   Home,
   PieChart,
   Receipt,
   Sparkles,
-  TrendingDown,
   TrendingUp,
+  Wallet,
 } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
-import { Typography } from '@/theme'
+import { ThemeColors, Typography } from '@/theme'
+
+/** Loose payload shape — fields are read defensively from canonical backend data. */
+export type ArtifactPayload = Record<string, unknown>
 
 // ==========================================
 // 1. HEALTH ARTIFACT CARD
 // ==========================================
-export interface HealthArtifactData {
-  overallScore: number
+export interface HealthArtifactData extends ArtifactPayload {
+  overallScore?: number
   savingsScore?: number
   emergencyScore?: number
   debtScore?: number
@@ -43,7 +46,7 @@ export function HealthArtifactCard({ data }: { data: HealthArtifactData }) {
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, { backgroundColor: 'rgba(91, 78, 250, 0.12)' }]}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
           <HeartPulse size={16} color={colors.primary} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>Financial Health Score</Text>
@@ -92,11 +95,6 @@ export function HealthArtifactCard({ data }: { data: HealthArtifactData }) {
           </View>
         </View>
       </View>
-
-      <Pressable style={styles.actionBtn} accessibilityRole="button">
-        <Text style={styles.actionBtnText}>View Full Breakdown</Text>
-        <ChevronRight size={14} color={colors.primary} />
-      </Pressable>
     </Animated.View>
   )
 }
@@ -104,28 +102,42 @@ export function HealthArtifactCard({ data }: { data: HealthArtifactData }) {
 // ==========================================
 // 2. BUDGET ARTIFACT CARD
 // ==========================================
-export interface BudgetArtifactData {
+
+interface BudgetCategoryRow {
+  categoryName?: string
+  overspend?: number
+  usage?: number
+  spent?: number
+  budget?: number
+}
+
+export interface BudgetArtifactData extends ArtifactPayload {
   totalBudget?: number
   totalSpent?: number
-  overspendCategory?: string
-  overspendAmount?: number
-  overspendPercentage?: number
+  overallUtilization?: number
+  overspendingCategories?: BudgetCategoryRow[]
 }
 
 export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const category = data.overspendCategory ?? '—'
-  const spent = data.overspendAmount ?? 0
-  const pct = data.overspendPercentage ?? 0
-  const statusText = pct > 0 ? 'Over Budget' : 'On Track'
-  const statusColor = pct > 0 ? colors.danger : colors.success
+  const overspending = Array.isArray(data.overspendingCategories)
+    ? (data.overspendingCategories as BudgetCategoryRow[])
+    : []
+  const top = overspending[0]
+  const category = top?.categoryName ?? '—'
+  const spent = typeof top?.overspend === 'number' ? top.overspend : 0
+  const usage = typeof top?.usage === 'number' ? top.usage : 0
+  const pct = Math.max(0, Math.round(usage - 100))
+  const overBudget = spent > 0
+  const statusText = overBudget ? 'Over Budget' : 'On Track'
+  const statusColor = overBudget ? colors.danger : colors.success
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, { backgroundColor: 'rgba(244, 63, 94, 0.12)' }]}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.dangerTint }]}>
           <PieChart size={16} color={colors.danger} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>Budget Highlight</Text>
@@ -140,22 +152,19 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
           <Text style={styles.itemValue}>₹{spent.toLocaleString('en-IN')}</Text>
         </View>
 
-        <View style={styles.trendPill}>
-          <TrendingUp size={12} color={colors.danger} strokeWidth={2.5} />
-          <Text style={styles.trendText}>▲ {pct}%</Text>
-        </View>
+        {overBudget && (
+          <View style={styles.trendPill}>
+            <TrendingUp size={12} color={colors.danger} strokeWidth={2.5} />
+            <Text style={styles.trendText}>▲ {pct}%</Text>
+          </View>
+        )}
       </View>
 
       <Text style={styles.noteText}>
-        {pct > 0
-          ? `Overspent by ₹${spent.toLocaleString('en-IN')} (${pct}%) in ${category}`
-          : `No overspending in ${category}`}
+        {overBudget
+          ? `Overspent by ₹${spent.toLocaleString('en-IN')} in ${category}`
+          : `Spent ₹${(data.totalSpent ?? 0).toLocaleString('en-IN')} of ₹${(data.totalBudget ?? 0).toLocaleString('en-IN')} budgeted`}
       </Text>
-
-      <Pressable style={styles.actionBtn} accessibilityRole="button">
-        <Text style={styles.actionBtnText}>Adjust Category Budget</Text>
-        <ChevronRight size={14} color={colors.primary} />
-      </Pressable>
     </Animated.View>
   )
 }
@@ -163,23 +172,28 @@ export function BudgetArtifactCard({ data }: { data: BudgetArtifactData }) {
 // ==========================================
 // 3. GOAL ARTIFACT CARD
 // ==========================================
-export interface GoalArtifactData {
-  goalName?: string
-  progressPercentage?: number
-  targetAmount?: number
-  currentAmount?: number
-  monthlyRequired?: number
+
+interface GoalProjectionRow {
+  goalId?: string
+  monthlyContribution?: number
+  completionPercentage?: number
   status?: string
 }
 
-export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
+export interface GoalArtifactData extends ArtifactPayload {
+  goals?: GoalProjectionRow[]
+}
+
+export function GoalArtifactCard({ data, title }: { data: GoalArtifactData; title?: string }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const name = data.goalName ?? '—'
-  const pct = data.progressPercentage ?? 0
-  const monthly = data.monthlyRequired ?? 0
-  const rawStatus = data.status ?? '—'
+  const goals = Array.isArray(data.goals) ? (data.goals as GoalProjectionRow[]) : []
+  const first = goals[0] ?? {}
+  const name = title ?? 'Goal Projections'
+  const pct = Math.round(first.completionPercentage ?? 0)
+  const monthly = first.monthlyContribution ?? 0
+  const rawStatus = first.status ?? '—'
   const statusColor =
     rawStatus === 'behind' || rawStatus === 'at_risk'
       ? colors.danger
@@ -194,7 +208,7 @@ export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, { backgroundColor: 'rgba(16, 185, 129, 0.12)' }]}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.successBackground }]}>
           <Home size={16} color={colors.success} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>{name}</Text>
@@ -216,15 +230,10 @@ export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
       <View style={styles.recommendationBox}>
         <Sparkles size={14} color={colors.primary} style={{ marginTop: 2 }} />
         <View style={{ flex: 1 }}>
-          <Text style={styles.recommendationLabel}>RECOMMENDED MONTHLY SAVINGS</Text>
+          <Text style={styles.recommendationLabel}>REQUIRED MONTHLY CONTRIBUTION</Text>
           <Text style={styles.recommendationValue}>₹{monthly.toLocaleString('en-IN')} / month</Text>
         </View>
       </View>
-
-      <Pressable style={styles.actionBtn} accessibilityRole="button">
-        <Text style={styles.actionBtnText}>Set Auto-Transfer</Text>
-        <ChevronRight size={14} color={colors.primary} />
-      </Pressable>
     </Animated.View>
   )
 }
@@ -232,7 +241,7 @@ export function GoalArtifactCard({ data }: { data: GoalArtifactData }) {
 // ==========================================
 // 4. TAX ARTIFACT CARD
 // ==========================================
-export interface TaxArtifactData {
+export interface TaxArtifactData extends ArtifactPayload {
   oldRegimeTax?: number
   newRegimeTax?: number
   savings?: number
@@ -246,11 +255,12 @@ export function TaxArtifactCard({ data }: { data: TaxArtifactData }) {
   const oldTax = data.oldRegimeTax ?? 0
   const newTax = data.newRegimeTax ?? 0
   const savings = data.savings ?? Math.abs(oldTax - newTax)
+  const betterRegime = data.betterRegime === 'old' ? 'Old' : 'New'
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, { backgroundColor: 'rgba(59, 130, 246, 0.12)' }]}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.chartMuted }]}>
           <Receipt size={16} color={colors.secondary} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>Tax Intelligence Comparison</Text>
@@ -278,17 +288,14 @@ export function TaxArtifactCard({ data }: { data: TaxArtifactData }) {
       </View>
 
       {/* Savings Callout Banner */}
-      <View style={styles.savingsBanner}>
-        <CheckCircle2 size={16} color={colors.success} strokeWidth={2.5} />
-        <Text style={styles.savingsBannerText}>
-          Save ₹{savings.toLocaleString('en-IN')} by choosing the New Tax Regime!
-        </Text>
-      </View>
-
-      <Pressable style={styles.actionBtn} accessibilityRole="button">
-        <Text style={styles.actionBtnText}>View Detailed Deductions</Text>
-        <ChevronRight size={14} color={colors.primary} />
-      </Pressable>
+      {savings > 0 && (
+        <View style={styles.savingsBanner}>
+          <CheckCircle2 size={16} color={colors.success} strokeWidth={2.5} />
+          <Text style={styles.savingsBannerText}>
+            Save ₹{savings.toLocaleString('en-IN')} by choosing the {betterRegime} Tax Regime!
+          </Text>
+        </View>
+      )}
     </Animated.View>
   )
 }
@@ -296,25 +303,29 @@ export function TaxArtifactCard({ data }: { data: TaxArtifactData }) {
 // ==========================================
 // 5. RETIREMENT ARTIFACT CARD
 // ==========================================
-export interface RetirementArtifactData {
-  corpusRequired?: number
-  yearsRemaining?: number
-  futureMonthlyExpense?: number
+export interface RetirementArtifactData extends ArtifactPayload {
+  retirementCorpus?: number
+  yearsToRetirement?: number
+  futureMonthlyExpenses?: number
+  inflationRate?: number
+  safeWithdrawalRate?: number
 }
 
 export function RetirementArtifactCard({ data }: { data: RetirementArtifactData }) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
 
-  const corpus = data.corpusRequired ?? 0
-  const years = data.yearsRemaining ?? 0
-  const futureExp = data.futureMonthlyExpense ?? 0
+  const corpus = data.retirementCorpus ?? 0
+  const years = data.yearsToRetirement ?? 0
+  const futureExp = data.futureMonthlyExpenses ?? 0
+  const withdrawalPct = Math.round((data.safeWithdrawalRate ?? 0) * 1000) / 10
+  const inflationPct = Math.round((data.inflationRate ?? 0) * 1000) / 10
 
   return (
     <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
       <View style={styles.headerRow}>
-        <View style={[styles.iconBadge, { backgroundColor: 'rgba(139, 92, 246, 0.12)' }]}>
-          <Compass size={16} color="#8B5CF6" strokeWidth={2.2} />
+        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
+          <Compass size={16} color={colors.primary} strokeWidth={2.2} />
         </View>
         <Text style={styles.headerTitle}>Retirement Corpus Projection</Text>
       </View>
@@ -322,7 +333,9 @@ export function RetirementArtifactCard({ data }: { data: RetirementArtifactData 
       <View style={styles.heroSection}>
         <Text style={styles.heroLabel}>TARGET RETIREMENT CORPUS</Text>
         <Text style={styles.heroValue}>₹{(corpus / 10000000).toFixed(2)} Cr</Text>
-        <Text style={styles.heroSubtext}>Based on 4% safe withdrawal rate over 25+ years</Text>
+        <Text style={styles.heroSubtext}>
+          Based on {withdrawalPct}% safe withdrawal rate
+        </Text>
       </View>
 
       <View style={styles.breakdownContainer}>
@@ -331,20 +344,237 @@ export function RetirementArtifactCard({ data }: { data: RetirementArtifactData 
           <Text style={styles.breakdownValue}>{years} Years</Text>
         </View>
         <View style={[styles.breakdownRow, { marginTop: 8 }]}>
-          <Text style={styles.breakdownLabel}>Future Monthly Expense (6% Inf.)</Text>
+          <Text style={styles.breakdownLabel}>
+            Future Monthly Expense ({inflationPct}% Inf.)
+          </Text>
           <Text style={styles.breakdownValue}>₹{futureExp.toLocaleString('en-IN')}</Text>
         </View>
       </View>
-
-      <Pressable style={styles.actionBtn} accessibilityRole="button">
-        <Text style={styles.actionBtnText}>Simulate Wealth Strategy</Text>
-        <ChevronRight size={14} color={colors.primary} />
-      </Pressable>
     </Animated.View>
   )
 }
 
-const makeStyles = (colors: any) =>
+// ==========================================
+// 6. NET WORTH ARTIFACT CARD
+// ==========================================
+export interface NetWorthArtifactData extends ArtifactPayload {
+  netWorth?: number
+  totalAssets?: number
+  totalLiabilities?: number
+}
+
+export function NetWorthArtifactCard({ data }: { data: NetWorthArtifactData }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
+  const netWorth = data.netWorth ?? 0
+  const assets = data.totalAssets ?? 0
+  const liabilities = data.totalLiabilities ?? 0
+
+  return (
+    <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
+      <View style={styles.headerRow}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
+          <Wallet size={16} color={colors.primary} strokeWidth={2.2} />
+        </View>
+        <Text style={styles.headerTitle}>Net Worth Snapshot</Text>
+      </View>
+
+      <View style={styles.heroSection}>
+        <Text style={styles.heroLabel}>TOTAL NET WORTH</Text>
+        <Text style={styles.heroValue}>₹{netWorth.toLocaleString('en-IN')}</Text>
+      </View>
+
+      <View style={styles.breakdownContainer}>
+        <View style={styles.breakdownRow}>
+          <Text style={styles.breakdownLabel}>Total Assets</Text>
+          <Text style={styles.breakdownValue}>₹{assets.toLocaleString('en-IN')}</Text>
+        </View>
+        <View style={[styles.breakdownRow, { marginTop: 8 }]}>
+          <Text style={styles.breakdownLabel}>Total Liabilities</Text>
+          <Text style={styles.breakdownValue}>₹{liabilities.toLocaleString('en-IN')}</Text>
+        </View>
+      </View>
+    </Animated.View>
+  )
+}
+
+// ==========================================
+// 7. CASH FLOW ARTIFACT CARD
+// ==========================================
+export interface CashFlowArtifactData extends ArtifactPayload {
+  netCashFlow?: number
+  runwayMonths?: number | null
+  savingsRate?: number
+  currentBalance?: number
+}
+
+export function CashFlowArtifactCard({ data }: { data: CashFlowArtifactData }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
+  const netFlow = data.netCashFlow ?? 0
+  const runway = data.runwayMonths
+  const savingsPct = Math.round((data.savingsRate ?? 0) * 100)
+  const positive = netFlow >= 0
+  const statusColor = positive ? colors.success : colors.danger
+
+  return (
+    <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
+      <View style={styles.headerRow}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
+          <Activity size={16} color={colors.primary} strokeWidth={2.2} />
+        </View>
+        <Text style={styles.headerTitle}>Cash Flow Snapshot</Text>
+        <View style={[styles.statusBadge, { backgroundColor: `${statusColor}1A` }]}>
+          <Text style={[styles.statusText, { color: statusColor }]}>
+            {positive ? 'Surplus' : 'Deficit'}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.breakdownContainer}>
+        <View style={styles.breakdownRow}>
+          <Text style={styles.breakdownLabel}>Net Monthly Cash Flow</Text>
+          <Text style={[styles.breakdownValue, { color: statusColor }]}>
+            {positive ? '+' : ''}₹{netFlow.toLocaleString('en-IN')}
+          </Text>
+        </View>
+        <View style={[styles.breakdownRow, { marginTop: 8 }]}>
+          <Text style={styles.breakdownLabel}>Savings Rate</Text>
+          <Text style={styles.breakdownValue}>{savingsPct}%</Text>
+        </View>
+        {typeof runway === 'number' && (
+          <View style={[styles.breakdownRow, { marginTop: 8 }]}>
+            <Text style={styles.breakdownLabel}>Cash Runway</Text>
+            <Text style={styles.breakdownValue}>{runway.toFixed(1)} months</Text>
+          </View>
+        )}
+      </View>
+    </Animated.View>
+  )
+}
+
+// ==========================================
+// 8. INSIGHT ARTIFACT CARD
+// ==========================================
+export interface InsightArtifactData extends ArtifactPayload {
+  insights?: string[]
+}
+
+export function InsightArtifactCard({
+  data,
+  title,
+}: {
+  data: InsightArtifactData
+  title?: string
+}) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
+  const insights = Array.isArray(data.insights)
+    ? data.insights.filter((i): i is string => typeof i === 'string')
+    : []
+  if (insights.length === 0) return null
+
+  return (
+    <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
+      <View style={styles.headerRow}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.accentBackground }]}>
+          <Sparkles size={16} color={colors.accent} strokeWidth={2.2} />
+        </View>
+        <Text style={styles.headerTitle}>{title ?? 'Insights'}</Text>
+      </View>
+      {insights.map((insight, idx) => (
+        <View key={`ins-${idx}`} style={styles.insightRow}>
+          <AlertTriangle size={13} color={colors.warning} strokeWidth={2.2} />
+          <Text style={styles.insightText}>{insight}</Text>
+        </View>
+      ))}
+    </Animated.View>
+  )
+}
+
+// ==========================================
+// 9. REPORT ARTIFACT CARD
+// ==========================================
+
+interface ReportSectionItem {
+  label?: string
+  value?: string
+}
+
+interface ReportSection {
+  title?: string
+  items?: ReportSectionItem[]
+  highlight?: string
+}
+
+export interface ReportArtifactData extends ArtifactPayload {
+  weekStart?: string
+  weekEnd?: string
+  totalSpent?: number
+  totalIncome?: number
+  netFlow?: number
+  sections?: ReportSection[]
+}
+
+export function ReportArtifactCard({ data }: { data: ReportArtifactData }) {
+  const { colors } = useTheme()
+  const styles = useMemo(() => makeStyles(colors), [colors])
+
+  const netFlow = data.netFlow ?? 0
+  const sections = Array.isArray(data.sections) ? (data.sections as ReportSection[]) : []
+
+  return (
+    <Animated.View entering={FadeInDown.springify().delay(100)} style={styles.card}>
+      <View style={styles.headerRow}>
+        <View style={[styles.iconBadge, { backgroundColor: colors.primarySoft }]}>
+          <FileText size={16} color={colors.primary} strokeWidth={2.2} />
+        </View>
+        <Text style={styles.headerTitle}>Weekly Report</Text>
+      </View>
+
+      <View style={styles.breakdownContainer}>
+        <View style={styles.breakdownRow}>
+          <Text style={styles.breakdownLabel}>Income</Text>
+          <Text style={styles.breakdownValue}>
+            ₹{(data.totalIncome ?? 0).toLocaleString('en-IN')}
+          </Text>
+        </View>
+        <View style={[styles.breakdownRow, { marginTop: 8 }]}>
+          <Text style={styles.breakdownLabel}>Spent</Text>
+          <Text style={styles.breakdownValue}>
+            ₹{(data.totalSpent ?? 0).toLocaleString('en-IN')}
+          </Text>
+        </View>
+        <View style={[styles.breakdownRow, { marginTop: 8 }]}>
+          <Text style={styles.breakdownLabel}>Net Flow</Text>
+          <Text
+            style={[
+              styles.breakdownValue,
+              { color: netFlow >= 0 ? colors.success : colors.danger },
+            ]}
+          >
+            {netFlow >= 0 ? '+' : ''}₹{netFlow.toLocaleString('en-IN')}
+          </Text>
+        </View>
+      </View>
+
+      {sections.slice(0, 3).map(
+        (section, idx) =>
+          section.highlight ? (
+            <Text key={`sec-${idx}`} style={styles.sectionHighlight}>
+              {section.title ? `${section.title}: ` : ''}
+              {section.highlight}
+            </Text>
+          ) : null
+      )}
+    </Animated.View>
+  )
+}
+
+const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     card: {
       backgroundColor: colors.surface,
@@ -481,7 +711,7 @@ const makeStyles = (colors: any) =>
     trendPill: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(244, 63, 94, 0.12)',
+      backgroundColor: colors.dangerTint,
       paddingHorizontal: 8,
       paddingVertical: 4,
       borderRadius: 12,
@@ -615,7 +845,7 @@ const makeStyles = (colors: any) =>
     savingsBanner: {
       flexDirection: 'row',
       alignItems: 'center',
-      backgroundColor: 'rgba(16, 185, 129, 0.12)',
+      backgroundColor: colors.successBackground,
       paddingHorizontal: 12,
       paddingVertical: 10,
       borderRadius: 12,
@@ -650,19 +880,23 @@ const makeStyles = (colors: any) =>
       fontWeight: '700',
       fontSize: 12,
     },
-    actionBtn: {
+    insightRow: {
       flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
-      paddingVertical: 10,
-      borderTopWidth: 1,
-      borderTopColor: colors.border,
-      gap: 6,
+      alignItems: 'flex-start',
+      gap: 8,
+      marginBottom: 6,
     },
-    actionBtnText: {
-      ...Typography.labelMedium,
-      color: colors.primary,
-      fontWeight: '700',
-      fontSize: 13,
+    insightText: {
+      ...Typography.bodySmall,
+      color: colors.textPrimary,
+      fontSize: 12,
+      lineHeight: 17,
+      flex: 1,
+    },
+    sectionHighlight: {
+      ...Typography.bodySmall,
+      color: colors.textSecondary,
+      fontSize: 12,
+      marginTop: 4,
     },
   })

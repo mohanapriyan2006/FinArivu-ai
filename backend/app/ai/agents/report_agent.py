@@ -5,15 +5,17 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from sqlalchemy.ext.asyncio import AsyncSession
-
 from app.ai.agents.base_agent import BaseSpecialistAgent
 from app.ai.schemas import AgentResult
-from app.services.reports import ReportService
+from app.ai.tools.financial_tools import get_report
 
 
 class ReportAgent(BaseSpecialistAgent):
-    """Generates a summary of the user's latest financial report."""
+    """Generates a summary of the user's financial report.
+
+    Uses the read-only report engine — the copilot chat path must never
+    persist rows, so this does not call ``ReportService``.
+    """
 
     @property
     def agent_name(self) -> str:
@@ -24,9 +26,7 @@ class ReportAgent(BaseSpecialistAgent):
         user_id: uuid.UUID,
         context: dict[str, Any],
     ) -> AgentResult:
-        report_service = ReportService(self._session)
-        report = await report_service.generate_weekly_report(user_id)
-        report_data = report.model_dump() if hasattr(report, "model_dump") else {}
+        report_data = await get_report(self._session, user_id, period="weekly")
 
         return AgentResult(
             agent_name=self.agent_name,

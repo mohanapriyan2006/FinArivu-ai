@@ -21,27 +21,9 @@ import NotificationsScreen from '@/screens/notifications/NotificationsScreen'
 import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 import FinancialProfileSetupScreen from '@/screens/financialProfile/FinancialProfileSetupScreen'
 import FinancialHealthPlaceholderScreen from '@/screens/insights/FinancialHealthPlaceholderScreen'
+import type { RootStackParamList } from '@/types/navigation'
 
-export type RootStackParamList = {
-  Splash: undefined
-  Onboarding: undefined
-  Auth: undefined
-  Main: undefined
-  FinancialProfileSetup: { startStep?: string } | undefined
-  Notifications: undefined
-  WeeklyReport: undefined
-  ExpenseTracker: undefined
-  BudgetTracker: undefined
-  SavingsTracker: undefined
-  InvestmentTracker: undefined
-  GoalsTracker: undefined
-  LoanTracker: undefined
-  CreditCardTracker: undefined
-  InsuranceTracker: undefined
-  PulseSectionList: { section: string }
-  PulseSectionCreate: { section: string; record?: Record<string, unknown> }
-  FinancialHealth: undefined
-}
+export type { RootStackParamList } from '@/types/navigation'
 
 const Stack = createStackNavigator<RootStackParamList>()
 

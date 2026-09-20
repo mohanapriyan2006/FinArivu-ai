@@ -14,23 +14,27 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { Clock, History, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react-native'
+import { useNavigation } from '@react-navigation/native'
+import type { StackNavigationProp } from '@react-navigation/stack'
+import { Clock, History, Pencil, Plus, Trash2, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useAuthContext } from '@/contexts/AuthContext'
-import { Typography } from '@/theme'
+import { ThemeColors, Typography } from '@/theme'
 import { useCopilot } from '@/hooks/useCopilot'
 import { CopilotHeader } from '@/components/chatbot/CopilotHeader'
 import { CopilotWelcome } from '@/components/chatbot/CopilotWelcome'
-import {
-  DocMessageItem,
-  type ChatMessageItemData,
-  type SuggestedAction,
-} from '@/components/chatbot/DocMessageItem'
+import { DocMessageItem } from '@/components/chatbot/DocMessageItem'
+import type { ChatMessageItemData, SuggestedAction } from '@/types/copilot'
 import { CopilotInput } from '@/components/chatbot/CopilotInput'
 import { ThinkingAnimation } from '@/components/chatbot/ThinkingAnimation'
+import { navigateToAction } from '@/navigation/actionRoutes'
+import type { RootStackParamList } from '@/types/navigation'
 
-export default function CopilotScreen({ navigation }: any) {
+type CopilotNavigationProp = StackNavigationProp<RootStackParamList>
+
+export default function CopilotScreen() {
+  const navigation = useNavigation<CopilotNavigationProp>()
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
   const { getToken } = useAuthContext()
@@ -229,16 +233,19 @@ export default function CopilotScreen({ navigation }: any) {
 
   const handleAction = useCallback(
     (action: SuggestedAction) => {
+      if (action.enabled === false) return
       if (action.type === 'CHAT_FOLLOWUP') {
-        handleSendMessage((action.payload?.question as string) || action.label)
-      } else if (action.type === 'NAVIGATE') {
-        const screen = action.payload?.screen as string | undefined
-        const params = (action.payload?.params as Record<string, any>) || undefined
-        if (screen) {
-          navigation.navigate(screen as never, params as never)
-        }
+        const question =
+          typeof action.payload?.question === 'string'
+            ? action.payload.question
+            : action.label
+        handleSendMessage(question)
+        return
       }
-      // API_ACTION not yet implemented
+      if (action.type === 'NAVIGATE') {
+        navigateToAction(navigation, action)
+      }
+      // API_ACTION is never executed — Phase 0 keeps the copilot read-only.
     },
     [handleSendMessage, navigation]
   )
@@ -449,7 +456,7 @@ export default function CopilotScreen({ navigation }: any) {
   )
 }
 
-const makeStyles = (colors: any) =>
+const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     safeArea: {
       flex: 1,
@@ -474,7 +481,7 @@ const makeStyles = (colors: any) =>
     },
     menuOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.35)',
+      backgroundColor: colors.overlay,
       justifyContent: 'flex-start',
       paddingTop: 70,
       paddingRight: 12,
@@ -585,7 +592,7 @@ const makeStyles = (colors: any) =>
     },
     renameOverlay: {
       flex: 1,
-      backgroundColor: 'rgba(0,0,0,0.5)',
+      backgroundColor: colors.overlay,
       justifyContent: 'center',
       alignItems: 'center',
       padding: 24,

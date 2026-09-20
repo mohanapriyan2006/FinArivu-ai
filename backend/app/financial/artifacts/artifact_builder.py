@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import Any
 
-from app.financial.artifacts.schemas import Artifact
+from app.financial.artifacts.schemas import Artifact, ArtifactType
 
 
 class ArtifactBuilder:
@@ -17,17 +17,31 @@ class ArtifactBuilder:
     @staticmethod
     def from_agent_data(agent_name: str, data: dict[str, Any]) -> Artifact | None:
         """Map an agent result to the correct artifact type."""
+        # Lazy import — the registry pulls in the agent package which imports
+        # ai.schemas; importing at module level creates a cycle.
+        from app.ai.registry.registry import AgentName
+
         mapping: dict[str, str] = {
-            "BudgetAgent": "budget_card",
-            "GoalAgent": "goal_card",
-            "HealthAgent": "health_card",
-            "TaxAgent": "tax_card",
-            "RetirementAgent": "retirement_card",
-            "NetWorthAgent": "networth_card",
-            "CashFlowAgent": "cashflow_card",
-            "ReportAgent": "report_card",
+            AgentName.BUDGET.value: ArtifactType.BUDGET_CARD.value,
+            AgentName.GOAL.value: ArtifactType.GOAL_CARD.value,
+            AgentName.HEALTH.value: ArtifactType.HEALTH_CARD.value,
+            AgentName.TAX.value: ArtifactType.TAX_CARD.value,
+            AgentName.RETIREMENT.value: ArtifactType.RETIREMENT_CARD.value,
+            AgentName.NETWORTH.value: ArtifactType.NETWORTH_CARD.value,
+            AgentName.CASHFLOW.value: ArtifactType.CASHFLOW_CARD.value,
+            AgentName.REPORT.value: ArtifactType.REPORT_CARD.value,
+            AgentName.INSIGHT.value: ArtifactType.INSIGHT_CARD.value,
         }
-        artifact_type = mapping.get(agent_name, "generic_card")
+        # Never visualise empty, errored, or missing-data payloads — the
+        # response layer explains gaps in text instead.
+        if not data:
+            return None
+        if data.get("error") or data.get("missing") or data.get("dataMissing"):
+            return None
+        artifact_type = mapping.get(agent_name)
+        if artifact_type is None:
+            # Unknown/unmapped agents never produce visual artifacts.
+            return None
         title = agent_name.replace("Agent", "")
         return Artifact(type=artifact_type, title=title, content=data)
 

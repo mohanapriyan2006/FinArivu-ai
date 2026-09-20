@@ -1,104 +1,45 @@
 from __future__ import annotations
 
 from datetime import datetime
-from decimal import Decimal
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import Field
+
+from app.schemas.base import BaseSchema
 
 
-class MoneyValue(BaseModel):
-    value: float
-    currency: str = "INR"
-    formatted: str = ""
+# Internal engine result contracts. These models are consumed by the tool
+# layer (``app.financial.tools``) and serialised into agent ``data`` payloads
+# and artifact ``content`` dicts, so they use ``BaseSchema`` to emit the same
+# camelCase keys the agents and the React Native cards expect.
+#
+# Budget / goal / health / net-worth results reuse the canonical API response
+# models from ``app.schemas.financial`` directly — they are intentionally NOT
+# redefined here.
 
 
-class BudgetAnalysis(BaseModel):
-    total_budget: float = 0
-    total_spent: float = 0
-    total_remaining: float = 0
-    utilisation_percentage: float = 0
-    overspending_percentage: float = 0
-    average_monthly_spending: float = 0
-    top_expense_categories: list[dict[str, Any]] = Field(default_factory=list)
-    category_breakdown: list[dict[str, Any]] = Field(default_factory=list)
-    overspending_categories: list[dict[str, Any]] = Field(default_factory=list)
-    savings_opportunities: list[str] = Field(default_factory=list)
-    recurring_expenses: list[dict[str, Any]] = Field(default_factory=list)
-    month_over_month: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class SubScore(BaseModel):
-    name: str
-    score: float
-    weight: float
-
-
-class FinancialHealthResult(BaseModel):
-    overall_score: float = 0
-    grade: str = "N/A"
-    status: str = "Unknown"
-    savings_score: float = 0
-    emergency_fund_score: float = 0
-    debt_score: float = 0
-    goal_score: float = 0
-    budget_score: float = 0
-    sub_scores: list[SubScore] = Field(default_factory=list)
-    improvement_areas: list[str] = Field(default_factory=list)
-    trend: list[dict[str, Any]] = Field(default_factory=list)
-
-
-class GoalAnalysis(BaseModel):
-    goals: list[dict[str, Any]] = Field(default_factory=list)
-    overall_progress: float = 0
-    projected_completion: datetime | None = None
-    monthly_savings_required: float = 0
-    risk_goals: list[str] = Field(default_factory=list)
-
-
-class RetirementAnalysis(BaseModel):
-    current_age: int = 0
-    retirement_age: int = 60
-    years_remaining: int = 0
-    future_monthly_expense: float = 0
-    required_corpus: float = 0
-    current_gap: float = 0
-    monthly_investment_required: float = 0
-    inflation_rate: float = 0.06
-    safe_withdrawal_rate: float = 0.04
-    readiness_score: float = 0
-
-
-class TaxSlab(BaseModel):
+class TaxSlab(BaseSchema):
     limit: float
     rate: float
 
 
-class TaxAnalysis(BaseModel):
+class TaxAnalysis(BaseSchema):
+    """Old-vs-new regime comparison for the current user."""
+
     regime: str
     gross_income: float = 0
     deductions: float = 0
     taxable_income: float = 0
     tax_amount: float = 0
     effective_tax_rate: float = 0
-    savings_vs_other_regime: float = 0
-    recommended_regime: str = ""
+    old_regime_tax: float = 0
+    new_regime_tax: float = 0
+    better_regime: str = ""
+    savings: float = 0
     slabs: list[TaxSlab] = Field(default_factory=list)
 
 
-class NetWorthAnalysis(BaseModel):
-    total_assets: float = 0
-    total_liabilities: float = 0
-    net_worth: float = 0
-    asset_breakdown: dict[str, float] = Field(default_factory=dict)
-    liability_breakdown: dict[str, float] = Field(default_factory=dict)
-    monthly_growth: float = 0
-    annual_growth: float = 0
-    debt_ratio: float = 0
-    asset_allocation: dict[str, float] = Field(default_factory=dict)
-
-
-class CashFlowAnalysis(BaseModel):
+class CashFlowAnalysis(BaseSchema):
     total_income: float = 0
     total_expenses: float = 0
     savings: float = 0
@@ -108,38 +49,31 @@ class CashFlowAnalysis(BaseModel):
     monthly_trend: list[dict[str, Any]] = Field(default_factory=list)
 
 
-class ScenarioInput(BaseModel):
+class ScenarioInput(BaseSchema):
     variable: str
     delta: float
     unit: str = "amount"
 
 
-class ScenarioResult(BaseModel):
-    current: dict[str, Any] = Field(default_factory=dict)
-    optimized: dict[str, Any] = Field(default_factory=dict)
-    difference: dict[str, Any] = Field(default_factory=dict)
-    recommendations: list[str] = Field(default_factory=list)
-
-
-class Recommendation(BaseModel):
+class Recommendation(BaseSchema):
     title: str
     description: str
     category: str
     priority: str = "medium"
 
 
-class RecommendationResult(BaseModel):
+class RecommendationResult(BaseSchema):
     recommendations: list[Recommendation] = Field(default_factory=list)
     priority_summary: dict[str, int] = Field(default_factory=dict)
 
 
-class ReportSection(BaseModel):
+class ReportSection(BaseSchema):
     title: str
     type: str
     data: dict[str, Any] = Field(default_factory=dict)
 
 
-class ReportResult(BaseModel):
+class ReportResult(BaseSchema):
     period: str = "monthly"
     generated_at: str = Field(default_factory=lambda: datetime.now().isoformat())
     summary: str = ""
@@ -154,8 +88,17 @@ class ReportResult(BaseModel):
     sections: list[ReportSection] = Field(default_factory=list)
 
 
-class SimulationResult(BaseModel):
+class SimulationResult(BaseSchema):
+    """What-if scenario output.
+
+    ``inputs`` echoes the baseline values used, ``assumptions`` exposes every
+    modelling assumption that influenced the numbers so callers can inspect
+    or display them.
+    """
+
     scenario: ScenarioInput
+    inputs: dict[str, Any] = Field(default_factory=dict)
+    assumptions: dict[str, Any] = Field(default_factory=dict)
     current: dict[str, Any] = Field(default_factory=dict)
     optimized: dict[str, Any] = Field(default_factory=dict)
     difference: dict[str, Any] = Field(default_factory=dict)

@@ -16,8 +16,9 @@ except ImportError:
 from typing import Any
 from uuid import UUID
 
-from pydantic import Field
+from pydantic import Field, model_validator
 
+from app.financial.artifacts.schemas import Artifact
 from app.schemas.base import BaseSchema
 
 
@@ -54,6 +55,20 @@ class ResponseStyle(StrEnum):
     CONCISE = "concise"
     DETAILED = "detailed"
     FRIENDLY = "friendly"
+
+
+class ActionType(StrEnum):
+    """Canonical suggested-action types on the copilot contract.
+
+    ``CHAT_FOLLOWUP`` re-sends the label/payload question as a user message.
+    ``NAVIGATE`` deep-links to an app screen resolved from ``route``.
+    ``API_ACTION`` is a typed placeholder for future executable actions —
+    the frontend must never execute it autonomously in Phase 0.
+    """
+
+    CHAT_FOLLOWUP = "CHAT_FOLLOWUP"
+    NAVIGATE = "NAVIGATE"
+    API_ACTION = "API_ACTION"
 
 
 # ── Request schemas ───────────────────────────────────────────────────────
@@ -164,30 +179,33 @@ class StreamEvent(BaseSchema):
 
 # ── Response schemas ─────────────────────────────────────────────────────
 
-class Artifact(BaseSchema):
-    """Structured artifact returned with the chat response."""
-
-    type: str
-    title: str
-    content: dict[str, Any] = Field(default_factory=dict)
-
-
 class SuggestedAction(BaseSchema):
-    """Suggested next action for the user."""
+    """Suggested next action for the user.
+
+    For ``NAVIGATE`` actions ``route`` carries a canonical navigation target
+    key (e.g. ``"budget"``); the frontend resolves it to a registered screen
+    name. ``payload`` carries optional navigation params.
+    """
 
     id: str
     label: str
-    type: str = "CHAT_FOLLOWUP"
+    type: ActionType = ActionType.CHAT_FOLLOWUP
     payload: dict[str, Any] = Field(default_factory=dict)
     enabled: bool = True
     route: str | None = None
+
+    @model_validator(mode="after")
+    def _navigate_requires_route(self) -> SuggestedAction:
+        if self.type == ActionType.NAVIGATE and not self.route:
+            raise ValueError("NAVIGATE actions require a canonical 'route' target")
+        return self
 
 
 class FollowUpQuestion(BaseSchema):
     """Follow-up question or prompt the user can select."""
 
     label: str
-    type: str = "CHAT_FOLLOWUP"
+    type: ActionType = ActionType.CHAT_FOLLOWUP
     payload: dict[str, Any] = Field(default_factory=dict)
 
 

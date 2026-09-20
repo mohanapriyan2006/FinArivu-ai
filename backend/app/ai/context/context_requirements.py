@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from app.ai.context.domain import FinancialDomain
+from app.ai.registry.registry import AgentName
 
 
 CONTEXT_KEY_TO_DOMAIN: dict[str, FinancialDomain] = {
@@ -28,19 +29,19 @@ CONTEXT_KEY_TO_DOMAIN: dict[str, FinancialDomain] = {
 
 
 AGENT_CONTEXT_REQUIREMENTS: dict[str, list[FinancialDomain]] = {
-    "BudgetAgent": [
+    AgentName.BUDGET.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.BUDGETS,
         FinancialDomain.CASH_FLOW,
     ],
-    "GoalAgent": [
+    AgentName.GOAL.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.SAVINGS,
         FinancialDomain.GOALS,
     ],
-    "RetirementAgent": [
+    AgentName.RETIREMENT.value: [
         FinancialDomain.PROFILE,
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
@@ -49,18 +50,18 @@ AGENT_CONTEXT_REQUIREMENTS: dict[str, list[FinancialDomain]] = {
         FinancialDomain.GOALS,
         FinancialDomain.LOANS,
     ],
-    "TaxAgent": [
+    AgentName.TAX.value: [
         FinancialDomain.INCOME,
         FinancialDomain.TAX,
     ],
-    "HealthAgent": [
+    AgentName.HEALTH.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.SAVINGS,
         FinancialDomain.LOANS,
         FinancialDomain.GOALS,
     ],
-    "NetWorthAgent": [
+    AgentName.NETWORTH.value: [
         FinancialDomain.SAVINGS,
         FinancialDomain.INVESTMENTS,
         FinancialDomain.FIXED_DEPOSITS,
@@ -69,8 +70,8 @@ AGENT_CONTEXT_REQUIREMENTS: dict[str, list[FinancialDomain]] = {
         FinancialDomain.INSURANCE,
         FinancialDomain.NET_WORTH,
     ],
-    "EducationAgent": [],
-    "ReportAgent": [
+    AgentName.EDUCATION.value: [],
+    AgentName.REPORT.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.SAVINGS,
@@ -78,18 +79,23 @@ AGENT_CONTEXT_REQUIREMENTS: dict[str, list[FinancialDomain]] = {
         FinancialDomain.GOALS,
         FinancialDomain.NET_WORTH,
     ],
-    "InsightAgent": [
+    AgentName.INSIGHT.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.SAVINGS,
         FinancialDomain.LOANS,
         FinancialDomain.GOALS,
     ],
-    "RecommendationAgent": [
+    AgentName.RECOMMENDATION.value: [
         FinancialDomain.INCOME,
         FinancialDomain.EXPENSES,
         FinancialDomain.SAVINGS,
         FinancialDomain.GOALS,
+    ],
+    AgentName.CASHFLOW.value: [
+        FinancialDomain.INCOME,
+        FinancialDomain.EXPENSES,
+        FinancialDomain.CASH_FLOW,
     ],
 }
 

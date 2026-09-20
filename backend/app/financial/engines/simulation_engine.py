@@ -7,10 +7,24 @@ from app.financial.schemas import ScenarioInput, SimulationResult
 
 
 class SimulationEngine:
-    """Deterministic what-if scenario engine."""
+    """Deterministic what-if scenario engine.
+
+    Modelling assumptions (horizon, return rate) are explicit parameters and
+    are echoed back in ``SimulationResult.assumptions`` so callers and the UI
+    can inspect exactly what influenced the projection.
+    """
+
+    DEFAULT_HORIZON_YEARS = 10
+    DEFAULT_ANNUAL_RETURN_RATE = 0.08
 
     @staticmethod
-    def run(scenario: ScenarioInput, context: dict[str, Any]) -> SimulationResult:
+    def run(
+        scenario: ScenarioInput,
+        context: dict[str, Any],
+        *,
+        horizon_years: int = DEFAULT_HORIZON_YEARS,
+        annual_return_rate: float = DEFAULT_ANNUAL_RETURN_RATE,
+    ) -> SimulationResult:
         current = {
             "monthly_income": float(context.get("monthly_income", 0)),
             "monthly_expenses": float(context.get("monthly_expenses", 0)),
@@ -40,11 +54,9 @@ class SimulationEngine:
         if current["monthly_income"] > 0:
             optimized["savings_rate"] = new_savings / current["monthly_income"]
 
-        years = 10
-        annual_rate = 0.08
         corpus_delta = sum(
-            new_savings * ((1 + annual_rate / 12) ** (i + 1))
-            for i in range(years * 12)
+            new_savings * ((1 + annual_return_rate / 12) ** (i + 1))
+            for i in range(horizon_years * 12)
         )
         optimized["retirement_corpus"] = current["retirement_corpus"] + float(Decimal(str(corpus_delta)))
 
@@ -54,13 +66,25 @@ class SimulationEngine:
             "retirement_corpus_change": optimized["retirement_corpus"] - current["retirement_corpus"],
         }
 
+        assumptions = {
+            "horizon_years": horizon_years,
+            "annual_return_rate": annual_return_rate,
+            "compounding": "monthly",
+            "note": (
+                f"Corpus projection assumes a {annual_return_rate:.0%} annual return "
+                f"compounded monthly over {horizon_years} years."
+            ),
+        }
+
         recommendations = [
             f"Changing {scenario.variable} by {delta} {scenario.unit} increases monthly savings by ₹{difference['monthly_savings_change']:.0f}.",
-            f"Projected retirement corpus improvement: ₹{difference['retirement_corpus_change']:.0f} over {years} years.",
+            f"Projected retirement corpus improvement: ₹{difference['retirement_corpus_change']:.0f} over {horizon_years} years at {annual_return_rate:.0%} annual return.",
         ]
 
         return SimulationResult(
             scenario=scenario,
+            inputs=current,
+            assumptions=assumptions,
             current=current,
             optimized=optimized,
             difference=difference,

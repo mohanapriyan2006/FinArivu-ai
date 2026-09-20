@@ -1,30 +1,21 @@
 from __future__ import annotations
 
-import time
 import uuid
 from typing import Any, AsyncIterator
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.ai.context.builder import ContextBuilder
-from app.ai.context.context_requirements import get_required_domains
 from app.ai.controller.controller_service import ControllerService
 from app.ai.guardrails.guardrail import Guardrail
 from app.ai.guardrails.guardrail_service import GuardrailService
-from app.ai.intent.classifier import IntentClassifier
+from app.ai.intents import to_copilot_intent
 from app.ai.memory.conversation_memory import ConversationMemory
-from app.ai.orchestrator.orchestrator import Orchestrator
-from app.ai.orchestrator.response_builder import ResponseBuilder
-from app.ai.planner.planner import Planner
 from app.ai.providers.factory import get_ai_provider
 from app.ai.schemas import (
     CopilotAttachment,
     CopilotChatRequest,
     CopilotChatResponse,
     CopilotHealthResponse,
-    CopilotIntent,
-    PlannerOutput,
-    ResponseStyle,
 )
 from app.core.logger import logger
 
@@ -41,12 +32,7 @@ class AIController:
         self._session = session
         self._guardrail = Guardrail()
         self._guardrail_service = GuardrailService()
-        self._intent = IntentClassifier()
-        self._context_builder = ContextBuilder(session)
-        self._planner = Planner()
-        self._orchestrator = Orchestrator(session)
         self._memory = ConversationMemory(session)
-        self._response_builder: ResponseBuilder | None = None
 
     async def chat(
         self,
@@ -54,7 +40,6 @@ class AIController:
         request: CopilotChatRequest,
     ) -> CopilotChatResponse:
         """Process a user message through the full orchestration pipeline."""
-        start = time.perf_counter()
         session_id = request.session_id
         message = request.message.strip()
 
@@ -214,8 +199,6 @@ class AIController:
         reason: str,
     ) -> CopilotChatResponse:
         """Handle a blocked or investment-advice message."""
-        from app.ai.schemas.orchestration import ChatResponse
-
         chat_response = self._guardrail.build_response(reason)
 
         await self._memory.save_message(
@@ -239,48 +222,7 @@ class AIController:
 
         return CopilotChatResponse(
             message=chat_response.message,
-            intent=self._map_intent("general"),
+            intent=to_copilot_intent("general"),
             guardrail_triggered=True,
             disclaimer=chat_response.disclaimer,
         )
-
-    def _to_planner_output(self, execution_plan: Any) -> PlannerOutput:
-        """Convert an ExecutionPlan into the existing PlannerOutput for response builder."""
-        from app.ai.schemas.orchestration import ExecutionPlan
-
-        plan = execution_plan if isinstance(execution_plan, ExecutionPlan) else ExecutionPlan(**execution_plan)
-        try:
-            style = ResponseStyle(plan.response_style)
-        except ValueError:
-            style = ResponseStyle.EDUCATIONAL
-
-        return PlannerOutput(
-            intent=self._map_intent(plan.intent.value),
-            agents=[s.agent_name for s in plan.steps],
-            response_style=style,
-        )
-
-    def _map_intent(self, value: str) -> CopilotIntent:
-        """Map new intent values onto the existing CopilotIntent schema."""
-        mapping: dict[str, str] = {
-            "budget": "budget_analysis",
-            "expense": "budget_analysis",
-            "goal": "goal_tracking",
-            "retirement": "retirement_planning",
-            "tax": "tax_planning",
-            "health": "health_score",
-            "networth": "net_worth",
-            "education": "education",
-            "investment_education": "education",
-            "report": "report_summary",
-            "greeting": "general",
-            "general": "general",
-            "mixed": "general",
-            "cash_flow": "general",
-            "scenario": "general",
-            "unsupported_investment_advice": "general",
-        }
-        try:
-            return CopilotIntent(mapping.get(value, value))
-        except ValueError:
-            return CopilotIntent.GENERAL

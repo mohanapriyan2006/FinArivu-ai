@@ -233,7 +233,7 @@ class ResponseBuilder:
             merged_data=merged_data,
             ai_response=ai_response,
             artifacts=artifacts,
-            recommendations=[],
+            recommendations=self._extract_recommendations(results),
             follow_up_questions=follow_ups if decision.show_follow_up else [],
             suggested_actions=actions if decision.show_actions else [],
             metadata=metadata,
@@ -398,7 +398,9 @@ class ResponseBuilder:
         if not decision.show_artifact or not decision.artifact_type:
             return []
         agent_results = [
-            {"agent_name": r.agent_name, "data": r.data, "error": r.error} for r in results
+            {"agent_name": r.agent_name, "data": r.data, "error": r.error}
+            for r in results
+            if not (r.data or {}).get("dataMissing")
         ]
         built = ArtifactBuilder.build_artifact_list(
             agent_results, allowed_types=[decision.artifact_type]
@@ -406,22 +408,18 @@ class ResponseBuilder:
         return [Artifact(**a.model_dump()) for a in built]
 
     @staticmethod
-    def _extract_recommendations(merged_data: dict[str, Any]) -> list[Recommendation]:
-        """Pull recommendations from the RecommendationAgent output."""
-        rec_data = merged_data.get("RecommendationAgent", {}).get("recommendations", [])
-        return [Recommendation(**r) for r in rec_data if isinstance(r, dict)]
-
-    @staticmethod
-    def _extract_follow_ups(merged_data: dict[str, Any]) -> list[FollowUpQuestion]:
-        """Pull follow-up questions from the InsightAgent output."""
-        follow_data = merged_data.get("InsightAgent", {}).get("follow_up_questions", [])
-        return [FollowUpQuestion(**f) for f in follow_data if isinstance(f, dict)]
-
-    @staticmethod
-    def _extract_suggested_actions(merged_data: dict[str, Any]) -> list[SuggestedAction]:
-        """Pull suggested actions from the InsightAgent output."""
-        action_data = merged_data.get("InsightAgent", {}).get("suggested_actions", [])
-        return [SuggestedAction(**a) for a in action_data if isinstance(a, dict)]
+    def _extract_recommendations(results: list[AgentResult]) -> list[Recommendation]:
+        """Pull canonical recommendations contributed by RecommendationAgent."""
+        out: list[Recommendation] = []
+        for r in results:
+            for item in (r.data or {}).get("recommendations", []):
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    out.append(Recommendation(**item))
+                except Exception:
+                    continue
+        return out[:5]
 
     @staticmethod
     def _merge_data(results: list[AgentResult]) -> dict[str, Any]:

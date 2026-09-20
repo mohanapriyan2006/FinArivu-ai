@@ -7,6 +7,7 @@ from typing import Any
 
 from pydantic import BaseModel, Field, field_validator
 
+from app.ai.intents import normalize_intent_str, to_copilot_intent
 from app.ai.schemas import CopilotIntent, PlannerOutput, ResponseStyle
 from app.ai.schemas.orchestration import ExecutionPlan, ExecutionStep, IntentEnum
 
@@ -98,20 +99,22 @@ class ControllerPlan(BaseModel):
         return value
 
     def to_intent_enum(self) -> IntentEnum:
-        """Map the controller intent string onto the existing IntentEnum."""
-        normalised = self.intent.strip().lower().replace(" ", "_").upper()
-        try:
-            return IntentEnum[normalised]
-        except KeyError:
-            return IntentEnum.GENERAL
+        """Map the controller intent string onto the internal IntentEnum."""
+        return normalize_intent_str(self.intent)
 
     def to_execution_plan(
         self,
         agent_timeout_seconds: int = 30,
     ) -> ExecutionPlan:
         """Convert the controller plan to the LangGraph ExecutionPlan."""
+        from app.ai.registry.registry import CONTROLLER_SELECTABLE_AGENTS
+
         steps: list[ExecutionStep] = []
         for name in self.selected_agents:
+            # Enforce the allow-list — the LLM may only select registered,
+            # controller-selectable agents.
+            if name not in CONTROLLER_SELECTABLE_AGENTS:
+                continue
             steps.append(ExecutionStep(agent_name=name, timeout_seconds=agent_timeout_seconds))
 
         if self.execution_mode == "serial" and len(steps) > 1:
@@ -126,17 +129,16 @@ class ControllerPlan(BaseModel):
 
     def to_planner_output(self) -> PlannerOutput:
         """Convert the controller plan to the ResponseBuilder's PlannerOutput."""
-        try:
-            intent = CopilotIntent(self.intent)
-        except ValueError:
-            intent = CopilotIntent.GENERAL
+        from app.ai.registry.registry import CONTROLLER_SELECTABLE_AGENTS
+
+        intent = to_copilot_intent(self.intent)
         try:
             style = ResponseStyle(self.response_style)
         except ValueError:
             style = ResponseStyle.EDUCATIONAL
         return PlannerOutput(
             intent=intent,
-            agents=self.selected_agents,
+            agents=[a for a in self.selected_agents if a in CONTROLLER_SELECTABLE_AGENTS],
             tools=self.required_financial_tools,
             response_style=style,
         )

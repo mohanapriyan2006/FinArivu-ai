@@ -73,10 +73,20 @@ class ContextBuilder:
         savings: dict[str, Any] = {}
         if FinancialDomain.SAVINGS in required:
             savings = financial_profile.get("savings") or {}
-            if savings.get("total", 0) > 0:
+            # asset_count > 0 means the user recorded savings assets —
+            # a zero total on recorded data is real data, not missing data.
+            if savings.get("asset_count", 0) > 0:
                 available.append(FinancialDomain.SAVINGS.value)
             else:
                 missing.append(FinancialDomain.SAVINGS.value)
+
+        budgets: list[dict[str, Any]] = []
+        if FinancialDomain.BUDGETS in required:
+            budgets = await self._budgets(user_id)
+            if budgets:
+                available.append(FinancialDomain.BUDGETS.value)
+            else:
+                missing.append(FinancialDomain.BUDGETS.value)
 
         investments: dict[str, Any] = {}
         if FinancialDomain.INVESTMENTS in required:
@@ -167,6 +177,30 @@ class ContextBuilder:
         if FinancialDomain.HEALTH in required:
             health_score = await self._health_score(user_id)
 
+        asset_domains = {
+            FinancialDomain.SAVINGS,
+            FinancialDomain.INVESTMENTS,
+            FinancialDomain.FIXED_DEPOSITS,
+            FinancialDomain.NET_WORTH,
+        }
+        liability_domains = {
+            FinancialDomain.LOANS,
+            FinancialDomain.CREDIT_CARDS,
+            FinancialDomain.NET_WORTH,
+        }
+        assets: list[dict[str, Any]] = []
+        liabilities: list[dict[str, Any]] = []
+        if asset_domains & required:
+            assets = (
+                financial_profile.get("investments", [])
+                + financial_profile.get("fixed_deposits", [])
+            )
+        if liability_domains & required:
+            liabilities = (
+                financial_profile.get("loans", [])
+                + financial_profile.get("credit_cards", [])
+            )
+
         tax_regime = tax_profile.get("tax_regime") if tax_profile else None
 
         return FinancialContext(
@@ -174,7 +208,7 @@ class ContextBuilder:
             profile=profile,
             income=income,
             expenses=expenses,
-            budgets=[],
+            budgets=budgets,
             savings=savings,
             investments=investments,
             fixed_deposits=fixed_deposits,
@@ -183,11 +217,8 @@ class ContextBuilder:
             goals=goals,
             insurance=insurance,
             tax_profile=tax_profile,
-            assets=financial_profile.get("investments", [])
-            + financial_profile.get("fixed_deposits", [])
-            + ([] if FinancialDomain.SAVINGS not in required else []),
-            liabilities=financial_profile.get("loans", [])
-            + financial_profile.get("credit_cards", []),
+            assets=assets,
+            liabilities=liabilities,
             net_worth=net_worth,
             cash_flow=cash_flow,
             health_score=health_score,
@@ -199,12 +230,32 @@ class ContextBuilder:
             user_snapshot=user_snapshot,
         )
 
-    async def _health_score(self, user_id: uuid.UUID) -> dict[str, Any]:
-        """Return latest health score snapshot if available."""
-        from app.engines.health_score import FinancialHealthEngine
+    async def _budgets(self, user_id: uuid.UUID) -> list[dict[str, Any]]:
+        """Load the user's budget records as plain dicts."""
+        from app.repositories.budgets import BudgetRepository
 
-        engine = FinancialHealthEngine()
-        return engine.calculate({})
+        repo = BudgetRepository(self._session)
+        budgets = await repo.list_for_user(user_id)
+        return [
+            {
+                "category_id": str(b.category_id),
+                "category_name": b.category.name if b.category else None,
+                "monthly_limit": float(b.monthly_limit),
+                "period": b.period,
+            }
+            for b in budgets
+        ]
+
+    async def _health_score(self, user_id: uuid.UUID) -> dict[str, Any]:
+        """Compute the real health score via the deterministic engine."""
+        from app.services.financial import FinancialService
+
+        svc = FinancialService(self._session)
+        try:
+            result = await svc.calculate_health_score(user_id)
+            return result.model_dump()
+        except Exception:
+            return {}
 
     async def _build_conversation_summary(self, user_id: uuid.UUID, session_id: str) -> str:
         """Generate a compact summary from recent messages."""

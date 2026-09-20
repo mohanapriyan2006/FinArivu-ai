@@ -4,7 +4,7 @@ import uuid
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.financial.schemas import FinancialHealthResult
+from app.schemas.financial import HealthScoreResponse
 from app.services.financial import FinancialService
 
 
@@ -18,7 +18,6 @@ class HealthEngine:
         *,
         year: int | None = None,
         month: int | None = None,
-    ) -> FinancialHealthResult:
+    ) -> HealthScoreResponse:
         svc = FinancialService(session)
-        result = await svc.calculate_health_score(user_id, year=year, month=month)
-        return FinancialHealthResult(**result.model_dump())
+        return await svc.calculate_health_score(user_id, year=year, month=month)
