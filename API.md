@@ -69,6 +69,35 @@ Returns paginated `AIMessage` history.
 }
 ```
 
+## Copilot Actions — `/api/v1/copilot/actions`
+
+Preview → confirm → execute for safe, user-confirmed CRUD changes. See
+`backend/docs/ACTION-COPILOT.md`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/preview` | Validate + snapshot; returns `executionId` |
+| POST | `/execute` | Confirm by `executionId` (idempotent) |
+| POST | `/{id}/cancel` | Cancel a pending preview |
+| POST | `/{id}/undo` | Undo an executed action |
+| GET | `/history` | User-scoped action history |
+
+## Scenario Lab — `/api/v1/scenarios`
+
+Deterministic what-if simulations over real user data. Never mutates
+financial records. See `backend/docs/SCENARIO-LAB.md`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/types` | Supported scenario types + required params |
+| POST | `/run` | Compute a simulation |
+| POST | `/save` | Run and persist to history |
+| POST | `/compare` | Side-by-side comparison (≤3) |
+| GET | `/` | List saved scenarios |
+| GET | `/{id}` | Fetch a saved scenario |
+| POST | `/{id}/rerun` | Re-run on current data |
+| DELETE | `/{id}` | Delete a saved scenario |
+
 ## Health & Monitoring
 
 | Method | Endpoint | Description |

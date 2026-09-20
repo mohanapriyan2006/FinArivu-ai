@@ -9,6 +9,7 @@
  */
 
 import type { ActionExecutionStatus, ActionPreview, ActionResult } from './actions'
+import type { ScenarioResult } from './scenarios'
 
 /**
  * Action types the backend may emit. API_ACTION opens a server-validated
@@ -78,6 +79,11 @@ export interface CopilotChatResponse {
    * render an ActionPreviewCard and let the user confirm explicitly.
    */
   actionPreview?: ActionPreview | null
+  /**
+   * Populated when the message produced a deterministic Scenario Lab
+   * simulation — render a ScenarioResultCard. Never mutates data.
+   */
+  scenarioResult?: ScenarioResult | null
   provider?: string
   model?: string
   tokensInput?: number
@@ -123,5 +129,7 @@ export interface ChatMessageItemData {
   actionPreviewResolved?: ActionExecutionStatus
   /** Action result appended after execution or undo. */
   actionResult?: ActionResult
+  /** Deterministic scenario simulation attached to this message. */
+  scenarioResult?: ScenarioResult
   createdAt?: string
 }

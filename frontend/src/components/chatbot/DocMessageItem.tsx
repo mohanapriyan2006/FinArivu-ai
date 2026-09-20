@@ -34,7 +34,9 @@ import {
 } from './ArtifactCards'
 import { ActionPreviewCard } from '@/components/actions/ActionPreviewCard'
 import { ActionResultCard } from '@/components/actions/ActionResultCard'
+import { ScenarioResultCard } from '@/components/scenarios/ScenarioResultCard'
 import type { ActionPreview, ActionResult } from '@/types/actions'
+import type { ScenarioApplyAction, ScenarioResult } from '@/types/scenarios'
 import { FollowUpChips } from './FollowUpChips'
 import { MarkdownMessage } from './MarkdownMessage'
 
@@ -53,6 +55,8 @@ interface DocMessageItemProps {
   onConfirmAction?: (messageId: string, preview: ActionPreview) => void
   onCancelAction?: (messageId: string, preview: ActionPreview) => void
   onUndoAction?: (result: ActionResult) => void
+  /** Bridges a scenario's applyAction into the Phase 1 preview flow. */
+  onScenarioApply?: (apply: ScenarioApplyAction) => void
 }
 
 export function DocMessageItem({
@@ -62,6 +66,7 @@ export function DocMessageItem({
   onConfirmAction,
   onCancelAction,
   onUndoAction,
+  onScenarioApply,
 }: DocMessageItemProps) {
   const { colors } = useTheme()
   const styles = useMemo(() => makeStyles(colors), [colors])
@@ -178,6 +183,19 @@ export function DocMessageItem({
           />
         )
       }
+      case 'scenario_card': {
+        // The canonical result renders from item.scenarioResult — the
+        // artifact duplicates it for history, so skip it here.
+        if (item.scenarioResult) return null
+        const scenario = content as unknown as ScenarioResult
+        return (
+          <ScenarioResultCard
+            key={`art-${index}`}
+            result={scenario}
+            onApply={onScenarioApply}
+          />
+        )
+      }
       default:
         return (
           <View key={`art-${index}`} style={styles.artifactCard}>
@@ -221,6 +239,14 @@ export function DocMessageItem({
         {/* Action result (post-execution / undo). */}
         {item.actionResult && (
           <ActionResultCard result={item.actionResult} onUndo={onUndoAction} />
+        )}
+
+        {/* Deterministic scenario result (Phase 2). */}
+        {item.scenarioResult && (
+          <ScenarioResultCard
+            result={item.scenarioResult}
+            onApply={onScenarioApply}
+          />
         )}
 
         {/* Render artifacts from backend only */}

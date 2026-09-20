@@ -83,6 +83,15 @@ class Settings(BaseSettings):
     # Copilot actions
     action_preview_ttl_seconds: int = Field(default=300, alias="ACTION_PREVIEW_TTL_SECONDS")
 
+    # Scenario Lab — centralised safety bounds and default assumptions
+    scenario_max_compare: int = Field(default=3, alias="SCENARIO_MAX_COMPARE")
+    scenario_max_horizon_years: int = Field(default=40, alias="SCENARIO_MAX_HORIZON_YEARS")
+    scenario_projection_horizon_years: int = Field(default=10, alias="SCENARIO_PROJECTION_HORIZON_YEARS")
+    scenario_annual_return_rate: float = Field(default=0.08, alias="SCENARIO_ANNUAL_RETURN_RATE")
+    scenario_inflation_rate: float = Field(default=0.06, alias="SCENARIO_INFLATION_RATE")
+    scenario_safe_withdrawal_rate: float = Field(default=0.04, alias="SCENARIO_SAFE_WITHDRAWAL_RATE")
+    scenario_max_purchase_months: int = Field(default=24, alias="SCENARIO_MAX_PURCHASE_MONTHS")
+
     # Provider routing per task type
     ai_provider_fast: str = Field(default="groq", alias="AI_PROVIDER_FAST")
     ai_provider_reasoning: str = Field(default="gemini", alias="AI_PROVIDER_REASONING")

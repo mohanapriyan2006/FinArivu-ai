@@ -101,3 +101,55 @@ def test_questions_are_not_actions() -> None:
         "Show me my goals.",
     ):
         assert extract_action(text) is None
+
+
+def test_create_expense_category_first_equals() -> None:
+    p = extract_action("Create a new expense as fuel = 2000 rs for this month")
+    assert p is not None
+    assert p.operation == "CREATE_EXPENSE"
+    assert p.arguments["categoryName"] == "fuel"
+    assert p.arguments["amount"] == 2000.0
+
+
+def test_update_expense_plural() -> None:
+    p = extract_action("Update my food expenses to 3600 rs")
+    assert p is not None
+    assert p.operation == "UPDATE_EXPENSE"
+    assert p.arguments["categoryName"] == "food"
+    assert p.arguments["amount"] == 3600.0
+
+
+def test_bare_create_goal_needs_fields() -> None:
+    p = extract_action("Create a goal")
+    assert p is not None
+    assert p.operation == "CREATE_GOAL"
+    assert set(p.missing_fields) == {"goalName", "targetAmount"}
+
+
+def test_bare_create_budget_needs_fields() -> None:
+    p = extract_action("Create budget")
+    assert p is not None
+    assert p.operation == "CREATE_BUDGET"
+    assert set(p.missing_fields) == {"categoryName", "monthlyLimit"}
+
+
+def test_create_budget_category_only() -> None:
+    p = extract_action("Create a food budget")
+    assert p is not None
+    assert p.operation == "CREATE_BUDGET"
+    assert p.arguments["categoryName"] == "food"
+    assert "monthlyLimit" in p.missing_fields
+
+
+def test_bare_add_income_needs_fields() -> None:
+    p = extract_action("Add income")
+    assert p is not None
+    assert p.operation == "CREATE_INCOME"
+    assert "amount" in p.missing_fields
+
+
+def test_aspirational_not_an_action() -> None:
+    assert extract_action("I want to buy a new electric car") is None
+    assert (
+        extract_action("Help me plan a savings target to buy a house") is None
+    )

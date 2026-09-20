@@ -8,6 +8,7 @@ import {
   Clock,
   Compass,
   EyeOff,
+  FlaskConical,
   PieChart,
   Target,
   TrendingUp,
@@ -58,6 +59,13 @@ const SUGGESTIONS2 = [
     prompt: 'Help me plan a monthly savings target to buy a house in 5 years.',
     icon: Target,
     color: '#10B981',
+  },
+  {
+    id: 'scenario',
+    label: 'What if…',
+    prompt: 'What if I save ₹5,000 more each month?',
+    icon: FlaskConical,
+    color: '#0EA5E9',
   },
   {
     id: 'report',

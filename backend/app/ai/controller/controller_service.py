@@ -37,6 +37,24 @@ from app.ai.schemas.orchestration import FinancialContext
 from app.ai.validator import ResponseValidationService, ValidationResult
 from app.core.config import settings
 from app.core.logger import logger
+from app.scenarios.errors import ScenarioError
+from app.scenarios.extractor import ScenarioProposal, extract_scenario
+from app.scenarios.service import ScenarioService
+
+
+def _strip_documents(text: str) -> str:
+    """Remove uploaded-document blocks — attachment text must never drive
+    actions or scenario parameters."""
+    return re.sub(r"<document.*?</document>", "", text, flags=re.DOTALL)
+
+
+def _intent_for_operation(operation: str) -> str:
+    """Best-effort intent label for action previews (UI badge only)."""
+    name = operation.upper()
+    for intent in ("BUDGET", "EXPENSE", "GOAL", "INCOME"):
+        if intent in name:
+            return intent.lower()
+    return "general"
 
 
 class ControllerService:
@@ -71,6 +89,31 @@ class ControllerService:
         history = await self._memory.load_history(user_id, session_id, limit=6)
         history_text = self._format_history(history)
 
+        # ── Scenario Lab: explicit "what if" requests run fully
+        # deterministically — extraction is conservative and the engine is
+        # authoritative for every number. Runs before the action fast path
+        # so simulation phrasing can never be misread as a mutation.
+        scenario_proposal = self._extract_scenario(user_message)
+        if scenario_proposal is not None:
+            scenario_response = await self._scenario_response(
+                user_id, session_id, scenario_proposal, start,
+            )
+            if scenario_response is not None:
+                return scenario_response
+
+        # ── Fast path: deterministic action extraction BEFORE the LLM ──
+        # A clear CRUD request should not wait on controller/provider latency
+        # (and must never time out just because a provider is slow).
+        fast_proposal = self._extract_proposal(user_message)
+        if fast_proposal is not None:
+            plan = ControllerPlan.default(request_id)
+            plan.intent = _intent_for_operation(fast_proposal.operation)
+            action_response = await self._action_preview_response(
+                user_id, session_id, fast_proposal, plan, start,
+            )
+            if action_response is not None:
+                return action_response
+
         plan = await self._controller.run(
             user_message,
             self._format_context(user_context),
@@ -96,6 +139,9 @@ class ControllerService:
             )
             if action_response is not None:
                 return action_response
+
+        # NOTE: the deterministic extractor already ran pre-controller in
+        # `chat()`; `plan.proposed_action` covers phrasing it missed.
 
         if plan.missing_information and plan.response_mode == "clarification":
             return await self._clarification_response(
@@ -187,26 +233,36 @@ class ControllerService:
         history = await self._memory.load_history(user_id, session_id, limit=6)
         history_text = self._format_history(history)
 
-        plan = await self._controller.run(
-            user_message,
-            self._format_context(user_context),
-            history_text,
-            request_id,
-        )
+        # ── Scenario Lab: deterministic simulations before everything else ──
+        scenario_proposal = self._extract_scenario(user_message)
+        if scenario_proposal is not None:
+            scenario = await self._run_scenario(
+                user_id, session_id, scenario_proposal
+            )
+            if scenario is not None:
+                text, event_payload = scenario
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Scenario computed",
+                    agent_name="ScenarioEngine",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="scenario_result",
+                    agent_chain=event_payload.get("scenarioResult") or {},
+                )
+                return
 
-        if plan.safety_action in ("block", "educational_refusal"):
-            text = self._safety_text(plan)
-            yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
-            yield StreamEvent(event_type=StreamEventType.DONE)
-            await self._memory.save_message(user_id, session_id, "assistant", text)
-            return
-
-        # ── Action requests: emit the preview card payload, then DONE ──
-        # Typed NEEDS_INPUT clarifications take precedence over the generic
-        # missing-information path.
-        proposal = self._action_proposal(plan, user_message)
-        if proposal is not None:
-            preview = await self._run_action_preview(user_id, session_id, proposal)
+        # ── Fast path: deterministic action extraction BEFORE the LLM ──
+        fast_proposal = self._extract_proposal(user_message)
+        if fast_proposal is not None:
+            preview = await self._run_action_preview(user_id, session_id, fast_proposal)
             if preview is not None:
                 text, event_payload = preview
                 yield StreamEvent(
@@ -226,6 +282,20 @@ class ControllerService:
                     agent_chain=event_payload.get("actionPreview") or {},
                 )
                 return
+
+        plan = await self._controller.run(
+            user_message,
+            self._format_context(user_context),
+            history_text,
+            request_id,
+        )
+
+        if plan.safety_action in ("block", "educational_refusal"):
+            text = self._safety_text(plan)
+            yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+            yield StreamEvent(event_type=StreamEventType.DONE)
+            await self._memory.save_message(user_id, session_id, "assistant", text)
+            return
 
         if plan.missing_information and plan.response_mode == "clarification":
             text = plan.to_clarification_message()
@@ -342,8 +412,134 @@ class ControllerService:
 
         # Deterministic fallback — document blocks are excluded so uploaded
         # files cannot trigger mutations on their own.
-        clean = re.sub(r"<document.*?</document>", "", user_message, flags=re.DOTALL)
-        return extract_action(clean)
+        return ControllerService._extract_proposal(user_message)
+
+    @staticmethod
+    def _extract_proposal(user_message: str) -> ActionProposal | None:
+        """Rule-based extraction — never reads attachment/document text."""
+        return extract_action(_strip_documents(user_message))
+
+    # ── Scenario Lab handling ───────────────────────────────────────────
+
+    @staticmethod
+    def _extract_scenario(user_message: str) -> ScenarioProposal | None:
+        """Conservative rule-based scenario extraction.
+
+        Only fires on explicit simulation phrasing and never invents
+        values — missing inputs surface as clarification questions.
+        """
+        return extract_scenario(_strip_documents(user_message))
+
+    async def _run_scenario(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        proposal: ScenarioProposal,
+    ) -> tuple[str, dict] | None:
+        """Run a validated scenario and build the response payload.
+
+        Returns ``(message_text, event_payload)`` or ``None`` when the
+        scenario type is unsupported and the normal pipeline should run.
+        """
+        from app.financial.artifacts.schemas import Artifact, ArtifactType
+
+        service = ScenarioService(self._session)
+        try:
+            result = await service.run(
+                user_id,
+                proposal.scenario_type,
+                proposal.parameters,
+                session_id=session_id,
+                missing_fields=proposal.missing_fields,
+            )
+        except ScenarioError as exc:
+            # Unknown type → let the normal agent pipeline answer.
+            from app.scenarios.scenario_types import ScenarioErrorCode
+
+            if exc.code == ScenarioErrorCode.INVALID_SCENARIO:
+                return None
+            # Controlled failure — surface the safe message.
+            return exc.message, {
+                "scenarioError": {"code": exc.code.value, "message": exc.message}
+            }
+
+        artifact = Artifact(
+            type=ArtifactType.SCENARIO_CARD.value,
+            title=result.title,
+            content=result.model_dump(mode="json", by_alias=True),
+        )
+        suggested_actions = [
+            {
+                "id": "open_scenario_lab",
+                "label": "Open Scenario Lab",
+                "type": "NAVIGATE",
+                "route": "scenario_lab",
+                "payload": {"scenarioType": result.scenario_type.value},
+            }
+        ]
+        text = (
+            result.clarification_question
+            or result.summary
+            or "Scenario computed."
+        )
+        return text, {
+            "scenarioResult": result.model_dump(mode="json", by_alias=True),
+            "artifacts": [artifact.model_dump(mode="json", by_alias=True)],
+            "suggestedActions": suggested_actions,
+        }
+
+    async def _scenario_response(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        proposal: ScenarioProposal,
+        start_time: float,
+    ) -> CopilotChatResponse | None:
+        """Synchronous scenario path — returns None if not a scenario."""
+        from app.ai.schemas.copilot import SuggestedAction
+        from app.financial.artifacts.schemas import Artifact
+        from app.scenarios.scenario_types import ScenarioRunStatus
+
+        result = await self._run_scenario(user_id, session_id, proposal)
+        if result is None:
+            return None
+
+        text, payload = result
+        latency = int((time.perf_counter() - start_time) * 1000)
+        scenario = payload.get("scenarioResult")
+        response_type = (
+            ResponseType.SCENARIO_RESULT
+            if scenario is not None
+            else ResponseType.CLARIFICATION
+        )
+        if scenario and scenario.get("status") == ScenarioRunStatus.NEEDS_INPUT.value:
+            response_type = ResponseType.CLARIFICATION
+
+        msg = await self._memory.save_message(
+            user_id,
+            session_id,
+            "assistant",
+            text,
+            intent="scenario_result",
+            latency_ms=latency,
+            agent_chain={
+                "scenarioType": (scenario or {}).get("scenarioType"),
+            },
+        )
+        return CopilotChatResponse(
+            message_id=msg.id,
+            message=text,
+            response_type=response_type,
+            summary=text,
+            artifacts=[
+                Artifact.model_validate(a) for a in payload.get("artifacts", [])
+            ],
+            suggested_actions=[
+                SuggestedAction.model_validate(a)
+                for a in payload.get("suggestedActions", [])
+            ],
+            scenario_result=scenario,
+        )
 
     async def _run_action_preview(
         self,

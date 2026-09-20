@@ -265,6 +265,20 @@ export default function CopilotScreen() {
     [handleSendMessage, navigation, runApiAction]
   )
 
+  const handleScenarioApply = useCallback(
+    (apply: { operation: string; arguments: Record<string, unknown>; label: string }) => {
+      // Scenario apply bridges into the Phase 1 preview flow — the user
+      // still confirms explicitly before any change is applied.
+      void runApiAction({
+        id: 'scenario_apply',
+        label: apply.label,
+        type: 'API_ACTION',
+        payload: { operation: apply.operation, arguments: apply.arguments },
+      })
+    },
+    [runApiAction]
+  )
+
   const renderItem = useCallback(
     ({ item }: { item: ChatMessageItemData }) => (
       <DocMessageItem
@@ -274,9 +288,10 @@ export default function CopilotScreen() {
         onConfirmAction={confirmActionPreview}
         onCancelAction={cancelActionPreview}
         onUndoAction={undoExecutedAction}
+        onScenarioApply={handleScenarioApply}
       />
     ),
-    [handleAction, handleSendMessage, confirmActionPreview, cancelActionPreview, undoExecutedAction]
+    [handleAction, handleScenarioApply, handleSendMessage, confirmActionPreview, cancelActionPreview, undoExecutedAction]
   )
 
   return (

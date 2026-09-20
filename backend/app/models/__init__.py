@@ -19,6 +19,7 @@ from app.models.ai_conversations import AIConversation
 from app.models.ai_feedback import AIFeedback
 from app.models.ai_messages import AIMessage
 from app.models.copilot_action_executions import CopilotActionExecution
+from app.models.scenario_runs import ScenarioRun
 from app.models.audit_logs import AuditLog
 from app.models.user_consents import UserConsent
 from app.models.notification_preferences import NotificationPreference
@@ -45,6 +46,7 @@ __all__ = [
     "AIFeedback",
     "AIMessage",
     "CopilotActionExecution",
+    "ScenarioRun",
     "AuditLog",
     "UserConsent",
     "NotificationPreference",

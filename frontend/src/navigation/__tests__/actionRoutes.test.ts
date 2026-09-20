@@ -22,7 +22,23 @@ describe('actionRoutes', () => {
       'pulse',
       'reports',
       'savings',
+      'scenario_lab',
     ])
+  })
+
+  it('resolves scenario_lab with an optional scenarioType param', () => {
+    const dest = resolveActionRoute({ type: 'NAVIGATE', route: 'scenario_lab' })
+    expect(dest).toEqual({ kind: 'stack', screen: 'ScenarioLab' })
+    const navigation = { navigate: jest.fn() } as any
+    const handled = navigateToAction(navigation, {
+      type: 'NAVIGATE',
+      route: 'scenario_lab',
+      payload: { scenarioType: 'PURCHASE' },
+    })
+    expect(handled).toBe(true)
+    expect(navigation.navigate).toHaveBeenCalledWith('ScenarioLab', {
+      scenarioType: 'PURCHASE',
+    })
   })
 
   it('recognises valid targets and rejects others', () => {

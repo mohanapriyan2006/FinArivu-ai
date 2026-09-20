@@ -48,6 +48,7 @@ class ResponseType(StrEnum):
     CLARIFICATION = "clarification"
     ACTION_PREVIEW = "action_preview"
     ACTION_RESULT = "action_result"
+    SCENARIO_RESULT = "scenario_result"
 
 
 class ResponseStyle(StrEnum):
@@ -254,6 +255,10 @@ class CopilotChatResponse(BaseSchema):
     # the frontend renders an ActionPreviewCard and the user confirms via
     # POST /v1/copilot/actions/execute.
     action_preview: dict[str, Any] | None = None
+    # Populated when the message produced a deterministic Scenario Lab
+    # simulation — the frontend renders a ScenarioResultCard. Simulations
+    # never mutate financial records.
+    scenario_result: dict[str, Any] | None = None
     provider: str | None = None
     model: str | None = None
     tokens_input: int = 0

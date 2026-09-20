@@ -64,6 +64,25 @@ class ResponseValidationService:
         "DebtAgent", "SimulationAgent",
     })
 
+    # Context hints: numbers in projected/recommended phrasing ("you'd need
+    # ₹50,000/month", "to save ₹30 lakh by 2031") are derived advice, not
+    # claims about existing records — they should not be refused.
+    _PROJECTION_HINTS = re.compile(
+        r"(needs?\s+to|to save|save for|targets?|goals?|aim|project(?:ed|ion)?|"
+        r"requires?|should|could|would|to reach|to buy|plans?|if you|"
+        r"recommend|consider|allocate|set aside|contribut|"
+        r"per month|each month|by 20\d{2}|over \d+|in \d+ (?:years?|months?)|"
+        r"grows? to|expected)",
+        re.I,
+    )
+    # Claim-style phrasing asserts the number is the user's real data.
+    _CLAIM_HINTS = re.compile(
+        r"(your|you(?:'|’)ve|you have|you spent|you paid|you earn|earned|"
+        r"spent|paid|balance|income|expenses?|savings?|owe|remaining|left|"
+        r"total|currently?|is|are|was|were|of)\s*$",
+        re.I,
+    )
+
     def __init__(self, local: Phi4Provider | None = None, api=None) -> None:
         self._local = local or Phi4Provider()
         self._api = api
@@ -202,7 +221,8 @@ class ResponseValidationService:
 
         numerical_errors: list[str] = []
 
-        # Check currency values.
+        # Check currency values — only flag when the response asserts the
+        # number IS the user's data (claim context), not derived advice.
         for match in self._CURRENCY_RE.finditer(response_text):
             raw = match.group(1).replace(",", "")
             if not raw:
@@ -211,7 +231,9 @@ class ResponseValidationService:
                 value = float(raw)
             except ValueError:
                 continue
-            if not self._is_known(value, known):
+            if not self._is_known(value, known) and self._is_claim(
+                response_text, match.start()
+            ):
                 numerical_errors.append(f"Unverified currency value: ₹{value}")
 
         # Check percentages — rules of thumb (50/30/20, 4% rule) are fine.
@@ -225,11 +247,13 @@ class ResponseValidationService:
                 continue
             if value in self._COMMON_CONSTANTS:
                 continue
-            if not self._is_known(value, known):
+            if not self._is_known(value, known) and self._is_claim(
+                response_text, match.start()
+            ):
                 numerical_errors.append(f"Unverified percentage: {value}%")
 
-        # Stand-alone numbers — only large values can be fabricated user
-        # data; small integers are step counts, months, and rules of thumb.
+        # Stand-alone numbers — only large values asserted as user data can
+        # be fabrications; projections and rules of thumb pass through.
         seen: set[float] = set()
         for match in self._NUMBER_RE.finditer(response_text):
             raw = match.group(1).replace(",", "")
@@ -244,7 +268,9 @@ class ResponseValidationService:
             if value in seen or value < 1000 or value in self._COMMON_CONSTANTS:
                 continue
             seen.add(value)
-            if not self._is_known(value, known):
+            if not self._is_known(value, known) and self._is_claim(
+                response_text, match.start()
+            ):
                 numerical_errors.append(f"Unverified number in response: {value}")
 
         if numerical_errors:
@@ -292,6 +318,23 @@ class ResponseValidationService:
             for k in known
             if k != 0
         )
+
+    def _is_projected(self, text: str, start: int) -> bool:
+        """Number sits in projected/recommended phrasing → derived advice."""
+        window = text[max(0, start - 80):start]
+        return bool(self._PROJECTION_HINTS.search(window))
+
+    def _is_claim(self, text: str, start: int) -> bool:
+        """Number is asserted as the user's real data → must be verified.
+
+        Projection hints win over claim hints ("you'd need to save ₹50,000").
+        Neutral contexts (no claim verbs) are not flagged — an unverified
+        number that makes no assertion about user data is harmless.
+        """
+        window = text[max(0, start - 60):start]
+        if self._PROJECTION_HINTS.search(window):
+            return False
+        return bool(self._CLAIM_HINTS.search(window))
 
     def _has_engine_data(self, agent_results: list[AgentResult]) -> bool:
         """True when a deterministic-engine agent contributed real data."""

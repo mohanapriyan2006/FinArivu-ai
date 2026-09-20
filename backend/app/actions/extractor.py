@@ -403,7 +403,7 @@ def _create_income(text: str) -> ActionProposal | None:
 
 def _create_expense(text: str) -> ActionProposal | None:
     match = re.search(
-        r"\b(?:add|log|record|spent)\s+(?:an?\s+|my\s+)?"
+        r"\b(?:add|create|log|record|spent)\s+(?:an?\s+|my\s+)?"
         r"(?:new\s+|recurring\s+)?(?:expenses?\s+)?(?:of\s+)?" + _NUM
         + r"\s+(?:for|on|towards?|to)\s+([a-zA-Z &]+)",
         text,
@@ -412,13 +412,42 @@ def _create_expense(text: str) -> ActionProposal | None:
     if not match:
         # "add a ₹2,000 recurring transport expense"
         alt = re.search(
-            r"\b(?:add|log|record)\s+(?:an?\s+)?(?:new\s+)?" + _NUM
+            r"\b(?:add|create|log|record)\s+(?:an?\s+)?(?:new\s+)?" + _NUM
             + r"\s+(recurring\s+)?([a-zA-Z &]+?)\s+expenses?",
             text,
             re.IGNORECASE,
         )
         if not alt:
-            return None
+            # "create a new expense as fuel = 2000 rs" — category-first
+            # with an explicit separator before the amount.
+            cat_first = re.search(
+                r"\b(?:add|create|log|record)\s+(?:an?\s+|my\s+)?"
+                r"(?:new\s+|recurring\s+)?expenses?"
+                r"\s+(?:as\s+|called\s+|for\s+)?([a-zA-Z &]+?)"
+                r"\s*(?:=|for|of|at|is)\s*" + _NUM,
+                text,
+                re.IGNORECASE,
+            )
+            if not cat_first:
+                return None
+            amount = _amount(cat_first, 2, 3)
+            category = _entity_name(cat_first.group(1))
+            if amount is None or not category:
+                return None
+            arguments = {
+                "amount": amount,
+                "categoryName": category,
+                "isRecurring": "recurring" in text.lower(),
+            }
+            day = _day_word(text)
+            if day:
+                arguments["expenseDate"] = day.isoformat()
+            return ActionProposal(
+                operation=ActionOperation.CREATE_EXPENSE.value,
+                arguments=arguments,
+                reason="User asked to log an expense",
+                confidence=0.85,
+            )
         amount = _amount(alt, 1, 2)
         category = alt.group(4).strip()
         recurring = bool(alt.group(3))
@@ -462,8 +491,8 @@ def _create_expense(text: str) -> ActionProposal | None:
 def _create_expense_incomplete(text: str) -> ActionProposal | None:
     """'Add ₹2000' — an expense verb + amount but no category → clarify."""
     match = re.search(
-        r"\b(?:add|log|record|spent)\s+(?:an?\s+|my\s+)?"
-        r"(?:new\s+|recurring\s+)?(?:expense\s+)?(?:of\s+)?" + _NUM + r"\b",
+        r"\b(?:add|create|log|record|spent)\s+(?:an?\s+|my\s+)?"
+        r"(?:new\s+|recurring\s+)?(?:expenses?\s+)?(?:of\s+)?" + _NUM + r"\b",
         text,
         re.IGNORECASE,
     )
@@ -481,7 +510,7 @@ def _create_expense_incomplete(text: str) -> ActionProposal | None:
 
     # 'Add an expense' — verb with no amount or category at all.
     if re.search(
-        r"\b(?:add|log|record)\s+(?:an?\s+|my\s+)?(?:new\s+|recurring\s+)?expenses?\b",
+        r"\b(?:add|create|log|record)\s+(?:an?\s+|my\s+)?(?:new\s+|recurring\s+)?expenses?\b",
         text,
         re.IGNORECASE,
     ):

@@ -73,6 +73,8 @@ flowchart TB
 | `app/middleware`  | Audit, rate limiting, security headers         |
 | `app/seed`        | Master data seeding (expense categories)       |
 | `app/exceptions`  | Custom exceptions and global handlers          |
+| `app/actions`     | Confirmed Copilot CRUD — preview/execute/undo  |
+| `app/scenarios`   | Deterministic what-if simulations (Scenario Lab) |
 
 ## Technology Stack
 

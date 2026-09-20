@@ -11,7 +11,8 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000,
+  // Copilot responses can take 30s+ when provider fallbacks kick in.
+  timeout: 60000,
 })
 
 const refreshApi = axios.create({

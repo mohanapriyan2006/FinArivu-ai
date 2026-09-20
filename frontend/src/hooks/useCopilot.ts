@@ -119,6 +119,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     disclaimer: response.disclaimer,
     guardrailTriggered: response.guardrailTriggered,
     actionPreview: response.actionPreview ?? undefined,
+    scenarioResult: response.scenarioResult ?? undefined,
     createdAt: new Date().toISOString(),
   }), [])
 
