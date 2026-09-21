@@ -98,6 +98,22 @@ financial records. See `backend/docs/SCENARIO-LAB.md`.
 | POST | `/{id}/rerun` | Re-run on current data |
 | DELETE | `/{id}` | Delete a saved scenario |
 
+## Money Radar — `/api/v1/money-radar`
+
+Deterministic, evidence-backed proactive insights. Detectors run only
+where real data exists; lifecycle is `ACTIVE → SEEN → DISMISSED` with
+auto-`RESOLVED` when the condition clears. See
+`backend/docs/MONEY-RADAR.md`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/scan` | Run all supported detectors |
+| GET | `/summary` | Last scan snapshot (auto-scans first use) |
+| GET | `/insights` | Filtered/paginated insight history |
+| GET | `/insights/{id}` | Detail — evidence, source, freshness, actions |
+| POST | `/insights/{id}/seen` | Mark seen (idempotent) |
+| POST | `/insights/{id}/dismiss` | Dismiss (idempotent) |
+
 ## Health & Monitoring
 
 | Method | Endpoint | Description |

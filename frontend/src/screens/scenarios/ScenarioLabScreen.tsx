@@ -118,6 +118,20 @@ export default function ScenarioLabScreen() {
       .loadTypes()
       .then(setTypes)
       .catch(() => setTypes([]))
+    // Money Radar preset bridge — auto-run when an insight hands a
+    // scenario over (POST /v1/scenarios/run with the preset verbatim).
+    const preset = route.params?.preset
+    if (preset?.scenarioType) {
+      setSelected(preset.scenarioType)
+      setLastRun({
+        scenarioType: preset.scenarioType,
+        parameters: preset.parameters ?? {},
+      })
+      scenarios.run({
+        scenarioType: preset.scenarioType,
+        parameters: preset.parameters ?? {},
+      })
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

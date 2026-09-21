@@ -40,6 +40,7 @@ class ArtifactType(str, Enum):
     ACTION_HISTORY_CARD = "action_history_card"
     SCENARIO_CARD = "scenario_card"
     SCENARIO_COMPARISON_CARD = "scenario_comparison_card"
+    MONEY_RADAR_CARD = "money_radar_card"
 
 
 class Artifact(BaseSchema):

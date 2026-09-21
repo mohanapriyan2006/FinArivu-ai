@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { BottomTabBarProps } from '@react-navigation/bottom-tabs'
-import { Home, BarChart2, Bot, Target, User } from 'lucide-react-native'
+import { Home, Bot, Radar, Target, User } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { TabBarItem } from './TabBarItem'
@@ -18,7 +18,7 @@ const TABS: TabConfig[] = [
   { name: 'Home', label: 'Home', icon: Home, variant: 'standard' },
   { name: 'Pulse', label: 'Pulse', icon: Target, variant: 'standard' },
   { name: 'AICopilot', label: 'AI Copilot', icon: Bot, variant: 'fab' },
-  { name: 'Insights', label: 'Insights', icon: BarChart2, variant: 'standard' },
+  { name: 'Insights', label: 'Radar', icon: Radar, variant: 'standard' },
   { name: 'Profile', label: 'Profile', icon: User, variant: 'standard' },
 ]
 

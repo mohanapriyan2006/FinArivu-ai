@@ -4,7 +4,7 @@ import type { MainTabParamList } from '@/types/navigation'
 
 import { CustomBottomTabBar } from '@/components/navigation/CustomBottomTabBar'
 import HomeScreen from '@/screens/dashboard/HomeScreen'
-import InsightsHubScreen from '@/screens/insights/InsightsHubScreen'
+import MoneyRadarScreen from '@/screens/moneyRadar/MoneyRadarScreen'
 import CopilotScreen from '@/screens/chatbot/CopilotScreen'
 import PulseScreen from '@/screens/Pulse/PulseScreen'
 import ProfileScreen from '@/screens/profile/ProfileScreen'
@@ -20,7 +20,7 @@ export default function MainTabNavigator() {
       <Tab.Screen name="Home" component={HomeScreen} />
       <Tab.Screen name="Pulse" component={PulseScreen} />
       <Tab.Screen name="AICopilot" component={CopilotScreen} />
-      <Tab.Screen name="Insights" component={InsightsHubScreen} />
+      <Tab.Screen name="Insights" component={MoneyRadarScreen} />
       <Tab.Screen name="Profile" component={ProfileScreen} />
     </Tab.Navigator>
   )

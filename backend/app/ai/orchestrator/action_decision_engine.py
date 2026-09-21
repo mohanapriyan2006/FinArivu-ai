@@ -49,6 +49,7 @@ NAVIGATION_TARGETS: dict[str, str] = {
     "reports": "WeeklyReport",
     "pulse": "Pulse",
     "insights": "Insights",
+    "money_radar": "MoneyRadar",
     "scenario_lab": "ScenarioLab",
 }
 

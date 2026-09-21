@@ -23,6 +23,7 @@ class IntentEnum(str, Enum):
     UNSUPPORTED_INVESTMENT_ADVICE = "unsupported_investment_advice"
     CASH_FLOW = "cash_flow"
     SCENARIO = "scenario"
+    MONEY_RADAR = "money_radar"
     REPORT = "report"
     GREETING = "greeting"
     GENERAL = "general"

@@ -27,5 +27,15 @@ export type RootStackParamList = {
   PulseSectionList: { section: string }
   PulseSectionCreate: { section: string; record?: Record<string, unknown> }
   FinancialHealth: undefined
-  ScenarioLab: { scenarioType?: string } | undefined
+  ScenarioLab:
+    | {
+        scenarioType?: string
+        /** Phase 3 bridge — a preset from a Money Radar insight auto-runs. */
+        preset?: {
+          scenarioType: string
+          parameters: Record<string, unknown>
+          title?: string
+        }
+      }
+    | undefined
 }

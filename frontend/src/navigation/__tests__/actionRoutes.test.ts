@@ -19,6 +19,7 @@ describe('actionRoutes', () => {
       'insurance',
       'investments',
       'loans',
+      'money_radar',
       'pulse',
       'reports',
       'savings',
@@ -64,6 +65,11 @@ describe('actionRoutes', () => {
       tab: 'Pulse',
     })
     expect(resolveActionRoute({ type: 'NAVIGATE', route: 'insights' })).toEqual({
+      kind: 'tab',
+      tab: 'Insights',
+    })
+    // Money Radar surfaces on the (renamed) Insights tab.
+    expect(resolveActionRoute({ type: 'NAVIGATE', route: 'money_radar' })).toEqual({
       kind: 'tab',
       tab: 'Insights',
     })

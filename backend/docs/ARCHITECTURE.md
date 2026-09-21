@@ -75,6 +75,7 @@ flowchart TB
 | `app/exceptions`  | Custom exceptions and global handlers          |
 | `app/actions`     | Confirmed Copilot CRUD — preview/execute/undo  |
 | `app/scenarios`   | Deterministic what-if simulations (Scenario Lab) |
+| `app/money_radar` | Deterministic insight detection (Money Radar) — registry, detectors, dedup + lifecycle, `/v1/money-radar` |
 
 ## Technology Stack
 

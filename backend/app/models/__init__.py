@@ -23,6 +23,7 @@ from app.models.scenario_runs import ScenarioRun
 from app.models.audit_logs import AuditLog
 from app.models.user_consents import UserConsent
 from app.models.notification_preferences import NotificationPreference
+from app.models.money_radar import RadarInsight, RadarScanState
 
 __all__ = [
     "Base",
@@ -50,4 +51,6 @@ __all__ = [
     "AuditLog",
     "UserConsent",
     "NotificationPreference",
+    "RadarInsight",
+    "RadarScanState",
 ]

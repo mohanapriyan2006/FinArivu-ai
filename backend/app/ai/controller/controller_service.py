@@ -22,21 +22,23 @@ from app.ai.context.context_requirements import (
 )
 from app.ai.controller.controller_schema import ControllerPlan
 from app.ai.controller.resilient_controller import ResilientController
-from app.ai.intents import to_copilot_intent
+from app.ai.intents import to_copilot_intent, to_internal_intent
 from app.ai.memory.conversation_memory import ConversationMemory
 from app.ai.orchestrator.orchestrator import Orchestrator
 from app.ai.orchestrator.response_builder import BuildResult, ResponseBuilder
 from app.ai.providers.factory import get_ai_provider
 from app.ai.schemas import (
     CopilotChatResponse,
+    CopilotIntent,
     ResponseType,
     StreamEvent,
     StreamEventType,
 )
-from app.ai.schemas.orchestration import FinancialContext
+from app.ai.schemas.orchestration import FinancialContext, IntentEnum
 from app.ai.validator import ResponseValidationService, ValidationResult
 from app.core.config import settings
 from app.core.logger import logger
+from app.money_radar.copilot import is_radar_request, run_radar
 from app.scenarios.errors import ScenarioError
 from app.scenarios.extractor import ScenarioProposal, extract_scenario
 from app.scenarios.service import ScenarioService
@@ -114,6 +116,15 @@ class ControllerService:
             if action_response is not None:
                 return action_response
 
+        # ── Money Radar: explicit "what needs attention" asks run the
+        # deterministic detector pipeline — no LLM decides what exists.
+        if is_radar_request(_strip_documents(user_message)):
+            radar_response = await self._radar_response(
+                user_id, session_id, start,
+            )
+            if radar_response is not None:
+                return radar_response
+
         plan = await self._controller.run(
             user_message,
             self._format_context(user_context),
@@ -126,6 +137,15 @@ class ControllerService:
             return await self._blocked_response(
                 user_id, session_id, user_message, plan, start,
             )
+
+        # Controller-classified radar intent — same deterministic scan path
+        # as the keyword fast path.
+        if to_internal_intent(plan.intent) == IntentEnum.MONEY_RADAR:
+            radar_response = await self._radar_response(
+                user_id, session_id, start, plan=plan,
+            )
+            if radar_response is not None:
+                return radar_response
 
         # ── Action requests: proposal → validated preview → confirmation ──
         # The LLM/extractor only proposes; the action layer validates and the
@@ -283,6 +303,29 @@ class ControllerService:
                 )
                 return
 
+        # ── Money Radar: deterministic scan for explicit radar asks ──
+        if is_radar_request(_strip_documents(user_message)):
+            radar = await self._run_radar(user_id)
+            if radar is not None:
+                text, event_payload = radar
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Radar scan complete",
+                    agent_name="MoneyRadar",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="money_radar",
+                    agent_chain={"radar": True},
+                )
+                return
+
         plan = await self._controller.run(
             user_message,
             self._format_context(user_context),
@@ -296,6 +339,29 @@ class ControllerService:
             yield StreamEvent(event_type=StreamEventType.DONE)
             await self._memory.save_message(user_id, session_id, "assistant", text)
             return
+
+        # Controller-classified radar intent → deterministic scan.
+        if to_internal_intent(plan.intent) == IntentEnum.MONEY_RADAR:
+            radar = await self._run_radar(user_id)
+            if radar is not None:
+                text, event_payload = radar
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Radar scan complete",
+                    agent_name="MoneyRadar",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="money_radar",
+                    agent_chain={"radar": True},
+                )
+                return
 
         if plan.missing_information and plan.response_mode == "clarification":
             text = plan.to_clarification_message()
@@ -600,6 +666,65 @@ class ControllerService:
             "actionPreview": preview.model_dump(by_alias=True),
             "artifacts": [artifact.model_dump(by_alias=True)],
         }
+
+    # ── Money Radar (Phase 3) ─────────────────────────────────────────
+
+    async def _run_radar(
+        self,
+        user_id: uuid.UUID,
+    ) -> tuple[str, dict] | None:
+        """Run the deterministic radar scan; None on failure."""
+        try:
+            return await run_radar(self._session, user_id)
+        except Exception:
+            logger.exception(
+                "Money Radar scan failed", extra={"user_id": str(user_id)}
+            )
+            return None
+
+    async def _radar_response(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        start_time: float,
+        plan: ControllerPlan | None = None,
+    ) -> CopilotChatResponse | None:
+        """Non-streaming radar response — mirrors ``_scenario_response``."""
+        from app.ai.schemas.copilot import SuggestedAction
+        from app.financial.artifacts.schemas import Artifact
+
+        result = await self._run_radar(user_id)
+        if result is None:
+            return None
+        text, payload = result
+        latency = int((time.perf_counter() - start_time) * 1000)
+        msg = await self._memory.save_message(
+            user_id,
+            session_id,
+            "assistant",
+            text,
+            intent="money_radar",
+            latency_ms=latency,
+            agent_chain={"radar": True},
+        )
+        return CopilotChatResponse(
+            message_id=msg.id,
+            message=text,
+            response_type=ResponseType.MONEY_RADAR_RESULT,
+            summary=text,
+            intent=CopilotIntent.MONEY_RADAR,
+            confidence=plan.confidence if plan else 1.0,
+            latency_ms=latency,
+            model_used="money_radar_v1",
+            data={"moneyRadar": payload["moneyRadar"]},
+            artifacts=[
+                Artifact.model_validate(a) for a in payload.get("artifacts", [])
+            ],
+            suggested_actions=[
+                SuggestedAction.model_validate(a)
+                for a in payload["suggestedActions"]
+            ],
+        )
 
     async def _action_preview_response(
         self,

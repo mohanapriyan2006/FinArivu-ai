@@ -25,6 +25,7 @@ export const ACTION_TARGETS = [
   'reports',
   'pulse',
   'insights',
+  'money_radar',
   'scenario_lab',
 ] as const
 
@@ -48,6 +49,7 @@ const ACTION_ROUTE_MAP: Record<ActionNavTarget, ActionDestination> = {
   reports: { kind: 'stack', screen: 'WeeklyReport' },
   pulse: { kind: 'tab', tab: 'Pulse' },
   insights: { kind: 'tab', tab: 'Insights' },
+  money_radar: { kind: 'tab', tab: 'Insights' },
   scenario_lab: { kind: 'stack', screen: 'ScenarioLab' },
 }
 
