@@ -22,6 +22,7 @@ import WeeklyReportStoryScreen from '@/screens/reports/WeeklyReportStoryScreen'
 import FinancialProfileSetupScreen from '@/screens/financialProfile/FinancialProfileSetupScreen'
 import FinancialHealthPlaceholderScreen from '@/screens/insights/FinancialHealthPlaceholderScreen'
 import ScenarioLabScreen from '@/screens/scenarios/ScenarioLabScreen'
+import FinancialActionPlanScreen from '@/screens/actionPlan/FinancialActionPlanScreen'
 import type { RootStackParamList } from '@/types/navigation'
 
 export type { RootStackParamList } from '@/types/navigation'
@@ -73,6 +74,7 @@ export default function AppNavigator() {
           <Stack.Screen name="WeeklyReport" component={WeeklyReportStoryScreen} />
           <Stack.Screen name="FinancialHealth" component={FinancialHealthPlaceholderScreen} />
           <Stack.Screen name="ScenarioLab" component={ScenarioLabScreen} />
+          <Stack.Screen name="FinancialActionPlan" component={FinancialActionPlanScreen} />
           <Stack.Screen name="PulseSectionList" component={PulseSectionListScreen} />
           <Stack.Screen name="PulseSectionCreate" component={PulseSectionCreateScreen} options={{ presentation: 'modal' }} />
         </Stack.Group>

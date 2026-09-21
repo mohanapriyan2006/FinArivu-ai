@@ -11,7 +11,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
-import { FlaskConical, X } from 'lucide-react-native'
+import { ClipboardList, FlaskConical, X } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { Typography } from '@/theme'
@@ -27,6 +27,7 @@ import {
   executeAction,
   previewAction,
 } from '@/services/ActionService'
+import { addInsightToPlan } from '@/services/ActionPlanService'
 import { ActionPreviewCard } from '@/components/actions/ActionPreviewCard'
 import { ActionResultCard } from '@/components/actions/ActionResultCard'
 import { severityColor } from './RadarInsightCard'
@@ -62,6 +63,8 @@ export function RadarDetailSheet({
   const [preview, setPreview] = useState<ActionPreview | null>(null)
   const [result, setResult] = useState<ActionResult | null>(null)
   const [actionBusy, setActionBusy] = useState(false)
+  const [inPlan, setInPlan] = useState(false)
+  const [planBusy, setPlanBusy] = useState(false)
 
   if (!insight) return null
   const accent = severityColor(insight.severity, colors)
@@ -94,6 +97,20 @@ export function RadarDetailSheet({
       setPreview(null)
     } finally {
       setActionBusy(false)
+    }
+  }
+
+  const addToPlan = async () => {
+    if (inPlan || planBusy) return
+    setPlanBusy(true)
+    try {
+      await addInsightToPlan(insight.id)
+      setInPlan(true)
+    } catch {
+      // Non-actionable insights (VIEW-only info) simply can't be added.
+      setInPlan(false)
+    } finally {
+      setPlanBusy(false)
     }
   }
 
@@ -272,6 +289,26 @@ export function RadarDetailSheet({
               <View style={styles.previewWrap}>
                 <ActionResultCard result={result} />
               </View>
+            )}
+
+            {(insight.status === 'ACTIVE' || insight.status === 'SEEN') && (
+              <Pressable
+                style={styles.planBtn}
+                onPress={() => void addToPlan()}
+                disabled={planBusy || inPlan}
+                accessibilityRole="button"
+                accessibilityLabel={inPlan ? 'In your plan' : 'Add to my plan'}
+                testID="radar-add-to-plan"
+              >
+                {planBusy ? (
+                  <ActivityIndicator size={14} color={colors.primary} />
+                ) : (
+                  <ClipboardList size={14} color={colors.primary} />
+                )}
+                <Text style={styles.planBtnText}>
+                  {inPlan ? 'In Plan' : 'Add to Plan'}
+                </Text>
+              </Pressable>
             )}
 
             <Pressable
@@ -455,6 +492,25 @@ const makeStyles = (colors: ThemeColors, isDark: boolean) =>
     },
     actionTextPrimary: { color: colors.onPrimary },
     previewWrap: { marginTop: 14 },
+    planBtn: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 6,
+      marginTop: 16,
+      alignSelf: 'center',
+      minHeight: 44,
+      paddingHorizontal: 20,
+      borderRadius: 14,
+      borderWidth: 1,
+      borderColor: colors.primary,
+    },
+    planBtnText: {
+      ...Typography.labelSmall,
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '700',
+    },
     dismissBtn: {
       marginTop: 18,
       alignSelf: 'center',

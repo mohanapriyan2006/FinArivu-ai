@@ -114,6 +114,26 @@ auto-`RESOLVED` when the condition clears. See
 | POST | `/insights/{id}/seen` | Mark seen (idempotent) |
 | POST | `/insights/{id}/dismiss` | Dismiss (idempotent) |
 
+## Financial Action Plan — `/api/v1/action-plan`
+
+The deterministic weekly plan built from active Radar insights — at most
+5 focused items, each with evidence, provenance and typed next steps.
+Lifecycle is `PENDING → IN_PROGRESS → COMPLETED` with `SNOOZED` /
+`DISMISSED` / `EXPIRED` branches; plan generation never mutates financial
+records. See `backend/docs/FINANCIAL-ACTION-PLAN.md`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/current?refresh=` | Current week's plan (auto-generates) |
+| POST | `/generate` | Reconcile against a fresh Radar scan |
+| GET | `/history` | Past plan periods (read-only) |
+| GET | `/items/{id}` | Plan item detail |
+| POST | `/items/{id}/accept` | Mark in-progress |
+| POST | `/items/{id}/snooze` | `{option: LATER_TODAY\|TOMORROW\|NEXT_WEEK}` |
+| POST | `/items/{id}/dismiss` | Dismiss (source insight untouched) |
+| POST | `/items/{id}/complete` | Complete; optional `{executionId}` audit link |
+| POST | `/items/from-insight` | Add a Radar insight to the plan (deduped) |
+
 ## Health & Monitoring
 
 | Method | Endpoint | Description |

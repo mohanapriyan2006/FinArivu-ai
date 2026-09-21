@@ -38,6 +38,7 @@ from app.ai.schemas.orchestration import FinancialContext, IntentEnum
 from app.ai.validator import ResponseValidationService, ValidationResult
 from app.core.config import settings
 from app.core.logger import logger
+from app.action_plan.copilot import is_plan_request, run_plan
 from app.money_radar.copilot import is_radar_request, run_radar
 from app.scenarios.errors import ScenarioError
 from app.scenarios.extractor import ScenarioProposal, extract_scenario
@@ -125,6 +126,15 @@ class ControllerService:
             if radar_response is not None:
                 return radar_response
 
+        # ── Financial Action Plan: explicit "what should I do" asks run the
+        # deterministic plan pipeline — priorities never come from the LLM.
+        if is_plan_request(_strip_documents(user_message)):
+            plan_response = await self._plan_response(
+                user_id, session_id, start,
+            )
+            if plan_response is not None:
+                return plan_response
+
         plan = await self._controller.run(
             user_message,
             self._format_context(user_context),
@@ -146,6 +156,14 @@ class ControllerService:
             )
             if radar_response is not None:
                 return radar_response
+
+        # Controller-classified action-plan intent — same deterministic path.
+        if to_internal_intent(plan.intent) == IntentEnum.FINANCIAL_ACTION_PLAN:
+            plan_response = await self._plan_response(
+                user_id, session_id, start, plan=plan,
+            )
+            if plan_response is not None:
+                return plan_response
 
         # ── Action requests: proposal → validated preview → confirmation ──
         # The LLM/extractor only proposes; the action layer validates and the
@@ -326,6 +344,29 @@ class ControllerService:
                 )
                 return
 
+        # ── Action Plan: deterministic plan for "what should I do" asks ──
+        if is_plan_request(_strip_documents(user_message)):
+            result = await self._run_plan(user_id)
+            if result is not None:
+                text, event_payload = result
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Plan generated",
+                    agent_name="ActionPlan",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="financial_action_plan",
+                    agent_chain={"action_plan": True},
+                )
+                return
+
         plan = await self._controller.run(
             user_message,
             self._format_context(user_context),
@@ -360,6 +401,29 @@ class ControllerService:
                     user_id, session_id, "assistant", text,
                     intent="money_radar",
                     agent_chain={"radar": True},
+                )
+                return
+
+        # Controller-classified plan intent → deterministic plan.
+        if to_internal_intent(plan.intent) == IntentEnum.FINANCIAL_ACTION_PLAN:
+            result = await self._run_plan(user_id)
+            if result is not None:
+                text, event_payload = result
+                yield StreamEvent(
+                    event_type=StreamEventType.AGENT_DONE,
+                    data="Plan generated",
+                    agent_name="ActionPlan",
+                )
+                yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+                yield StreamEvent(
+                    event_type=StreamEventType.DATA,
+                    data=json.dumps(event_payload, default=str),
+                )
+                yield StreamEvent(event_type=StreamEventType.DONE)
+                await self._memory.save_message(
+                    user_id, session_id, "assistant", text,
+                    intent="financial_action_plan",
+                    agent_chain={"action_plan": True},
                 )
                 return
 
@@ -717,6 +781,66 @@ class ControllerService:
             latency_ms=latency,
             model_used="money_radar_v1",
             data={"moneyRadar": payload["moneyRadar"]},
+            artifacts=[
+                Artifact.model_validate(a) for a in payload.get("artifacts", [])
+            ],
+            suggested_actions=[
+                SuggestedAction.model_validate(a)
+                for a in payload["suggestedActions"]
+            ],
+        )
+
+    # ── Financial Action Plan (Phase 4) ──────────────────────────────────
+
+    async def _run_plan(
+        self,
+        user_id: uuid.UUID,
+    ) -> tuple[str, dict] | None:
+        """Run the deterministic plan pipeline; None on failure."""
+        try:
+            return await run_plan(self._session, user_id)
+        except Exception:
+            logger.exception(
+                "Action plan generation failed",
+                extra={"user_id": str(user_id)},
+            )
+            return None
+
+    async def _plan_response(
+        self,
+        user_id: uuid.UUID,
+        session_id: str,
+        start_time: float,
+        plan: ControllerPlan | None = None,
+    ) -> CopilotChatResponse | None:
+        """Non-streaming plan response — mirrors ``_radar_response``."""
+        from app.ai.schemas.copilot import SuggestedAction
+        from app.financial.artifacts.schemas import Artifact
+
+        result = await self._run_plan(user_id)
+        if result is None:
+            return None
+        text, payload = result
+        latency = int((time.perf_counter() - start_time) * 1000)
+        msg = await self._memory.save_message(
+            user_id,
+            session_id,
+            "assistant",
+            text,
+            intent="financial_action_plan",
+            latency_ms=latency,
+            agent_chain={"action_plan": True},
+        )
+        return CopilotChatResponse(
+            message_id=msg.id,
+            message=text,
+            response_type=ResponseType.FINANCIAL_ACTION_PLAN_RESULT,
+            summary=text,
+            intent=CopilotIntent.FINANCIAL_ACTION_PLAN,
+            confidence=plan.confidence if plan else 1.0,
+            latency_ms=latency,
+            model_used="action_plan_v1",
+            data={"actionPlan": payload["actionPlan"]},
             artifacts=[
                 Artifact.model_validate(a) for a in payload.get("artifacts", [])
             ],

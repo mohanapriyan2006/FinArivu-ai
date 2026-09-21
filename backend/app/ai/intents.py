@@ -33,6 +33,7 @@ INTERNAL_TO_COPILOT: dict[IntentEnum, CopilotIntent] = {
     IntentEnum.CASH_FLOW: CopilotIntent.GENERAL,
     IntentEnum.SCENARIO: CopilotIntent.GENERAL,
     IntentEnum.MONEY_RADAR: CopilotIntent.MONEY_RADAR,
+    IntentEnum.FINANCIAL_ACTION_PLAN: CopilotIntent.FINANCIAL_ACTION_PLAN,
     IntentEnum.GREETING: CopilotIntent.GENERAL,
     IntentEnum.GENERAL: CopilotIntent.GENERAL,
     IntentEnum.MIXED: CopilotIntent.GENERAL,
@@ -48,6 +49,7 @@ COPILOT_TO_INTERNAL: dict[CopilotIntent, IntentEnum] = {
     CopilotIntent.HEALTH_SCORE: IntentEnum.HEALTH,
     CopilotIntent.NET_WORTH: IntentEnum.NETWORTH,
     CopilotIntent.MONEY_RADAR: IntentEnum.MONEY_RADAR,
+    CopilotIntent.FINANCIAL_ACTION_PLAN: IntentEnum.FINANCIAL_ACTION_PLAN,
     CopilotIntent.REPORT_SUMMARY: IntentEnum.REPORT,
     CopilotIntent.EDUCATION: IntentEnum.EDUCATION,
     CopilotIntent.GENERAL: IntentEnum.GENERAL,
@@ -80,6 +82,11 @@ _INTENT_ALIASES: dict[str, IntentEnum] = {
     "risks": IntentEnum.MONEY_RADAR,
     "anomalies": IntentEnum.MONEY_RADAR,
     "alerts": IntentEnum.MONEY_RADAR,
+    "action_plan": IntentEnum.FINANCIAL_ACTION_PLAN,
+    "financial_plan": IntentEnum.FINANCIAL_ACTION_PLAN,
+    "plan": IntentEnum.FINANCIAL_ACTION_PLAN,
+    "priorities": IntentEnum.FINANCIAL_ACTION_PLAN,
+    "financial_action_plan": IntentEnum.FINANCIAL_ACTION_PLAN,
 }
 
 

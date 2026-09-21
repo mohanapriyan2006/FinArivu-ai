@@ -33,6 +33,7 @@ import {
   type ArtifactPayload,
 } from './ArtifactCards'
 import { MoneyRadarCard } from './MoneyRadarCard'
+import { FinancialPlanCard } from './FinancialPlanCard'
 import { ActionPreviewCard } from '@/components/actions/ActionPreviewCard'
 import { ActionResultCard } from '@/components/actions/ActionResultCard'
 import { ScenarioResultCard } from '@/components/scenarios/ScenarioResultCard'
@@ -158,6 +159,8 @@ export function DocMessageItem({
         return <InsightArtifactCard key={`art-${index}`} data={content} title={artifact.title} />
       case 'money_radar_card':
         return <MoneyRadarCard key={`art-${index}`} data={content} />
+      case 'financial_action_plan_card':
+        return <FinancialPlanCard key={`art-${index}`} data={content} />
       case 'report_card':
         return <ReportArtifactCard key={`art-${index}`} data={content} />
       case 'action_preview_card': {

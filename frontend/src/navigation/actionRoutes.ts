@@ -27,6 +27,7 @@ export const ACTION_TARGETS = [
   'insights',
   'money_radar',
   'scenario_lab',
+  'action_plan',
 ] as const
 
 export type ActionNavTarget = (typeof ACTION_TARGETS)[number]
@@ -51,6 +52,7 @@ const ACTION_ROUTE_MAP: Record<ActionNavTarget, ActionDestination> = {
   insights: { kind: 'tab', tab: 'Insights' },
   money_radar: { kind: 'tab', tab: 'Insights' },
   scenario_lab: { kind: 'stack', screen: 'ScenarioLab' },
+  action_plan: { kind: 'stack', screen: 'FinancialActionPlan' },
 }
 
 export function isActionNavTarget(value: unknown): value is ActionNavTarget {
@@ -132,6 +134,14 @@ export function navigateToAction(
       return true
     case 'WeeklyReport':
       navigation.navigate('WeeklyReport')
+      return true
+    case 'FinancialActionPlan':
+      navigation.navigate('FinancialActionPlan', {
+        planId:
+          typeof action.payload?.planId === 'string'
+            ? action.payload.planId
+            : undefined,
+      })
       return true
     case 'ScenarioLab':
       navigation.navigate('ScenarioLab', {

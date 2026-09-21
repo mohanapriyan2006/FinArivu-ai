@@ -27,6 +27,7 @@ export type RootStackParamList = {
   PulseSectionList: { section: string }
   PulseSectionCreate: { section: string; record?: Record<string, unknown> }
   FinancialHealth: undefined
+  FinancialActionPlan: { planId?: string } | undefined
   ScenarioLab:
     | {
         scenarioType?: string

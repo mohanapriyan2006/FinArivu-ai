@@ -76,6 +76,7 @@ flowchart TB
 | `app/actions`     | Confirmed Copilot CRUD — preview/execute/undo  |
 | `app/scenarios`   | Deterministic what-if simulations (Scenario Lab) |
 | `app/money_radar` | Deterministic insight detection (Money Radar) — registry, detectors, dedup + lifecycle, `/v1/money-radar` |
+| `app/action_plan` | Financial Action Plan (Phase 4) — candidate builder, priority policy, selector, reconciliation, `/v1/action-plan` |
 
 ## Technology Stack
 

@@ -26,6 +26,7 @@ import {
   Banknote,
   RefreshCw,
   FlaskConical,
+  ClipboardList,
   ChevronRight,
 } from 'lucide-react-native'
 import { useNavigation } from '@react-navigation/native'
@@ -39,6 +40,8 @@ import { PROFILE_COMPLETION_THRESHOLD } from '@/utils/profileCompletion'
 import type { RootStackParamList } from '@/navigation/AppNavigator'
 import { Typography } from '@/theme'
 import { DashboardService, type DashboardCard } from '@/services/DashboardService'
+import { getCurrentPlan } from '@/services/ActionPlanService'
+import type { FinancialActionPlan } from '@/types/actionPlan'
 
 interface WaveBackgroundProps {
   isDark: boolean
@@ -217,6 +220,7 @@ export default function HomeScreen() {
   const [netWorth, setNetWorth] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [plan, setPlan] = useState<FinancialActionPlan | null>(null)
 
   const fetchDashboard = useCallback(async () => {
     setLoading(true)
@@ -235,6 +239,12 @@ export default function HomeScreen() {
       setError(err instanceof Error ? err.message : 'Could not load dashboard')
     } finally {
       setLoading(false)
+    }
+    // The plan summary is supplementary — a failure must never break Home.
+    try {
+      setPlan(await getCurrentPlan())
+    } catch {
+      setPlan(null)
     }
   }, [getToken])
 
@@ -378,6 +388,59 @@ export default function HomeScreen() {
               </View>
             </View>
           </View>
+
+          {/* Financial Action Plan summary — compact, evidence-first. */}
+          {plan && plan.activeCount > 0 && (
+            <View style={styles.cardSpacing}>
+              <Pressable
+                onPress={() => navigation.navigate('FinancialActionPlan')}
+                accessibilityRole="button"
+                accessibilityLabel="Open Financial Plan"
+                testID="home-plan-card"
+              >
+                <GlassCard isDark={isDark}>
+                  <View style={styles.scenarioRow}>
+                    <View
+                      style={[
+                        styles.iconContainer,
+                        {
+                          backgroundColor: isDark
+                            ? 'rgba(91, 78, 250, 0.16)'
+                            : 'rgba(91, 78, 250, 0.10)',
+                        },
+                      ]}
+                    >
+                      <ClipboardList size={20} color="#5B4EFA" />
+                    </View>
+                    <View style={styles.scenarioTextWrap}>
+                      <Text
+                        style={[
+                          styles.cardTitle,
+                          { color: colors.textPrimary, marginLeft: 0 },
+                        ]}
+                      >
+                        Your Financial Plan
+                      </Text>
+                      <Text
+                        style={[
+                          styles.cardSubtitle,
+                          { color: colors.textSecondary, marginTop: 2 },
+                        ]}
+                        numberOfLines={2}
+                      >
+                        {plan.activeCount} priorit
+                        {plan.activeCount === 1 ? 'y' : 'ies'}
+                        {plan.items?.[0]
+                          ? ` — ${plan.items[0].title}`
+                          : ''}
+                      </Text>
+                    </View>
+                    <ChevronRight size={18} color={colors.textSecondary} />
+                  </View>
+                </GlassCard>
+              </Pressable>
+            </View>
+          )}
 
           {/* Scenario Lab shortcut */}
           <View style={styles.cardSpacing}>

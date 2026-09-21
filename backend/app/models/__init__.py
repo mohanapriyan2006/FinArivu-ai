@@ -24,6 +24,7 @@ from app.models.audit_logs import AuditLog
 from app.models.user_consents import UserConsent
 from app.models.notification_preferences import NotificationPreference
 from app.models.money_radar import RadarInsight, RadarScanState
+from app.models.action_plan import FinancialActionPlan, FinancialPlanItem
 
 __all__ = [
     "Base",
@@ -53,4 +54,6 @@ __all__ = [
     "NotificationPreference",
     "RadarInsight",
     "RadarScanState",
+    "FinancialActionPlan",
+    "FinancialPlanItem",
 ]

@@ -10,6 +10,7 @@ describe('actionRoutes', () => {
     // Keep in sync with NAVIGATION_TARGETS in
     // backend/app/ai/orchestrator/action_decision_engine.py
     expect([...ACTION_TARGETS].sort()).toEqual([
+      'action_plan',
       'budget',
       'credit_cards',
       'expenses',
@@ -92,6 +93,21 @@ describe('actionRoutes', () => {
     ).toBeNull()
     expect(resolveActionRoute({ type: 'NAVIGATE', route: 'hack_screen' })).toBeNull()
     expect(resolveActionRoute({ type: 'NAVIGATE' })).toBeNull()
+  })
+
+  it('resolves action_plan to the FinancialActionPlan stack screen', () => {
+    const dest = resolveActionRoute({ type: 'NAVIGATE', route: 'action_plan' })
+    expect(dest).toEqual({ kind: 'stack', screen: 'FinancialActionPlan' })
+    const navigation = { navigate: jest.fn() } as any
+    const handled = navigateToAction(navigation, {
+      type: 'NAVIGATE',
+      route: 'action_plan',
+      payload: { planId: 'p1' },
+    })
+    expect(handled).toBe(true)
+    expect(navigation.navigate).toHaveBeenCalledWith('FinancialActionPlan', {
+      planId: 'p1',
+    })
   })
 
   it('navigates stack destinations without casts', () => {

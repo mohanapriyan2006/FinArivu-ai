@@ -36,6 +36,7 @@ class CopilotIntent(StrEnum):
     REPORT_SUMMARY = "report_summary"
     NET_WORTH = "net_worth"
     MONEY_RADAR = "money_radar"
+    FINANCIAL_ACTION_PLAN = "financial_action_plan"
     GENERAL = "general"
 
 
@@ -51,6 +52,7 @@ class ResponseType(StrEnum):
     ACTION_RESULT = "action_result"
     SCENARIO_RESULT = "scenario_result"
     MONEY_RADAR_RESULT = "money_radar_result"
+    FINANCIAL_ACTION_PLAN_RESULT = "financial_action_plan_result"
 
 
 class ResponseStyle(StrEnum):
