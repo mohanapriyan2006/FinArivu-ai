@@ -11,7 +11,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { StatusBar } from 'expo-status-bar'
 import { useNavigation } from '@react-navigation/native'
 import type { StackNavigationProp } from '@react-navigation/stack'
-import { Bell, FlaskConical } from 'lucide-react-native'
+import { Bell, FileUp, FlaskConical } from 'lucide-react-native'
 
 import { useTheme } from '@/contexts/ThemeContext'
 import { useInsights } from './useInsights'
@@ -211,6 +211,15 @@ export default function InsightsHubScreen() {
       <View style={styles.header}>
         <Text style={[styles.headerTitle, { color: colors.primary }]}>Insights</Text>
         <View style={styles.headerActions}>
+          <Pressable
+            onPress={() => navigation.navigate('ImportCenter')}
+            style={styles.bellButton}
+            accessibilityRole="button"
+            accessibilityLabel="Open Import Center"
+            testID="insights-import-center"
+          >
+            <FileUp size={20} color={colors.textPrimary} strokeWidth={2} />
+          </Pressable>
           <Pressable
             onPress={() => navigation.navigate('ScenarioLab')}
             style={styles.bellButton}

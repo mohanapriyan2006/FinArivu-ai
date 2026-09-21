@@ -134,6 +134,32 @@ records. See `backend/docs/FINANCIAL-ACTION-PLAN.md`.
 | POST | `/items/{id}/complete` | Complete; optional `{executionId}` audit link |
 | POST | `/items/from-insight` | Add a Radar insight to the plan (deduped) |
 
+## Financial Data Ingestion — `/api/v1/imports`
+
+Document import pipeline — extract → detect → normalize → **review** →
+explicit confirm → commit → recompute → Radar refresh + Plan reconcile.
+Uploading never mutates financial data; only `/confirm` with the current
+`confirmToken` applies candidates (any candidate edit rotates the token).
+Raw file bytes are never stored — only content hash + provenance.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `` | Upload document (multipart `file`, optional `document_type`) → preview |
+| POST | `/from-text` | Ingest pre-extracted text `{fileName, content, mimeType?, documentType?}` |
+| GET | `` | Import history (`skip`, `limit`) |
+| GET | `/{id}` | Batch detail |
+| GET | `/{id}/preview` | Candidates + detected fields + counts + confirmToken |
+| POST | `/{id}/candidates/{cid}` | Review one candidate `{decision?, editedValue?}` |
+| POST | `/{id}/confirm` | Apply — `{confirmToken}` must match the last preview |
+| POST | `/{id}/cancel` | Discard a pending import |
+| GET | `/{id}/changes` | Post-apply result — counts, changed domains, recompute flags |
+
+Controlled errors: `UNSUPPORTED_FORMAT`, `UNREADABLE_DOCUMENT`,
+`EMPTY_DOCUMENT`, `AMBIGUOUS_DOCUMENT`, `DUPLICATE_IMPORT` (409, carries
+`existingBatchId`), `STALE_PREVIEW` (409), `ALREADY_APPLIED`,
+`ALREADY_CANCELLED`, `INVALID_CANDIDATE`, `INVALID_VALUE`,
+`FILE_TOO_LARGE`. See `backend/docs/DATA-INGESTION.md`.
+
 ## Health & Monitoring
 
 | Method | Endpoint | Description |

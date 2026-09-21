@@ -22,6 +22,7 @@ from app.api.v1 import (
 from app.actions.router import router as copilot_actions_router
 from app.ai.router import router as copilot_router
 from app.action_plan.router import router as action_plan_router
+from app.data_ingestion.router import router as imports_router
 from app.money_radar.router import router as money_radar_router
 from app.scenarios.router import router as scenarios_router
 from app.utils.response import success_response
@@ -48,6 +49,7 @@ api_router.include_router(copilot_actions_router)
 api_router.include_router(scenarios_router)
 api_router.include_router(money_radar_router)
 api_router.include_router(action_plan_router)
+api_router.include_router(imports_router)
 
 
 @api_router.get("/health", tags=["Health"], summary="Service health check")

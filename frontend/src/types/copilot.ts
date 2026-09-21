@@ -9,6 +9,7 @@
  */
 
 import type { ActionExecutionStatus, ActionPreview, ActionResult } from './actions'
+import type { ImportPreviewCard } from './imports'
 import type { ScenarioResult } from './scenarios'
 
 /**
@@ -84,6 +85,12 @@ export interface CopilotChatResponse {
    * simulation — render a ScenarioResultCard. Never mutates data.
    */
   scenarioResult?: ScenarioResult | null
+  /**
+   * Populated when a document was ingested for review (Phase 5) —
+   * render an ImportCard linking to the Import Center. The import is
+   * never applied until the user confirms it there.
+   */
+  importPreview?: ImportPreviewCard | null
   provider?: string
   model?: string
   tokensInput?: number
@@ -131,5 +138,7 @@ export interface ChatMessageItemData {
   actionResult?: ActionResult
   /** Deterministic scenario simulation attached to this message. */
   scenarioResult?: ScenarioResult
+  /** Document ingested for review — renders an ImportCard. */
+  importPreview?: ImportPreviewCard
   createdAt?: string
 }

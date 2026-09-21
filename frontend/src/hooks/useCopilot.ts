@@ -120,6 +120,7 @@ export function useCopilot({ token, initialMessages = [] }: UseCopilotOptions = 
     guardrailTriggered: response.guardrailTriggered,
     actionPreview: response.actionPreview ?? undefined,
     scenarioResult: response.scenarioResult ?? undefined,
+    importPreview: response.importPreview ?? undefined,
     createdAt: new Date().toISOString(),
   }), [])
 

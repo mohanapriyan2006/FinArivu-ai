@@ -4,7 +4,7 @@ import uuid
 
 from datetime import date
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.constants import INCOME_SOURCES
@@ -48,6 +48,19 @@ class Income(Base):
     frequency: Mapped[str | None] = mapped_column(
         String(50),
         nullable=True,
+    )
+    # Phase 5 import provenance — note ``source`` already means the
+    # income-source enum (Salary/Freelance/…), so import lineage is
+    # carried by these two columns instead.
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True, native_uuid=True),
+        nullable=True,
+        index=True,
+    )
+    import_fingerprint: Mapped[str | None] = mapped_column(
+        String(80),
+        nullable=True,
+        index=True,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="incomes")

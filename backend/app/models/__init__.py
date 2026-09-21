@@ -2,6 +2,7 @@ from app.models.base import Base
 from app.models.users import User
 from app.models.profiles import Profile
 from app.models.categories import ExpenseCategory
+from app.models.data_ingestion import ImportBatch, ImportCandidate
 from app.models.income import Income
 from app.models.expenses import Expense
 from app.models.budgets import Budget
@@ -31,6 +32,8 @@ __all__ = [
     "User",
     "Profile",
     "ExpenseCategory",
+    "ImportBatch",
+    "ImportCandidate",
     "Income",
     "Expense",
     "Budget",

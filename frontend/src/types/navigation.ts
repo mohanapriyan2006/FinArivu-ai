@@ -39,4 +39,6 @@ export type RootStackParamList = {
         }
       }
     | undefined
+  ImportCenter: undefined
+  ImportReview: { batchId: string }
 }

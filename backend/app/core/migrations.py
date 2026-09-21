@@ -109,6 +109,32 @@ async def _migrate_profiles_avatar(conn: AsyncConnection) -> None:
     )
 
 
+async def _migrate_import_provenance(conn: AsyncConnection) -> None:
+    """Phase 5 — import provenance columns on expenses and income.
+
+    ``income.source`` already stores the income-source enum, so income
+    rows carry only batch + fingerprint lineage; expenses gain a
+    manual/imported ``source`` marker as well.
+    """
+    await _ensure_columns(
+        conn,
+        "expenses",
+        {
+            "source": "VARCHAR(50) NOT NULL DEFAULT 'manual'",
+            "import_batch_id": "UUID",
+            "import_fingerprint": "VARCHAR(80)",
+        },
+    )
+    await _ensure_columns(
+        conn,
+        "income",
+        {
+            "import_batch_id": "UUID",
+            "import_fingerprint": "VARCHAR(80)",
+        },
+    )
+
+
 async def _migrate_financial_profile(conn: AsyncConnection) -> None:
     """Idempotently add financial profile columns and ensure new tables exist."""
     await _ensure_columns(
@@ -160,4 +186,5 @@ async def apply_migrations(engine: AsyncEngine) -> None:
         await _migrate_expense_categories(conn)
         await _migrate_financial_profile(conn)
         await _migrate_profiles_avatar(conn)
+        await _migrate_import_provenance(conn)
     logger.info("Database migrations complete")

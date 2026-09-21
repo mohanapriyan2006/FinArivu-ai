@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from typing import Any, AsyncIterator
 
@@ -16,8 +17,12 @@ from app.ai.schemas import (
     CopilotChatRequest,
     CopilotChatResponse,
     CopilotHealthResponse,
+    StreamEvent,
+    StreamEventType,
+    SuggestedAction,
 )
 from app.core.logger import logger
+from app.financial.artifacts.schemas import Artifact
 
 
 class AIController:
@@ -68,6 +73,49 @@ class AIController:
             user_id, session_id, "user",
             self._display_message(sanitised_message, request.attachments),
         )
+
+        # ── Data Ingestion: explicit "import this" asks run the same
+        # deterministic pipeline as POST /v1/imports — review-only, the
+        # user confirms in the Import Center before anything is applied.
+        from app.data_ingestion.copilot import is_import_request, run_import
+
+        if is_import_request(sanitised_message):
+            try:
+                text, payload = await run_import(
+                    self._session, user_id, request.attachments,
+                )
+            except Exception:
+                logger.exception(
+                    "Copilot import failed", extra={"user_id": str(user_id)}
+                )
+                text, payload = (
+                    "I couldn't read that document for import. Try the "
+                    "Import Center instead.",
+                    {},
+                )
+            msg = await self._memory.save_message(
+                user_id, session_id, "assistant", text,
+                intent="data_import",
+                agent_chain={"import": True},
+            )
+            from app.ai.schemas import CopilotIntent, ResponseType
+
+            return CopilotChatResponse(
+                message_id=msg.id,
+                message=text,
+                response_type=ResponseType.IMPORT_RESULT,
+                summary=text,
+                intent=CopilotIntent.DATA_IMPORT,
+                artifacts=[
+                    Artifact.model_validate(a)
+                    for a in payload.get("artifacts", [])
+                ],
+                suggested_actions=[
+                    SuggestedAction.model_validate(a)
+                    for a in payload.get("suggestedActions", [])
+                ],
+                import_preview=payload.get("importPreview"),
+            )
 
         service = ControllerService(self._session)
         ai_message = self._apply_attachments(sanitised_message, request.attachments)
@@ -147,6 +195,43 @@ class AIController:
             user_id, session_id, "user",
             self._display_message(sanitised_message, request.attachments),
         )
+
+        # ── Data Ingestion fast path — same deterministic pipeline as the
+        # synchronous handler; review-only until confirmed in-app.
+        from app.data_ingestion.copilot import is_import_request, run_import
+
+        if is_import_request(sanitised_message):
+            yield StreamEvent(
+                event_type=StreamEventType.AGENT_DONE,
+                data="Document ingested for review",
+                agent_name="DataIngestion",
+            )
+            try:
+                text, payload = await run_import(
+                    self._session, user_id, request.attachments,
+                )
+            except Exception:
+                logger.exception(
+                    "Copilot import failed", extra={"user_id": str(user_id)}
+                )
+                text, payload = (
+                    "I couldn't read that document for import. Try the "
+                    "Import Center instead.",
+                    {},
+                )
+            yield StreamEvent(event_type=StreamEventType.TOKEN, data=text)
+            yield StreamEvent(
+                event_type=StreamEventType.DATA,
+                data=json.dumps(payload, default=str),
+            )
+            yield StreamEvent(event_type=StreamEventType.DONE)
+            await self._memory.save_message(
+                user_id, session_id, "assistant", text,
+                intent="data_import",
+                agent_chain={"import": True},
+            )
+            return
+
         service = ControllerService(self._session)
         ai_message = self._apply_attachments(sanitised_message, request.attachments)
         async for event in service.chat_stream(user_id, session_id, ai_message):

@@ -4,7 +4,7 @@ import uuid
 
 from datetime import date
 
-from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text
+from sqlalchemy import Boolean, CheckConstraint, Date, ForeignKey, Index, Numeric, String, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.constants import PAYMENT_METHODS
@@ -44,6 +44,22 @@ class Expense(Base):
         Boolean,
         default=False,
         nullable=False,
+    )
+    # Phase 5 import provenance — 'manual' for user-entered rows.
+    source: Mapped[str] = mapped_column(
+        String(50),
+        default="manual",
+        nullable=False,
+    )
+    import_batch_id: Mapped[uuid.UUID | None] = mapped_column(
+        Uuid(as_uuid=True, native_uuid=True),
+        nullable=True,
+        index=True,
+    )
+    import_fingerprint: Mapped[str | None] = mapped_column(
+        String(80),
+        nullable=True,
+        index=True,
     )
 
     user: Mapped["User"] = relationship("User", back_populates="expenses")

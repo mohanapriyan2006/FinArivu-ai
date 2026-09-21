@@ -28,6 +28,7 @@ export const ACTION_TARGETS = [
   'money_radar',
   'scenario_lab',
   'action_plan',
+  'import_center',
 ] as const
 
 export type ActionNavTarget = (typeof ACTION_TARGETS)[number]
@@ -53,6 +54,7 @@ const ACTION_ROUTE_MAP: Record<ActionNavTarget, ActionDestination> = {
   money_radar: { kind: 'tab', tab: 'Insights' },
   scenario_lab: { kind: 'stack', screen: 'ScenarioLab' },
   action_plan: { kind: 'stack', screen: 'FinancialActionPlan' },
+  import_center: { kind: 'stack', screen: 'ImportCenter' },
 }
 
 export function isActionNavTarget(value: unknown): value is ActionNavTarget {
@@ -150,6 +152,16 @@ export function navigateToAction(
             ? action.payload.scenarioType
             : undefined,
       })
+      return true
+    case 'ImportCenter':
+      // A batchId payload deep-links straight into the review screen.
+      if (typeof action.payload?.batchId === 'string') {
+        navigation.navigate('ImportReview', {
+          batchId: action.payload.batchId,
+        })
+      } else {
+        navigation.navigate('ImportCenter')
+      }
       return true
     default:
       return false

@@ -37,6 +37,7 @@ class CopilotIntent(StrEnum):
     NET_WORTH = "net_worth"
     MONEY_RADAR = "money_radar"
     FINANCIAL_ACTION_PLAN = "financial_action_plan"
+    DATA_IMPORT = "data_import"
     GENERAL = "general"
 
 
@@ -53,6 +54,7 @@ class ResponseType(StrEnum):
     SCENARIO_RESULT = "scenario_result"
     MONEY_RADAR_RESULT = "money_radar_result"
     FINANCIAL_ACTION_PLAN_RESULT = "financial_action_plan_result"
+    IMPORT_RESULT = "import_result"
 
 
 class ResponseStyle(StrEnum):
@@ -263,6 +265,10 @@ class CopilotChatResponse(BaseSchema):
     # simulation — the frontend renders a ScenarioResultCard. Simulations
     # never mutate financial records.
     scenario_result: dict[str, Any] | None = None
+    # Populated when a document was ingested for review — the frontend
+    # renders an import card linking to the Import Center. The import is
+    # never applied until the user confirms it there.
+    import_preview: dict[str, Any] | None = None
     provider: str | None = None
     model: str | None = None
     tokens_input: int = 0

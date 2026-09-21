@@ -16,6 +16,7 @@ describe('actionRoutes', () => {
       'expenses',
       'financial_health',
       'goals',
+      'import_center',
       'insights',
       'insurance',
       'investments',
@@ -108,6 +109,29 @@ describe('actionRoutes', () => {
     expect(navigation.navigate).toHaveBeenCalledWith('FinancialActionPlan', {
       planId: 'p1',
     })
+  })
+
+  it('resolves import_center and deep-links batchId to ImportReview', () => {
+    const dest = resolveActionRoute({
+      type: 'NAVIGATE',
+      route: 'import_center',
+    })
+    expect(dest).toEqual({ kind: 'stack', screen: 'ImportCenter' })
+    const navigation = { navigate: jest.fn() } as any
+    expect(
+      navigateToAction(navigation, {
+        type: 'NAVIGATE',
+        route: 'import_center',
+        payload: { batchId: 'b1' },
+      })
+    ).toBe(true)
+    expect(navigation.navigate).toHaveBeenCalledWith('ImportReview', {
+      batchId: 'b1',
+    })
+    // Without a batchId it lands on the center list.
+    navigation.navigate.mockClear()
+    navigateToAction(navigation, { type: 'NAVIGATE', route: 'import_center' })
+    expect(navigation.navigate).toHaveBeenCalledWith('ImportCenter')
   })
 
   it('navigates stack destinations without casts', () => {
